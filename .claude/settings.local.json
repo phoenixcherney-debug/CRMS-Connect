@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start:*)",
+      "Bash(npm run:*)",
+      "Bash(grep -v \"^$\")",
+      "Bash(npx tsc:*)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(npm install:*)",
+      "Bash(chmod +x /Users/phoenixcherney/Desktop/crms-connect/crms-connect/node_modules/esbuild/bin/esbuild)",
+      "Bash(/Users/phoenixcherney/Desktop/crms-connect/crms-connect/node_modules/esbuild/bin/esbuild --version)",
+      "Bash(chmod +x /Users/phoenixcherney/Desktop/crms-connect/crms-connect/node_modules/@esbuild/darwin-arm64/bin/esbuild)",
+      "Bash(npx vite:*)",
+      "Bash(pkill -f \"vite preview\")",
+      "Bash(pkill -f \"vite\")",
+      "Bash(ls /Users/phoenixcherney/Desktop/crms-connect/crms-connect/.env*)",
+      "Bash(find /Users/phoenixcherney/Desktop/crms-connect/crms-connect/src -type f \\\\\\(-name *.png -o -name *.jpg -o -name *.jpeg -o -name *.gif -o -name *.svg -o -name *.webp \\\\\\))",
+      "Bash(npx vercel:*)",
+      "Bash(supabase db:*)",
+      "Bash(curl:*)",
+      "Bash(git:*)"
+    ]
+  }
+}
