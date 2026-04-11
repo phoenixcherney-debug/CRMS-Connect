@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
-  MapPin, Calendar, Building2, Mail, ExternalLink,
+  MapPin, Calendar, Building2, ExternalLink,
   MessageSquare, ChevronLeft, Edit3, Trash2, AlertCircle, CheckCircle2, Clock,
 } from 'lucide-react'
 import { format, isPast, parseISO } from 'date-fns'
@@ -283,9 +283,6 @@ export default function JobDetail() {
                 Posted {format(parseISO(job.created_at), 'MMM d, yyyy')}
               </span>
             )}
-            <span className="flex items-center gap-1.5">
-              <Mail size={14} /> {job.contact_email}
-            </span>
           </div>
 
           {/* Posted by */}
@@ -323,12 +320,6 @@ export default function JobDetail() {
             </p>
           </section>
 
-          <section>
-            <h2 className="text-base font-semibold text-ink mb-3">How to Apply</h2>
-            <p className="text-ink-secondary leading-relaxed whitespace-pre-wrap text-sm">
-              {job.how_to_apply}
-            </p>
-          </section>
         </div>
 
         {/* Apply section — students only */}

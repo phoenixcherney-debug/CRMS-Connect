@@ -20,8 +20,6 @@ interface JobForm {
   industry: string
   job_type: JobType
   description: string
-  how_to_apply: string
-  contact_email: string
   deadline: string
   expected_weekly_hours: string
 }
@@ -34,8 +32,6 @@ const DEFAULT_FORM: JobForm = {
   industry: '',
   job_type: 'internship',
   description: '',
-  how_to_apply: '',
-  contact_email: '',
   deadline: '',
   expected_weekly_hours: '',
 }
@@ -65,8 +61,6 @@ export default function PostJob() {
           industry: data.industry ?? '',
           job_type: data.job_type,
           description: data.description,
-          how_to_apply: data.how_to_apply,
-          contact_email: data.contact_email,
           deadline: data.deadline,
           expected_weekly_hours: data.expected_weekly_hours ?? '',
         })
@@ -91,6 +85,8 @@ export default function PostJob() {
       industry: form.industry || null,
       deadline: form.deadline || null,
       expected_weekly_hours: form.expected_weekly_hours || null,
+      how_to_apply: '',
+      contact_email: '',
       posted_by: profile.id,
       is_active: true,
     }
@@ -280,50 +276,19 @@ export default function PostJob() {
             />
           </div>
 
-          {/* How to apply */}
-          <div>
+          {/* Deadline */}
+          <div className="sm:max-w-[calc(50%-0.5rem)]">
             <label className="block text-sm font-medium text-ink mb-1.5">
-              How to apply <span className="text-error">*</span>
+              Application deadline{' '}
+              <span className="text-ink-muted font-normal">(optional — leave blank for rolling)</span>
             </label>
-            <textarea
-              required
-              rows={3}
-              maxLength={2000}
-              value={form.how_to_apply}
-              onChange={(e) => set('how_to_apply', e.target.value)}
-              placeholder="Email your resume to hiring@example.com, or apply at our website…"
-              className="field resize-none"
+            <input
+              type="date"
+              value={form.deadline}
+              onChange={(e) => set('deadline', e.target.value)}
+              min={isEdit ? undefined : new Date().toISOString().split('T')[0]}
+              className="field"
             />
-          </div>
-
-          {/* Row: Contact email + Deadline */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1.5">
-                Contact email <span className="text-error">*</span>
-              </label>
-              <input
-                type="email"
-                required
-                value={form.contact_email}
-                onChange={(e) => set('contact_email', e.target.value)}
-                placeholder="hiring@example.com"
-                className="field"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1.5">
-                Application deadline{' '}
-                <span className="text-ink-muted font-normal">(optional — leave blank for rolling)</span>
-              </label>
-              <input
-                type="date"
-                value={form.deadline}
-                onChange={(e) => set('deadline', e.target.value)}
-                min={isEdit ? undefined : new Date().toISOString().split('T')[0]}
-                className="field"
-              />
-            </div>
           </div>
 
           {/* Submit */}
