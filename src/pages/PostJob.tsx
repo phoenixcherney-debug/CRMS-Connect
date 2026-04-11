@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { JobType, LocationType } from '../types'
-import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
 
 const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer']
@@ -23,6 +23,7 @@ interface JobForm {
   how_to_apply: string
   contact_email: string
   deadline: string
+  expected_weekly_hours: string
 }
 
 const DEFAULT_FORM: JobForm = {
@@ -36,6 +37,7 @@ const DEFAULT_FORM: JobForm = {
   how_to_apply: '',
   contact_email: '',
   deadline: '',
+  expected_weekly_hours: '',
 }
 
 export default function PostJob() {
@@ -66,6 +68,7 @@ export default function PostJob() {
           how_to_apply: data.how_to_apply,
           contact_email: data.contact_email,
           deadline: data.deadline,
+          expected_weekly_hours: data.expected_weekly_hours ?? '',
         })
       }
       setLoading(false)
@@ -87,6 +90,7 @@ export default function PostJob() {
       ...form,
       industry: form.industry || null,
       deadline: form.deadline || null,
+      expected_weekly_hours: form.expected_weekly_hours || null,
       posted_by: profile.id,
       is_active: true,
     }
@@ -240,6 +244,24 @@ export default function PostJob() {
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Expected weekly hours */}
+          <div className="sm:max-w-[calc(50%-0.5rem)]">
+            <label className="block text-sm font-medium text-ink mb-1.5">
+              Expected weekly hours{' '}
+              <span className="text-ink-muted font-normal">(optional)</span>
+            </label>
+            <select
+              value={form.expected_weekly_hours}
+              onChange={(e) => set('expected_weekly_hours', e.target.value)}
+              className="field"
+            >
+              <option value="">Select expected hours…</option>
+              {EXPECTED_HOURS_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
           </div>
 
           {/* Description */}

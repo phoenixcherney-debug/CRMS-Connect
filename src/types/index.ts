@@ -1,7 +1,7 @@
 export type Role = 'student' | 'alumni' | 'parent'
 export type JobType = 'internship' | 'part-time' | 'full-time' | 'volunteer'
 export type LocationType = 'remote' | 'in-person' | 'hybrid'
-export type ApplicationStatus = 'pending' | 'reviewed' | 'accepted' | 'rejected'
+export type ApplicationStatus = 'pending' | 'reviewed' | 'accepted' | 'rejected' | 'waitlisted'
 
 export interface Profile {
   id: string
@@ -14,6 +14,8 @@ export interface Profile {
   industry?: string | null
   open_to_mentorship: boolean
   onboarding_complete: boolean
+  interests: string[]
+  weekly_availability: string | null
   created_at: string
 }
 
@@ -56,6 +58,7 @@ export interface Job {
   industry?: string | null
   deadline: string | null
   is_active: boolean
+  expected_weekly_hours?: string | null
   // Joined
   profiles?: Profile | null
 }
@@ -108,7 +111,17 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   reviewed: 'Reviewed',
   accepted: 'Accepted',
   rejected: 'Rejected',
+  waitlisted: 'Waitlisted',
 }
+
+export const WEEKLY_AVAILABILITY_OPTIONS = [
+  '< 5 hrs/week',
+  '5–10 hrs/week',
+  '10–20 hrs/week',
+  '20+ hrs/week',
+] as const
+
+export const EXPECTED_HOURS_OPTIONS = WEEKLY_AVAILABILITY_OPTIONS
 
 export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
   remote: 'Remote',

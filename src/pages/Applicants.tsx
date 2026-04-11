@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ExternalLink, User, Calendar, MessageSquare } from 'lucide-react'
+import { ChevronLeft, ExternalLink, User, Calendar, MessageSquare, CheckCircle2, X, Clock } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -9,14 +9,31 @@ import type { Application, ApplicationStatus, Job } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 
-const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string; dot: string }> = {
-  pending: { label: 'Pending', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
-  reviewed: { label: 'Under review', classes: 'bg-status-reviewed-bg text-status-reviewed-text border-status-reviewed-border', dot: 'bg-status-reviewed-dot' },
-  accepted: { label: 'Accepted', classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
-  rejected: { label: 'Not selected', classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border', dot: 'bg-status-rejected-dot' },
+type Tab = 'inbox' | 'waitlist' | 'decided'
+
+interface ApplicantProfile {
+  id: string
+  full_name: string
+  graduation_year?: number | null
+  bio?: string | null
+  avatar_url?: string | null
+  role: string
+  interests: string[]
+  weekly_availability: string | null
 }
 
-const STATUS_OPTIONS: ApplicationStatus[] = ['pending', 'reviewed', 'accepted', 'rejected']
+const DECIDED_CONFIG: Record<'accepted' | 'rejected', { label: string; classes: string; dot: string }> = {
+  accepted: {
+    label: 'Accepted',
+    classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border',
+    dot: 'bg-status-accepted-dot',
+  },
+  rejected: {
+    label: 'Not selected',
+    classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border',
+    dot: 'bg-status-rejected-dot',
+  },
+}
 
 export default function Applicants() {
   const { id } = useParams<{ id: string }>()
@@ -29,6 +46,7 @@ export default function Applicants() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<Tab>('inbox')
 
   useEffect(() => {
     async function load() {
@@ -38,7 +56,7 @@ export default function Applicants() {
         supabase.from('jobs').select('*').eq('id', id!).single(),
         supabase
           .from('applications')
-          .select('*, profiles(id, full_name, graduation_year, bio, avatar_url, role)')
+          .select('*, profiles(id, full_name, graduation_year, bio, avatar_url, role, interests, weekly_availability)')
           .eq('job_id', id!)
           .order('created_at', { ascending: true }),
       ])
@@ -63,15 +81,16 @@ export default function Applicants() {
       setApplications((prev) =>
         prev.map((a) => (a.id === appId ? { ...a, status } : a))
       )
-      // Notify the applicant of their status update (best-effort)
+      // Notify applicant of status update (best-effort)
       const app = applications.find((a) => a.id === appId)
       const applicantId = (app?.profiles as { id?: string } | null)?.id
       if (applicantId && job) {
         const STATUS_PUSH: Record<ApplicationStatus, string> = {
-          pending:  'Your application is pending review.',
-          reviewed: 'Your application is under review.',
-          accepted: 'Your application was accepted!',
-          rejected: 'Your application was not selected.',
+          pending:    'Your application is pending review.',
+          reviewed:   'Your application is under review.',
+          waitlisted: "You've been added to the waitlist.",
+          accepted:   'Your application was accepted!',
+          rejected:   'Your application was not selected.',
         }
         sendPushToUser(
           applicantId,
@@ -99,10 +118,17 @@ export default function Applicants() {
     )
   }
 
-  const counts = STATUS_OPTIONS.reduce((acc, s) => {
-    acc[s] = applications.filter((a) => a.status === s).length
-    return acc
-  }, {} as Record<ApplicationStatus, number>)
+  const inbox    = applications.filter((a) => a.status === 'pending')
+  const waitlist = applications.filter((a) => a.status === 'waitlisted')
+  const decided  = applications.filter((a) => a.status === 'accepted' || a.status === 'rejected')
+
+  const tabApps = activeTab === 'inbox' ? inbox : activeTab === 'waitlist' ? waitlist : decided
+
+  const TABS: { key: Tab; label: string; count: number }[] = [
+    { key: 'inbox',    label: 'Inbox',    count: inbox.length    },
+    { key: 'waitlist', label: 'Waitlist', count: waitlist.length },
+    { key: 'decided',  label: 'Decided',  count: decided.length  },
+  ]
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -115,7 +141,7 @@ export default function Applicants() {
       </Link>
 
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-5">
         <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Applicants</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
           {job.title} · {job.company} ·{' '}
@@ -125,24 +151,33 @@ export default function Applicants() {
         </p>
       </div>
 
-      {/* Status summary */}
-      {applications.length > 0 && (
-        <div className="flex flex-wrap gap-3 mb-6">
-          {STATUS_OPTIONS.map((s) => {
-            const cfg = STATUS_CONFIG[s]
-            if (counts[s] === 0) return null
-            return (
+      {/* Tabs */}
+      <div className="flex gap-1 mb-5 border-b border-border">
+        {TABS.map(({ key, label, count }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === key
+                ? 'border-primary text-primary'
+                : 'border-transparent text-ink-secondary hover:text-ink'
+            }`}
+          >
+            {label}
+            {count > 0 && (
               <span
-                key={s}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${cfg.classes}`}
+                className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-none ${
+                  activeTab === key
+                    ? 'bg-primary text-white'
+                    : 'bg-border text-ink-secondary'
+                }`}
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                {cfg.label}: {counts[s]}
+                {count}
               </span>
-            )
-          })}
-        </div>
-      )}
+            )}
+          </button>
+        ))}
+      </div>
 
       {updateError && (
         <div className="mb-4 rounded-lg bg-error-bg border border-status-rejected-border px-4 py-3 text-sm text-error">
@@ -151,16 +186,22 @@ export default function Applicants() {
       )}
 
       {/* Applicant list */}
-      {applications.length === 0 ? (
+      {tabApps.length === 0 ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
-          <p className="text-ink-muted">No applications yet.</p>
+          <p className="text-ink-muted">
+            {activeTab === 'inbox'
+              ? 'No new applicants.'
+              : activeTab === 'waitlist'
+              ? 'No one on the waitlist.'
+              : 'No decisions made yet.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {applications.map((app) => {
-            const applicant = app.profiles
+          {tabApps.map((app) => {
+            const applicant = app.profiles as ApplicantProfile | null
             const isExpanded = expandedId === app.id
-            const statusCfg = STATUS_CONFIG[app.status]
+            const isUpdating = updatingId === app.id
             const initials = applicant?.full_name
               .split(' ')
               .map((n) => n[0])
@@ -174,6 +215,7 @@ export default function Applicants() {
                 className="bg-surface rounded-xl border border-border p-5"
                 style={{ boxShadow: 'var(--shadow-card)' }}
               >
+                {/* Top row: avatar + name + action buttons */}
                 <div className="flex flex-col sm:flex-row gap-4">
                   {/* Applicant info */}
                   <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -199,10 +241,20 @@ export default function Applicants() {
                           <span className="text-xs text-ink-muted">Class of {applicant.graduation_year}</span>
                         )}
                       </div>
-                      {applicant?.bio && (
-                        <p className="text-xs text-ink-secondary leading-relaxed line-clamp-1">{applicant.bio}</p>
-                      )}
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-ink-muted">
+
+                      {/* Screening fields */}
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-ink-secondary">
+                        {applicant?.weekly_availability && (
+                          <span className="flex items-center gap-1">
+                            <Clock size={11} />
+                            {applicant.weekly_availability}
+                          </span>
+                        )}
+                        {applicant?.role === 'student' && !applicant.weekly_availability && (
+                          <span className="flex items-center gap-1 text-ink-muted/60">
+                            <Clock size={11} /> Availability not set
+                          </span>
+                        )}
                         <span className="flex items-center gap-1">
                           <Calendar size={11} />
                           Applied {format(parseISO(app.created_at), 'MMM d, yyyy')}
@@ -251,30 +303,69 @@ export default function Applicants() {
                           </button>
                         )}
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Status selector */}
-                  <div className="flex items-start gap-2 shrink-0">
-                    <div className="relative">
-                      <select
-                        value={app.status}
-                        disabled={updatingId === app.id}
-                        onChange={(e) => updateStatus(app.id, e.target.value as ApplicationStatus)}
-                        className={`pl-2.5 pr-7 py-1.5 rounded-lg text-xs font-medium border appearance-none cursor-pointer
-                          disabled:opacity-50 disabled:cursor-not-allowed transition-colors
-                          ${statusCfg.classes}`}
-                      >
-                        {STATUS_OPTIONS.map((s) => (
-                          <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
-                        ))}
-                      </select>
-                      {updatingId === app.id && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                          <Spinner size="sm" />
+                      {/* Interests */}
+                      {applicant?.interests && applicant.interests.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {applicant.interests.map((interest) => (
+                            <span
+                              key={interest}
+                              className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-primary-muted text-primary"
+                            >
+                              {interest}
+                            </span>
+                          ))}
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex items-start gap-2 shrink-0">
+                    {(activeTab === 'inbox' || activeTab === 'waitlist') && (
+                      <>
+                        <button
+                          onClick={() => updateStatus(app.id, 'accepted')}
+                          disabled={isUpdating}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                            bg-status-accepted-bg text-status-accepted-text border border-status-accepted-border
+                            hover:opacity-80 transition-opacity disabled:opacity-40"
+                        >
+                          {isUpdating ? <Spinner size="sm" /> : <CheckCircle2 size={13} />}
+                          Accept
+                        </button>
+                        {activeTab === 'inbox' && (
+                          <button
+                            onClick={() => updateStatus(app.id, 'waitlisted')}
+                            disabled={isUpdating}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                              bg-status-pending-bg text-status-pending-text border border-status-pending-border
+                              hover:opacity-80 transition-opacity disabled:opacity-40"
+                          >
+                            Waitlist
+                          </button>
+                        )}
+                        <button
+                          onClick={() => updateStatus(app.id, 'rejected')}
+                          disabled={isUpdating}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
+                            bg-status-rejected-bg text-status-rejected-text border border-status-rejected-border
+                            hover:opacity-80 transition-opacity disabled:opacity-40"
+                        >
+                          <X size={13} />
+                          Decline
+                        </button>
+                      </>
+                    )}
+
+                    {activeTab === 'decided' && (app.status === 'accepted' || app.status === 'rejected') && (
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${DECIDED_CONFIG[app.status].classes}`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${DECIDED_CONFIG[app.status].dot}`} />
+                        {DECIDED_CONFIG[app.status].label}
+                      </span>
+                    )}
                   </div>
                 </div>
 

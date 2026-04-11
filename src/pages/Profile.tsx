@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { ROLE_LABELS, INDUSTRY_OPTIONS } from '../types'
+import { ROLE_LABELS, INDUSTRY_OPTIONS, WEEKLY_AVAILABILITY_OPTIONS } from '../types'
 import type { CareerHistory } from '../types'
 import Spinner from '../components/Spinner'
 
@@ -20,6 +20,8 @@ export default function Profile() {
   const [company, setCompany] = useState('')
   const [industry, setIndustry] = useState('')
   const [openToMentorship, setOpenToMentorship] = useState(false)
+  const [interests, setInterests] = useState<string[]>([])
+  const [weeklyAvailability, setWeeklyAvailability] = useState('')
 
   // Career history
   const [careerHistory, setCareerHistory] = useState<CareerHistory[]>([])
@@ -43,6 +45,8 @@ export default function Profile() {
       setCompany(profile.company ?? '')
       setIndustry(profile.industry ?? '')
       setOpenToMentorship(profile.open_to_mentorship ?? false)
+      setInterests(profile.interests ?? [])
+      setWeeklyAvailability(profile.weekly_availability ?? '')
     }
   }, [profile?.id])
 
@@ -96,6 +100,8 @@ export default function Profile() {
     setCompany(profile!.company ?? '')
     setIndustry(profile!.industry ?? '')
     setOpenToMentorship(profile!.open_to_mentorship ?? false)
+    setInterests(profile!.interests ?? [])
+    setWeeklyAvailability(profile!.weekly_availability ?? '')
     setSaveError(null)
     setEditing(false)
   }
@@ -121,6 +127,11 @@ export default function Profile() {
       updates.company = company.trim() || null
       updates.industry = industry || null
       updates.open_to_mentorship = openToMentorship
+    }
+
+    if (profile?.role === 'student') {
+      updates.interests = interests
+      updates.weekly_availability = weeklyAvailability || null
     }
 
     const { error } = await supabase
@@ -293,7 +304,29 @@ export default function Profile() {
                     <span className="text-ink-secondary">{profile.industry}</span>
                   </div>
                 )}
+                {profile.role === 'student' && profile.weekly_availability && (
+                  <div className="flex gap-2">
+                    <span className="font-medium text-ink w-28 shrink-0">Availability</span>
+                    <span className="text-ink-secondary">{profile.weekly_availability}</span>
+                  </div>
+                )}
               </div>
+
+              {profile.role === 'student' && profile.interests && profile.interests.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-ink mb-1.5">Interests</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {profile.interests.map((interest) => (
+                      <span
+                        key={interest}
+                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-primary-muted text-primary border border-primary-muted"
+                      >
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {profile.bio ? (
                 <div>
@@ -404,6 +437,59 @@ export default function Profile() {
                         transition-colors"
                     />
                   </div>
+                )}
+
+                {profile.role === 'student' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-ink mb-1.5">
+                        Weekly availability{' '}
+                        <span className="text-ink-muted font-normal">(optional)</span>
+                      </label>
+                      <select
+                        value={weeklyAvailability}
+                        onChange={(e) => setWeeklyAvailability(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                          focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                          transition-colors"
+                      >
+                        <option value="">Select availability…</option>
+                        {WEEKLY_AVAILABILITY_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-ink mb-1.5">
+                        Areas of interest{' '}
+                        <span className="text-ink-muted font-normal">(optional — select all that apply)</span>
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {INDUSTRY_OPTIONS.map((opt) => {
+                          const selected = interests.includes(opt)
+                          return (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() =>
+                                setInterests((prev) =>
+                                  selected ? prev.filter((i) => i !== opt) : [...prev, opt]
+                                )
+                              }
+                              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                                selected
+                                  ? 'bg-primary text-white border-primary'
+                                  : 'bg-surface text-ink-secondary border-border hover:border-primary hover:text-ink'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {isPoster && (

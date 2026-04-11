@@ -32,6 +32,12 @@ const STATUS_CONFIG: Record<
     classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border',
     dot: 'bg-status-rejected-dot',
   },
+  // Waitlisted is shown to students as "Pending review" — never expose the word "waitlisted"
+  waitlisted: {
+    label: 'Pending review',
+    classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border',
+    dot: 'bg-status-pending-dot',
+  },
 }
 
 export default function MyApplications() {

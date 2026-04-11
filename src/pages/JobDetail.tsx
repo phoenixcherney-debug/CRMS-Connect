@@ -7,14 +7,17 @@ import {
 import { format, isPast, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { sendPushToUser } from '../lib/sendPush'
 import type { Job, Application, ApplicationStatus } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS } from '../types'
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string; dot: string }> = {
-  pending: { label: 'Pending review', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
-  reviewed: { label: 'Under review', classes: 'bg-status-reviewed-bg text-status-reviewed-text border-status-reviewed-border', dot: 'bg-status-reviewed-dot' },
-  accepted: { label: 'Accepted', classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
-  rejected: { label: 'Not selected', classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border', dot: 'bg-status-rejected-dot' },
+  pending:    { label: 'Pending review', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
+  reviewed:   { label: 'Under review',  classes: 'bg-status-reviewed-bg text-status-reviewed-text border-status-reviewed-border', dot: 'bg-status-reviewed-dot' },
+  accepted:   { label: 'Accepted',      classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
+  rejected:   { label: 'Not selected',  classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border', dot: 'bg-status-rejected-dot' },
+  // Students see waitlisted as pending — never expose the word "waitlisted" in student-facing UI
+  waitlisted: { label: 'Pending review', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
 }
 import Spinner from '../components/Spinner'
 
@@ -145,6 +148,16 @@ export default function JobDetail() {
     setMyApplication(data as Application)
     setApplySuccess(true)
     setApplying(false)
+
+    // Notify the job poster (best-effort)
+    if (job.posted_by) {
+      sendPushToUser(
+        job.posted_by,
+        `New applicant for ${job.title}`,
+        `${profile.full_name} just applied.`,
+        `/jobs/${job.id}/applicants`
+      )
+    }
   }
 
   async function handleDelete() {
@@ -259,10 +272,17 @@ export default function JobDetail() {
                 ? <>Deadline: {format(deadline, 'MMMM d, yyyy')}{expired && <span className="text-error font-medium ml-1">(Passed)</span>}</>
                 : 'Rolling — no deadline'}
             </span>
-            <span className="flex items-center gap-1.5">
-              <Clock size={14} />
-              Posted {format(parseISO(job.created_at), 'MMM d, yyyy')}
-            </span>
+            {job.expected_weekly_hours && (
+              <span className="flex items-center gap-1.5">
+                <Clock size={14} /> {job.expected_weekly_hours}
+              </span>
+            )}
+            {!job.expected_weekly_hours && (
+              <span className="flex items-center gap-1.5">
+                <Clock size={14} />
+                Posted {format(parseISO(job.created_at), 'MMM d, yyyy')}
+              </span>
+            )}
             <span className="flex items-center gap-1.5">
               <Mail size={14} /> {job.contact_email}
             </span>
@@ -314,7 +334,30 @@ export default function JobDetail() {
         {/* Apply section — students only */}
         {isStudent && !isPoster && (
           <div className="px-6 sm:px-8 pb-8">
-            {applySuccess || myApplication ? (() => {
+            {/* Profile completeness gate — shown if student hasn't filled in interests/availability */}
+        {isStudent && !applySuccess && !myApplication && !expired && job.is_active &&
+          (!(profile?.interests?.length) || !profile?.weekly_availability) && (
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-status-pending-border bg-status-pending-bg px-4 py-3">
+            <AlertCircle size={16} className="text-status-pending-text shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-ink">Complete your profile before applying</p>
+              <p className="text-ink-secondary mt-0.5">
+                Please add your{' '}
+                {!profile?.interests?.length && !profile?.weekly_availability
+                  ? 'areas of interest and weekly availability'
+                  : !profile?.interests?.length
+                  ? 'areas of interest'
+                  : 'weekly availability'}{' '}
+                so this opportunity's poster can evaluate your fit.{' '}
+                <Link to="/profile" className="text-primary font-medium hover:text-primary-light underline">
+                  Update profile →
+                </Link>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {applySuccess || myApplication ? (() => {
               const status = myApplication?.status ?? 'pending'
               const s = STATUS_CONFIG[status]
               const isRejected = status === 'rejected'
@@ -439,7 +482,9 @@ export default function JobDetail() {
             ) : (
               <button
                 onClick={() => setApplying(true)}
-                className="btn-gold w-full sm:w-auto px-6"
+                disabled={!profile?.interests?.length || !profile?.weekly_availability}
+                className="btn-gold w-full sm:w-auto px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!profile?.interests?.length || !profile?.weekly_availability ? 'Complete your profile to apply' : undefined}
               >
                 Apply now
               </button>
