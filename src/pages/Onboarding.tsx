@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, GraduationCap, Sparkles } from 'lucide-react'
+import { ArrowRight, GraduationCap, Sparkles, Building2, Layers } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { ROLE_LABELS } from '../types'
+import { ROLE_LABELS, INDUSTRY_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
@@ -31,6 +31,8 @@ export default function Onboarding() {
   const [bio, setBio] = useState('')
   const [graduationYear, setGraduationYear] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [company, setCompany] = useState('')
+  const [industry, setIndustry] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [logoError, setLogoError] = useState(false)
@@ -39,6 +41,7 @@ export default function Onboarding() {
 
   const welcome = ROLE_WELCOME[profile.role] ?? ROLE_WELCOME.student
   const showGradYear = profile.role === 'student' || profile.role === 'alumni'
+  const isPoster = profile.role === 'alumni' || profile.role === 'parent'
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -54,6 +57,11 @@ export default function Onboarding() {
     if (showGradYear) {
       const yr = parseInt(graduationYear)
       updates.graduation_year = isNaN(yr) ? null : yr
+    }
+
+    if (isPoster) {
+      updates.company = company.trim() || null
+      updates.industry = industry || null
     }
 
     const { error } = await supabase.from('profiles').update(updates).eq('id', profile!.id)
@@ -93,11 +101,20 @@ export default function Onboarding() {
         className="w-full max-w-lg bg-surface rounded-2xl border border-border overflow-hidden"
         style={{ boxShadow: 'var(--shadow-modal)' }}
       >
-        {/* Green header band */}
-        <div className="bg-primary px-8 py-6 text-white">
+        {/* Brand header band */}
+        <div
+          className="px-8 py-6 text-white relative overflow-hidden"
+          style={{
+            background: `
+              radial-gradient(ellipse 70% 120% at 85% 15%, rgba(74,124,47,0.7) 0%, transparent 60%),
+              radial-gradient(ellipse 50% 100% at 10% 90%, rgba(45,80,22,0.5) 0%, transparent 50%),
+              linear-gradient(155deg, #2D5016 0%, #3A6B1E 40%, #4A7C2F 70%, #3A6B1E 100%)
+            `,
+          }}
+        >
           <div className="mb-4">
             {logoError ? (
-              <span className="text-white font-black text-2xl tracking-tight">CRMS Connect</span>
+              <span className="font-black text-2xl tracking-tight" style={{ fontFamily: 'var(--font-serif)', color: 'var(--color-accent)' }}>CRMS Connect</span>
             ) : (
               <img
                 src={CRMS_LOGO}
@@ -108,9 +125,9 @@ export default function Onboarding() {
             )}
           </div>
           <div className="flex items-start gap-3">
-            <Sparkles size={22} className="text-primary-muted shrink-0 mt-0.5" />
+            <Sparkles size={22} className="shrink-0 mt-0.5" style={{ color: 'var(--color-accent)' }} />
             <div>
-              <h1 className="text-xl font-bold leading-snug">{welcome.headline}</h1>
+              <h1 className="text-xl font-bold leading-snug" style={{ fontFamily: 'var(--font-serif)' }}>{welcome.headline}</h1>
               <p className="text-sm text-white/75 mt-1 leading-relaxed">{welcome.sub}</p>
             </div>
           </div>
@@ -134,7 +151,7 @@ export default function Onboarding() {
           </p>
 
           {saveError && (
-            <div className="mb-4 px-4 py-3 rounded-lg bg-error-bg border border-red-200 text-sm text-error">
+            <div className="mb-4 px-4 py-3 rounded-lg bg-error-bg border border-status-rejected-border text-sm text-error">
               {saveError}
             </div>
           )}
@@ -162,6 +179,50 @@ export default function Onboarding() {
                     transition-colors"
                 />
               </div>
+            )}
+
+            {/* Company & Industry (alumni/parent only) */}
+            {isPoster && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <Building2 size={14} className="text-ink-muted" />
+                      Company / Organization
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="Where do you work?"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                      placeholder:text-ink-placeholder
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                      transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <Layers size={14} className="text-ink-muted" />
+                      Industry / Area of expertise
+                    </span>
+                  </label>
+                  <select
+                    value={industry}
+                    onChange={(e) => setIndustry(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                      transition-colors"
+                  >
+                    <option value="">Select an industry…</option>
+                    {INDUSTRY_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
             )}
 
             {/* Bio */}
@@ -209,9 +270,7 @@ export default function Onboarding() {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg
-                  bg-primary hover:bg-primary-light text-white font-medium text-sm
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="btn-gold flex-1"
               >
                 {saving
                   ? <Spinner size="sm" className="border-white/30 border-t-white" />

@@ -14,23 +14,23 @@ const STATUS_CONFIG: Record<
 > = {
   pending: {
     label: 'Pending review',
-    classes: 'bg-amber-50 text-amber-700 border-amber-200',
-    dot: 'bg-amber-400',
+    classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border',
+    dot: 'bg-status-pending-dot',
   },
   reviewed: {
     label: 'Under review',
-    classes: 'bg-blue-50 text-blue-700 border-blue-200',
-    dot: 'bg-blue-400',
+    classes: 'bg-status-reviewed-bg text-status-reviewed-text border-status-reviewed-border',
+    dot: 'bg-status-reviewed-dot',
   },
   accepted: {
     label: 'Accepted',
-    classes: 'bg-success-bg text-success border-green-200',
-    dot: 'bg-success',
+    classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border',
+    dot: 'bg-status-accepted-dot',
   },
   rejected: {
     label: 'Not selected',
-    classes: 'bg-error-bg text-error border-red-200',
-    dot: 'bg-error',
+    classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border',
+    dot: 'bg-status-rejected-dot',
   },
 }
 
@@ -38,10 +38,12 @@ export default function MyApplications() {
   const { profile } = useAuth()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
 
   async function load() {
     if (!profile) return
-    const { data } = await supabase
+    setFetchError(false)
+    const { data, error } = await supabase
       .from('applications')
       .select(`
         *,
@@ -50,7 +52,11 @@ export default function MyApplications() {
       `)
       .eq('applicant_id', profile.id)
       .order('created_at', { ascending: false })
-    setApplications((data as Application[]) ?? [])
+    if (error) {
+      setFetchError(true)
+    } else {
+      setApplications((data as Application[]) ?? [])
+    }
     setLoading(false)
   }
 
@@ -79,7 +85,7 @@ export default function MyApplications() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">My Applications</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>My Applications</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
           {loading ? 'Loading…' : `${applications.length} application${applications.length !== 1 ? 's' : ''}`}
         </p>
@@ -87,13 +93,22 @@ export default function MyApplications() {
 
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+      ) : fetchError ? (
+        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
+          <p className="text-ink-muted">Failed to load your applications.</p>
+          <button
+            onClick={() => load()}
+            className="mt-3 text-sm text-primary hover:text-primary-light font-medium"
+          >
+            Try again
+          </button>
+        </div>
       ) : applications.length === 0 ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted mb-3">You haven't applied to any opportunities yet.</p>
           <Link
             to="/jobs"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg
-              bg-primary hover:bg-primary-light text-white font-medium text-sm transition-colors"
+            className="btn-gold"
           >
             Browse opportunities →
           </Link>

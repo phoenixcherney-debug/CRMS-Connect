@@ -8,13 +8,13 @@ import { format, isPast, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Application, ApplicationStatus } from '../types'
-import { JOB_TYPE_LABELS } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS } from '../types'
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string; dot: string }> = {
-  pending: { label: 'Pending review', classes: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-400' },
-  reviewed: { label: 'Under review', classes: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-400' },
-  accepted: { label: 'Accepted', classes: 'bg-success-bg text-success border-green-200', dot: 'bg-success' },
-  rejected: { label: 'Not selected', classes: 'bg-error-bg text-error border-red-200', dot: 'bg-error' },
+  pending: { label: 'Pending review', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
+  reviewed: { label: 'Under review', classes: 'bg-status-reviewed-bg text-status-reviewed-text border-status-reviewed-border', dot: 'bg-status-reviewed-dot' },
+  accepted: { label: 'Accepted', classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
+  rejected: { label: 'Not selected', classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border', dot: 'bg-status-rejected-dot' },
 }
 import Spinner from '../components/Spinner'
 
@@ -209,8 +209,18 @@ export default function JobDetail() {
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
                   {JOB_TYPE_LABELS[job.job_type]}
                 </span>
+                {job.location_type && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
+                    {LOCATION_TYPE_LABELS[job.location_type]}
+                  </span>
+                )}
+                {job.industry && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
+                    {job.industry}
+                  </span>
+                )}
               </div>
-              <h1 className="text-2xl font-bold text-ink">{job.title}</h1>
+              <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>{job.title}</h1>
               <div className="flex items-center gap-1.5 mt-1 text-ink-secondary">
                 <Building2 size={15} />
                 <span className="font-medium">{job.company}</span>
@@ -229,7 +239,7 @@ export default function JobDetail() {
                 </Link>
                 <button
                   onClick={() => setConfirmDelete(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-status-rejected-border
                     text-sm text-error hover:bg-error-bg transition-colors"
                 >
                   <Trash2 size={14} /> Delete
@@ -309,7 +319,7 @@ export default function JobDetail() {
               const s = STATUS_CONFIG[status]
               const isRejected = status === 'rejected'
               const isAccepted = status === 'accepted'
-              const bgClass = isRejected ? 'bg-error-bg border-red-200' : isAccepted ? 'bg-success-bg border-green-200' : 'bg-primary-faint border-border'
+              const bgClass = isRejected ? 'bg-error-bg border-status-rejected-border' : isAccepted ? 'bg-success-bg border-status-accepted-border' : 'bg-primary-faint border-border'
               const IconComponent = isRejected ? AlertCircle : CheckCircle2
               const iconClass = isRejected ? 'text-error' : isAccepted ? 'text-success' : 'text-primary'
               return (
@@ -330,7 +340,7 @@ export default function JobDetail() {
                     <button
                       onClick={handleWithdraw}
                       disabled={withdrawing}
-                      className="text-xs text-error hover:text-red-700 font-medium disabled:opacity-50"
+                      className="text-xs text-error hover:text-error/80 font-medium disabled:opacity-50"
                     >
                       {withdrawing ? 'Withdrawing…' : 'Withdraw'}
                     </button>
@@ -345,7 +355,7 @@ export default function JobDetail() {
               <div className="rounded-xl border border-border p-5 space-y-4">
                 <h3 className="font-semibold text-ink">Apply for {job.title}</h3>
                 {applyError && (
-                  <div className="flex items-start gap-2 rounded-lg bg-error-bg border border-red-200 p-3 text-sm text-error">
+                  <div className="flex items-start gap-2 rounded-lg bg-error-bg border border-status-rejected-border p-3 text-sm text-error">
                     <AlertCircle size={15} className="shrink-0 mt-0.5" />
                     {applyError}
                   </div>
@@ -393,9 +403,7 @@ export default function JobDetail() {
                       <button
                         onClick={() => { setConfirmApply(false); handleApply() }}
                         disabled={applyLoading}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-                          bg-primary hover:bg-primary-light text-white font-medium text-sm
-                          disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="btn-gold flex-1"
                       >
                         {applyLoading ? <Spinner size="sm" className="border-white/30 border-t-white" /> : null}
                         {applyLoading ? 'Submitting…' : 'Yes, submit'}
@@ -413,9 +421,7 @@ export default function JobDetail() {
                       <button
                         onClick={() => setConfirmApply(true)}
                         disabled={!coverNote.trim()}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-                          bg-primary hover:bg-primary-light text-white font-medium text-sm
-                          disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="btn-gold flex-1"
                       >
                         Submit application
                       </button>
@@ -433,8 +439,7 @@ export default function JobDetail() {
             ) : (
               <button
                 onClick={() => setApplying(true)}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-primary hover:bg-primary-light
-                  text-white font-medium text-sm transition-colors"
+                className="btn-gold w-full sm:w-auto px-6"
               >
                 Apply now
               </button>
@@ -459,7 +464,7 @@ export default function JobDetail() {
                 onClick={handleDelete}
                 disabled={deleteLoading}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-                  bg-error hover:bg-red-700 text-white font-medium text-sm
+                  bg-error hover:bg-error/90 text-white font-medium text-sm
                   disabled:opacity-50 transition-colors"
               >
                 {deleteLoading ? <Spinner size="sm" className="border-white/30 border-t-white" /> : null}

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, UserPlus, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useAuth, validateEmailForRole } from '../contexts/AuthContext'
 import type { Role } from '../types'
 import { ROLE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
+
+const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
 
 const ROLES: Role[] = ['student', 'alumni', 'parent']
 
@@ -28,6 +30,7 @@ export default function Signup() {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [logoError, setLogoError] = useState(false)
 
   // Real-time email domain validation — must be before any early returns
   useEffect(() => {
@@ -53,24 +56,26 @@ export default function Signup() {
     } else if (needsVerification) {
       setSuccess(true)
     } else {
-      // Email confirmation is disabled — user is immediately logged in.
-      // Navigate to onboarding; ProtectedRoute will redirect if already complete.
       navigate('/onboarding', { replace: true })
     }
   }
 
   if (success) {
     return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-        style={{ backgroundColor: 'var(--color-background)' }}
-      >
+      <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ backgroundColor: 'var(--color-background)' }}>
         <div
           className="w-full max-w-sm bg-surface rounded-2xl border border-border p-8 text-center"
           style={{ boxShadow: 'var(--shadow-modal)' }}
         >
-          <CheckCircle2 size={48} className="mx-auto mb-4 text-primary" />
-          <h2 className="text-xl font-semibold text-ink mb-2">Check your inbox</h2>
+          <div
+            className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style={{ backgroundColor: 'var(--color-success-bg)' }}
+          >
+            <CheckCircle2 size={28} style={{ color: 'var(--color-success)' }} />
+          </div>
+          <h2 className="text-xl font-bold text-ink mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
+            Check your inbox
+          </h2>
           <p className="text-sm text-ink-secondary leading-relaxed">
             We sent a verification link to{' '}
             <strong className="text-ink">{email}</strong>. Click the link to
@@ -78,7 +83,8 @@ export default function Signup() {
           </p>
           <Link
             to="/login"
-            className="mt-6 inline-block text-sm font-medium text-primary hover:text-primary-light"
+            className="mt-6 inline-block text-sm font-bold hover:underline"
+            style={{ color: 'var(--color-primary)' }}
           >
             Back to sign in →
           </Link>
@@ -95,184 +101,241 @@ export default function Signup() {
     !submitting
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-      style={{ backgroundColor: 'var(--color-background)' }}
-    >
-      {/* Brand */}
-      <div className="mb-8 text-center">
-        <img
-          src="https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png"
-          alt="Colorado Rocky Mountain School"
-          className="h-12 w-auto object-contain mx-auto mb-4"
-          onError={(e) => {
-            const el = e.currentTarget
-            el.style.display = 'none'
-            const fallback = el.nextElementSibling as HTMLElement | null
-            if (fallback) fallback.style.removeProperty('display')
-          }}
-        />
-        <div
-          className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary text-white text-xl font-black mb-3"
-          style={{ display: 'none' }}
-        >
-          C
+    <div className="min-h-screen flex">
+
+      {/* ── Left panel: CRMS branding ── */}
+      <div
+        className="hidden lg:flex lg:w-5/12 flex-col justify-between p-12 relative overflow-hidden"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 60% at 80% 20%, rgba(74,124,47,0.7) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 80% at 20% 80%, rgba(45,80,22,0.5) 0%, transparent 50%),
+            linear-gradient(155deg, #2D5016 0%, #3A6B1E 35%, #4A7C2F 65%, #3A6B1E 100%)
+          `,
+        }}
+      >
+        {/* Decorative bubbles */}
+        <div className="absolute top-[8%] right-[10%] w-44 h-44 rounded-full opacity-[0.12] border border-white/20"
+          style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15) 0%, transparent 70%)' }} />
+        <div className="absolute top-[25%] right-[30%] w-24 h-24 rounded-full opacity-[0.09] border border-white/10"
+          style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
+        <div className="absolute bottom-[12%] left-[5%] w-32 h-32 rounded-full opacity-[0.10] border border-white/15"
+          style={{ background: 'radial-gradient(circle at 40% 30%, rgba(255,255,255,0.1) 0%, transparent 70%)' }} />
+        <div className="absolute bottom-[35%] right-[15%] w-14 h-14 rounded-full opacity-[0.08] border border-white/10"
+          style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15) 0%, transparent 70%)' }} />
+        <div className="absolute top-[55%] left-[25%] w-10 h-10 rounded-full opacity-[0.07]"
+          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)' }} />
+
+        {/* Logo */}
+        <div className="relative z-10">
+          {logoError ? (
+            <span className="text-white font-black text-2xl tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>
+              CRMS
+            </span>
+          ) : (
+            <img
+              src={CRMS_LOGO}
+              alt="Colorado Rocky Mountain School"
+              className="h-12 w-auto object-contain brightness-0 invert"
+              onError={() => setLogoError(true)}
+            />
+          )}
         </div>
-        <h1 className="text-2xl font-bold text-ink">Join CRMS Connect</h1>
-        <p className="text-ink-secondary text-sm mt-1">
-          Colorado Rocky Mountain School's private network
-        </p>
+
+        {/* Center message */}
+        <div className="relative z-10">
+          <div className="w-12 h-1 rounded-full mb-6" style={{ backgroundColor: 'var(--color-accent)' }} />
+          <h2
+            className="text-3xl font-bold text-white leading-tight mb-4"
+            style={{ fontFamily: 'var(--font-serif)' }}
+          >
+            Your community<br />starts here
+          </h2>
+          <p className="text-white/65 text-base leading-relaxed">
+            Students, alumni, and parents — all in one place. Discover opportunities, find mentors, and build the future together.
+          </p>
+        </div>
+
+        {/* Bottom tagline */}
+        <div className="relative z-10">
+          <p className="text-white/40 text-sm font-semibold uppercase tracking-widest">
+            Colorado Rocky Mountain School
+          </p>
+        </div>
       </div>
 
-      {/* Card */}
-      <div
-        className="w-full max-w-sm bg-surface rounded-2xl border border-border p-8"
-        style={{ boxShadow: 'var(--shadow-modal)' }}
-      >
-        <h2 className="text-lg font-semibold text-ink mb-6">Create your account</h2>
-
-        {formError && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-lg bg-error-bg border border-red-200 px-4 py-3">
-            <AlertCircle size={16} className="text-error shrink-0 mt-0.5" />
-            <p className="text-sm text-error">{formError}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          {/* Full Name */}
-          <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-ink mb-1.5">
-              Full name
-            </label>
-            <input
-              id="fullName"
-              type="text"
-              autoComplete="name"
-              required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Alex Johnson"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                placeholder:text-ink-placeholder
-                focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
-                transition-colors"
-            />
-          </div>
-
-          {/* Role selector */}
-          <div>
-            <label className="block text-sm font-medium text-ink mb-1.5">
-              I am a…
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {ROLES.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors text-center
-                    ${role === r
-                      ? 'bg-primary-muted border-primary text-primary'
-                      : 'border-border text-ink-secondary hover:border-border-strong hover:bg-primary-faint'
-                    }`}
-                >
-                  {ROLE_LABELS[r]}
-                </button>
-              ))}
+      {/* ── Right panel: form ── */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
+        {/* Mobile logo */}
+        <div className="lg:hidden mb-8 text-center">
+          {logoError ? (
+            <div
+              className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-3"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+            >
+              <span className="text-2xl font-black" style={{ color: 'var(--color-accent)' }}>C</span>
             </div>
-            <p className="mt-2 text-xs text-ink-muted leading-relaxed">
-              {ROLE_DESCRIPTIONS[role]}
-            </p>
-          </div>
+          ) : (
+            <div
+              className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-3"
+              style={{ backgroundColor: 'var(--color-primary)' }}
+            >
+              <img
+                src={CRMS_LOGO}
+                alt="CRMS"
+                className="h-9 w-auto brightness-0 invert"
+                onError={() => setLogoError(true)}
+              />
+            </div>
+          )}
+          <p className="text-sm text-ink-muted font-semibold uppercase tracking-wider">CRMS Connect</p>
+        </div>
 
-          {/* Email */}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-ink mb-1.5">
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={role === 'student' ? 'you@crms.org' : 'you@example.com'}
-              className={`w-full px-3.5 py-2.5 rounded-lg border bg-surface text-ink text-sm
-                placeholder:text-ink-placeholder
-                focus:outline-none focus:ring-2 focus:border-primary transition-colors
-                ${emailError
-                  ? 'border-error focus:ring-red-200'
-                  : 'border-border focus:ring-primary/30'
-                }`}
-            />
-            {emailError && (
-              <p className="mt-1.5 text-xs text-error flex items-center gap-1">
-                <AlertCircle size={12} />
-                {emailError}
-              </p>
-            )}
-          </div>
+        <div className="w-full max-w-sm">
+          <h1 className="text-2xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
+            Create your account
+          </h1>
+          <p className="text-ink-muted text-sm mb-7">Join Colorado Rocky Mountain School's private network.</p>
 
-          {/* Password */}
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-ink mb-1.5">
-              Password
-            </label>
-            <div className="relative">
+          {formError && (
+            <div className="mb-5 flex items-start gap-2.5 rounded-lg px-4 py-3 text-sm border border-status-rejected-border"
+              style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error)' }}>
+              <AlertCircle size={15} className="shrink-0 mt-0.5" />
+              <p>{formError}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            {/* Full Name */}
+            <div>
+              <label htmlFor="fullName" className="block text-sm text-ink mb-1.5" style={{ fontWeight: 700 }}>
+                Full name
+              </label>
               <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="new-password"
+                id="fullName"
+                type="text"
+                autoComplete="name"
                 required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
-                className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-border bg-surface text-ink text-sm
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Alex Johnson"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
                   placeholder:text-ink-placeholder
-                  focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+                  focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
                   transition-colors"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-secondary"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
             </div>
-            {password && password.length < 8 && (
-              <p className="mt-1.5 text-xs text-ink-muted">
-                Password must be at least 8 characters.
+
+            {/* Role selector */}
+            <div>
+              <label className="block text-sm text-ink mb-1.5" style={{ fontWeight: 700 }}>
+                I am a…
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {ROLES.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRole(r)}
+                    className={`px-3 py-2 rounded-lg border text-sm font-semibold transition-colors text-center
+                      ${role === r
+                        ? 'border-primary text-primary'
+                        : 'border-border text-ink-secondary hover:border-border-strong hover:bg-primary-faint'
+                      }`}
+                    style={role === r ? { backgroundColor: 'var(--color-primary-muted)' } : {}}
+                  >
+                    {ROLE_LABELS[r]}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-ink-muted leading-relaxed">
+                {ROLE_DESCRIPTIONS[role]}
               </p>
-            )}
-          </div>
+            </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-              bg-primary hover:bg-primary-light text-white font-medium text-sm
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transition-colors duration-150 mt-2"
-          >
-            {submitting
-              ? <Spinner size="sm" className="border-white/30 border-t-white" />
-              : <UserPlus size={16} />
-            }
-            {submitting ? 'Creating account…' : 'Create account'}
-          </button>
-        </form>
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm text-ink mb-1.5" style={{ fontWeight: 700 }}>
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={role === 'student' ? 'you@crms.org' : 'you@example.com'}
+                className={`w-full px-3.5 py-2.5 rounded-lg border bg-surface text-ink text-sm
+                  placeholder:text-ink-placeholder
+                  focus:outline-none focus:ring-2 focus:border-primary transition-colors
+                  ${emailError
+                    ? 'border-error focus:ring-error/20'
+                    : 'border-border focus:ring-primary/20'
+                  }`}
+              />
+              {emailError && (
+                <p className="mt-1.5 text-xs flex items-center gap-1" style={{ color: 'var(--color-error)' }}>
+                  <AlertCircle size={12} />
+                  {emailError}
+                </p>
+              )}
+            </div>
 
-        <p className="mt-6 text-center text-sm text-ink-secondary">
-          Already have an account?{' '}
-          <Link to="/login" className="font-medium text-primary hover:text-primary-light">
-            Sign in
-          </Link>
-        </p>
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm text-ink mb-1.5" style={{ fontWeight: 700 }}>
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-border bg-surface text-ink text-sm
+                    placeholder:text-ink-placeholder
+                    focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
+                    transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-secondary"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {password && password.length < 8 && (
+                <p className="mt-1.5 text-xs text-ink-muted">
+                  Password must be at least 8 characters.
+                </p>
+              )}
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="btn-gold w-full py-3 mt-2"
+            >
+              {submitting && <Spinner size="sm" className="border-white/30 border-t-white" />}
+              {submitting ? 'Creating account…' : 'Create account'}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-ink-muted">
+            Already have an account?{' '}
+            <Link to="/login" className="font-800 hover:underline" style={{ color: 'var(--color-primary)', fontWeight: 800 }}>
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

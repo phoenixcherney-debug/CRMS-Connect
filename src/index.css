@@ -1,42 +1,224 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800;900&family=Merriweather:wght@300;400;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* CRMS Brand Colors */
-  --color-primary: #2D5016;
+  /*
+   * CRMS Brand System — Rocky Mountain Warmth
+   * ───────────────────────────────────────────
+   * Forest green primary, warm earthy accents,
+   * cream backgrounds, humanist typography.
+   */
+
+  /* ── Primary (forest green — nav, CTAs, interactive) ── */
+  --color-primary: #3A6B1E;
   --color-primary-light: #4A7C2F;
-  --color-primary-muted: #EBF2E8;
-  --color-primary-faint: #F4F8F1;
+  --color-primary-dark: #2D5016;
+  --color-primary-muted: #E2EDDA;
+  --color-primary-faint: #F0F5EC;
 
-  /* App surfaces */
-  --color-background: #FAF8F3;
-  --color-surface: #FFFFFF;
+  /* ── Accent (warm ochre / aged wood) ── */
+  --color-accent: #C4922A;
+  --color-accent-hover: #B07F1E;
+  --color-accent-dark: #9A6F18;
+  --color-accent-light: #F5EDD8;
+  --color-accent-faint: #FBF7EE;
 
-  /* Borders */
-  --color-border: #DDE5D4;
-  --color-border-strong: #B5C4AC;
+  /* ── Surfaces (warm cream, not sterile white) ── */
+  --color-background: #F7F4EE;
+  --color-surface: #FEFDFB;
 
-  /* Text */
-  --color-ink: #1A2E0F;
-  --color-ink-secondary: #5C6B52;
-  --color-ink-muted: #8A9E7D;
-  --color-ink-placeholder: #A8B9A0;
+  /* ── Borders (warm tan) ── */
+  --color-border: #DDD5C9;
+  --color-border-strong: #C4B9AA;
+
+  /* ── Text (warm charcoal) ── */
+  --color-ink: #1C1A17;
+  --color-ink-secondary: #524D44;
+  --color-ink-muted: #8A8276;
+  --color-ink-placeholder: #A69E92;
+
+  /* ── Status ── */
+  --color-error: #C53030;
+  --color-error-bg: #FDF0EF;
+  --color-warning: #B8860B;
+  --color-warning-bg: #FBF5E8;
+  --color-success: #2E7D4F;
+  --color-success-bg: #EDF7F1;
+
+  /* ── Badge colors (light mode) ── */
+  --color-badge-internship-bg: #EDF4FC;
+  --color-badge-internship-text: #2B6CB0;
+  --color-badge-internship-border: #BEE3F8;
+  --color-badge-parttime-bg: #FDF6E3;
+  --color-badge-parttime-text: #975A16;
+  --color-badge-parttime-border: #F6E4B5;
+  --color-badge-volunteer-bg: #F5EDFB;
+  --color-badge-volunteer-text: #6B46C1;
+  --color-badge-volunteer-border: #E2CFF5;
+  --color-badge-remote-bg: #EDF7F1;
+  --color-badge-remote-text: #2E7D4F;
+  --color-badge-remote-border: #C6F0D5;
+  --color-badge-inperson-bg: #F5F2EC;
+  --color-badge-inperson-text: #63583C;
+  --color-badge-inperson-border: #DDD5C9;
+  --color-badge-hybrid-bg: #EDF6FB;
+  --color-badge-hybrid-text: #276A8A;
+  --color-badge-hybrid-border: #BDE0EF;
+
+  /* ── Status badge colors (light mode) ── */
+  --color-status-pending-bg: #FDF6E3;
+  --color-status-pending-text: #975A16;
+  --color-status-pending-border: #F6E4B5;
+  --color-status-pending-dot: #D69E2E;
+  --color-status-reviewed-bg: #EDF4FC;
+  --color-status-reviewed-text: #2B6CB0;
+  --color-status-reviewed-border: #BEE3F8;
+  --color-status-reviewed-dot: #4299E1;
+  --color-status-accepted-bg: #EDF7F1;
+  --color-status-accepted-text: #2E7D4F;
+  --color-status-accepted-border: #C6F0D5;
+  --color-status-accepted-dot: #38A169;
+  --color-status-rejected-bg: #FDF0EF;
+  --color-status-rejected-text: #C53030;
+  --color-status-rejected-border: #FED7D7;
+  --color-status-rejected-dot: #E53E3E;
+
+  /* ── Event badge colors ── */
+  --color-event-networking-bg: #F5EDFB;
+  --color-event-networking-text: #6B46C1;
+  --color-event-networking-border: #E2CFF5;
+  --color-event-workshop-bg: #FDF6E3;
+  --color-event-workshop-text: #975A16;
+  --color-event-workshop-border: #F6E4B5;
+  --color-event-info-bg: #EDF4FC;
+  --color-event-info-text: #2B6CB0;
+  --color-event-info-border: #BEE3F8;
+  --color-event-other-bg: #F5F2EC;
+  --color-event-other-text: #63583C;
+  --color-event-other-border: #DDD5C9;
+
+  /* ── Notification icon bg ── */
+  --color-notif-app-out-bg: #FDF6E3;
+  --color-notif-app-out-text: #975A16;
+  --color-notif-booking-bg: #EDF4FC;
+  --color-notif-booking-text: #2B6CB0;
+
+  /* ── Typography ── */
+  --font-sans: 'Nunito Sans', system-ui, sans-serif;
+  --font-serif: 'Merriweather', Georgia, serif;
+
+  /* ── Shadows (warm-tinted) ── */
+  --shadow-card: 0 1px 3px 0 rgba(28, 26, 23, 0.06), 0 1px 2px -1px rgba(28, 26, 23, 0.06);
+  --shadow-card-hover: 0 4px 12px 0 rgba(28, 26, 23, 0.1);
+  --shadow-modal: 0 20px 40px 0 rgba(28, 26, 23, 0.15);
+  --shadow-nav: 0 1px 4px 0 rgba(28, 26, 23, 0.06);
+}
+
+/*
+ * ── Dark mode overrides ──
+ * Applied when <html data-theme="dark"> is set.
+ * Cabin-at-night feel — warm, not void-like.
+ */
+[data-theme="dark"] {
+  /* Surfaces — warm dark, not neutral/cold */
+  --color-background: #1A1714;
+  --color-surface: #262320;
+
+  /* Borders — warm dark */
+  --color-border: #3A3530;
+  --color-border-strong: #4D463E;
+
+  /* Text — warm off-white */
+  --color-ink: #F0ECE4;
+  --color-ink-secondary: #B5AFA5;
+  --color-ink-muted: #7D766C;
+  --color-ink-placeholder: #5A544C;
+
+  /* Primary — lighter vibrant green for dark backgrounds */
+  --color-primary: #6AAF3D;
+  --color-primary-light: #7DC44A;
+  --color-primary-dark: #5A9832;
+  --color-primary-muted: #2A3325;
+  --color-primary-faint: #222520;
+
+  /* Accent — warm ochre adjusted for dark */
+  --color-accent: #D4A23A;
+  --color-accent-hover: #C4922A;
+  --color-accent-dark: #B07F1E;
+  --color-accent-light: #2D2518;
+  --color-accent-faint: #252015;
 
   /* Status */
-  --color-error: #DC2626;
-  --color-error-bg: #FEF2F2;
-  --color-warning: #D97706;
-  --color-warning-bg: #FFFBEB;
-  --color-success: #059669;
-  --color-success-bg: #ECFDF5;
+  --color-error: #E85D5D;
+  --color-error-bg: #2D1F1F;
+  --color-warning: #D4A23A;
+  --color-warning-bg: #2D2518;
+  --color-success: #4EBF7F;
+  --color-success-bg: #1A2D22;
 
-  /* Fonts */
-  --font-sans: 'Inter', system-ui, sans-serif;
+  /* Badge colors (dark mode) */
+  --color-badge-internship-bg: #1A2535;
+  --color-badge-internship-text: #63B3ED;
+  --color-badge-internship-border: #2A3A4D;
+  --color-badge-parttime-bg: #2D2518;
+  --color-badge-parttime-text: #D4A23A;
+  --color-badge-parttime-border: #3D3222;
+  --color-badge-volunteer-bg: #251A35;
+  --color-badge-volunteer-text: #B794F4;
+  --color-badge-volunteer-border: #362A4D;
+  --color-badge-remote-bg: #1A2D22;
+  --color-badge-remote-text: #4EBF7F;
+  --color-badge-remote-border: #2A3D30;
+  --color-badge-inperson-bg: #262320;
+  --color-badge-inperson-text: #B5AFA5;
+  --color-badge-inperson-border: #3A3530;
+  --color-badge-hybrid-bg: #1A2530;
+  --color-badge-hybrid-text: #63B3ED;
+  --color-badge-hybrid-border: #2A3540;
 
-  /* Shadows */
-  --shadow-card: 0 1px 3px 0 rgba(45, 80, 22, 0.08), 0 1px 2px -1px rgba(45, 80, 22, 0.06);
-  --shadow-card-hover: 0 4px 12px 0 rgba(45, 80, 22, 0.12), 0 2px 4px -2px rgba(45, 80, 22, 0.08);
-  --shadow-modal: 0 20px 40px 0 rgba(45, 80, 22, 0.15);
+  /* Status badge colors (dark mode) */
+  --color-status-pending-bg: #2D2518;
+  --color-status-pending-text: #D4A23A;
+  --color-status-pending-border: #3D3222;
+  --color-status-pending-dot: #D4A23A;
+  --color-status-reviewed-bg: #1A2535;
+  --color-status-reviewed-text: #63B3ED;
+  --color-status-reviewed-border: #2A3A4D;
+  --color-status-reviewed-dot: #63B3ED;
+  --color-status-accepted-bg: #1A2D22;
+  --color-status-accepted-text: #4EBF7F;
+  --color-status-accepted-border: #2A3D30;
+  --color-status-accepted-dot: #4EBF7F;
+  --color-status-rejected-bg: #2D1F1F;
+  --color-status-rejected-text: #E85D5D;
+  --color-status-rejected-border: #3D2828;
+  --color-status-rejected-dot: #E85D5D;
+
+  /* Event badge colors (dark mode) */
+  --color-event-networking-bg: #251A35;
+  --color-event-networking-text: #B794F4;
+  --color-event-networking-border: #362A4D;
+  --color-event-workshop-bg: #2D2518;
+  --color-event-workshop-text: #D4A23A;
+  --color-event-workshop-border: #3D3222;
+  --color-event-info-bg: #1A2535;
+  --color-event-info-text: #63B3ED;
+  --color-event-info-border: #2A3A4D;
+  --color-event-other-bg: #262320;
+  --color-event-other-text: #B5AFA5;
+  --color-event-other-border: #3A3530;
+
+  /* Notification icon bg (dark mode) */
+  --color-notif-app-out-bg: #2D2518;
+  --color-notif-app-out-text: #D4A23A;
+  --color-notif-booking-bg: #1A2535;
+  --color-notif-booking-text: #63B3ED;
+
+  /* Shadows — softer in dark */
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 4px 12px 0 rgba(0, 0, 0, 0.3);
+  --shadow-modal: 0 20px 40px 0 rgba(0, 0, 0, 0.4);
+  --shadow-nav: 0 1px 4px 0 rgba(0, 0, 0, 0.15);
 }
 
 * {
@@ -51,18 +233,100 @@ body {
   margin: 0;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/*
+ * ── CRMS Primary CTA button ──
+ * Forest green bg, warm rounded corners, friendly feel.
+ */
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background-image: linear-gradient(135deg, #3A6B1E 0%, #4A7C2F 50%, #3A6B1E 100%);
+  background-color: var(--color-primary);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--color-primary-dark);
+  border-radius: 0.625rem;
+  cursor: pointer;
+  transition: background-image 0.15s, box-shadow 0.15s, transform 0.1s;
+  text-decoration: none;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+.btn-gold::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 80% 20%, rgba(255,255,255,0.12) 0%, transparent 60%),
+              radial-gradient(ellipse 50% 70% at 10% 80%, rgba(45,80,22,0.3) 0%, transparent 50%);
+  pointer-events: none;
 }
-::-webkit-scrollbar-thumb {
-  background: var(--color-border-strong);
-  border-radius: 3px;
+.btn-gold:hover:not(:disabled) {
+  background-image: linear-gradient(135deg, #4A7C2F 0%, #5A8F3A 50%, #4A7C2F 100%);
+  box-shadow: 0 2px 8px rgba(58, 107, 30, 0.35);
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-ink-muted);
+.btn-gold:active:not(:disabled) {
+  transform: scale(0.98);
 }
+.btn-gold:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Green outline button ── */
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background-color: transparent;
+  color: var(--color-primary);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 0.625rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn-outline:hover:not(:disabled) {
+  background-color: var(--color-primary-faint);
+}
+.btn-outline:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Section heading with accent bar ── */
+.section-heading {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--color-ink);
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+.section-heading::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2.5rem;
+  height: 3px;
+  background-color: var(--color-accent);
+  border-radius: 2px;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-muted); }

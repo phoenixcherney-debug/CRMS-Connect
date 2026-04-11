@@ -17,17 +17,21 @@ interface EmployerEntry {
 export default function Employers() {
   const [employers, setEmployers] = useState<EmployerEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const [search, setSearch] = useState('')
   const [expandedCompany, setExpandedCompany] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data } = await supabase
+      setFetchError(false)
+      const { data, error } = await supabase
         .from('jobs')
         .select('*, profiles(id, full_name)')
         .order('created_at', { ascending: false })
 
+      if (error) { setFetchError(true); setLoading(false); return }
       const jobs = (data as Job[]) ?? []
 
       // Group by company
@@ -51,7 +55,7 @@ export default function Employers() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [retryCount])
 
   const filtered = employers.filter((e) =>
     !search || e.company.toLowerCase().includes(search.toLowerCase())
@@ -60,7 +64,7 @@ export default function Employers() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">Employers</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Employers</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
           {loading
             ? 'Loading…'
@@ -93,6 +97,16 @@ export default function Employers() {
 
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+      ) : fetchError ? (
+        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
+          <p className="text-ink-muted">Failed to load employers.</p>
+          <button
+            onClick={() => setRetryCount((n) => n + 1)}
+            className="mt-3 text-sm text-primary hover:text-primary-light font-medium"
+          >
+            Try again
+          </button>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <Building2 size={36} className="mx-auto text-ink-muted mb-3" />

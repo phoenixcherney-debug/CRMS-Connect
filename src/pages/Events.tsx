@@ -27,10 +27,10 @@ const EVENT_TYPE_LABELS: Record<DBEvent['type'], string> = {
 
 const EVENT_TYPE_COLORS: Record<DBEvent['type'], string> = {
   career_fair:  'bg-primary-muted text-primary border-primary-muted',
-  networking:   'bg-purple-50 text-purple-700 border-purple-200',
-  workshop:     'bg-amber-50 text-amber-700 border-amber-200',
-  info_session: 'bg-blue-50 text-blue-700 border-blue-200',
-  other:        'bg-border/40 text-ink-secondary border-border',
+  networking:   'bg-event-networking-bg text-event-networking-text border-event-networking-border',
+  workshop:     'bg-event-workshop-bg text-event-workshop-text border-event-workshop-border',
+  info_session: 'bg-event-info-bg text-event-info-text border-event-info-border',
+  other:        'bg-event-other-bg text-event-other-text border-event-other-border',
 }
 
 export default function Events() {
@@ -41,6 +41,7 @@ export default function Events() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -101,7 +102,7 @@ export default function Events() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Events</h1>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Events</h1>
           <p className="text-ink-secondary text-sm mt-0.5">
             Career fairs, networking nights, workshops & more
           </p>
@@ -109,8 +110,7 @@ export default function Events() {
         {isPoster && (
           <button
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg
-              bg-primary hover:bg-primary-light text-white font-medium text-sm transition-colors"
+            className="btn-gold"
           >
             <Plus size={15} /> Add Event
           </button>
@@ -214,7 +214,7 @@ export default function Events() {
                 <button
                   type="submit"
                   disabled={!form.title || !form.date || submitting}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-light text-white font-medium text-sm disabled:opacity-50 transition-colors"
+                  className="btn-gold flex-1"
                 >
                   {submitting && <Spinner size="sm" className="border-white/30 border-t-white" />}
                   {submitting ? 'Adding…' : 'Add Event'}
@@ -228,6 +228,30 @@ export default function Events() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-surface rounded-2xl border border-border p-6 max-w-sm w-full" style={{ boxShadow: 'var(--shadow-modal)' }}>
+            <h3 className="text-base font-semibold text-ink mb-2">Delete this event?</h3>
+            <p className="text-sm text-ink-secondary mb-5">This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { handleDelete(confirmDeleteId); setConfirmDeleteId(null) }}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-error hover:bg-error/90 text-white font-medium text-sm transition-colors"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -269,7 +293,7 @@ export default function Events() {
                     key={ev.id}
                     event={ev}
                     canDelete={ev.host_id === profile?.id}
-                    onDelete={() => handleDelete(ev.id)}
+                    onDelete={() => setConfirmDeleteId(ev.id)}
                   />
                 ))}
               </div>
@@ -286,7 +310,7 @@ export default function Events() {
                     key={ev.id}
                     event={ev}
                     canDelete={ev.host_id === profile?.id}
-                    onDelete={() => handleDelete(ev.id)}
+                    onDelete={() => setConfirmDeleteId(ev.id)}
                   />
                 ))}
               </div>

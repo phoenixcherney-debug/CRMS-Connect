@@ -65,16 +65,14 @@ export default function MyPostings() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-ink">My Postings</h1>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>My Postings</h1>
           <p className="text-ink-secondary text-sm mt-0.5">
             {loading ? 'Loading…' : `${postings.length} listing${postings.length !== 1 ? 's' : ''}`}
           </p>
         </div>
         <Link
           to="/jobs/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg
-            bg-primary hover:bg-primary-light text-white font-medium text-sm
-            transition-colors shrink-0"
+          className="btn-gold shrink-0"
         >
           <Plus size={16} /> Post an opportunity
         </Link>
@@ -87,8 +85,7 @@ export default function MyPostings() {
           <p className="text-ink-muted mb-3">You haven't posted any opportunities yet.</p>
           <Link
             to="/jobs/new"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg
-              bg-primary hover:bg-primary-light text-white font-medium text-sm transition-colors"
+            className="btn-gold"
           >
             <Plus size={15} /> Post your first listing
           </Link>
@@ -146,10 +143,10 @@ export default function MyPostings() {
                       return (
                         <div key={s} className="flex items-center gap-1.5">
                           <span className={`w-1.5 h-1.5 rounded-full ${
-                            s === 'accepted' ? 'bg-success'
-                            : s === 'rejected' ? 'bg-error'
-                            : s === 'reviewed' ? 'bg-warning'
-                            : 'bg-ink-muted'
+                            s === 'accepted' ? 'bg-status-accepted-dot'
+                            : s === 'rejected' ? 'bg-status-rejected-dot'
+                            : s === 'reviewed' ? 'bg-status-reviewed-dot'
+                            : 'bg-status-pending-dot'
                           }`} />
                           <span className="text-xs text-ink-secondary capitalize">{s}: {count}</span>
                         </div>
@@ -173,8 +170,8 @@ export default function MyPostings() {
                     onClick={() => toggleActive(job.id, job.is_active)}
                     className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-colors
                       ${job.is_active
-                        ? 'border-amber-200 text-amber-700 hover:bg-amber-50'
-                        : 'border-green-200 text-success hover:bg-success-bg'
+                        ? 'border-status-pending-border text-status-pending-text hover:bg-status-pending-bg'
+                        : 'border-status-accepted-border text-success hover:bg-success-bg'
                       }`}
                     title={job.is_active ? 'Close this listing' : 'Reopen this listing'}
                   >
@@ -190,7 +187,7 @@ export default function MyPostings() {
                   </Link>
                   <button
                     onClick={() => { setConfirmDeleteId(job.id); setDeleteError(null) }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-200
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-status-rejected-border
                       text-sm text-error hover:bg-error-bg transition-colors"
                   >
                     <Trash2 size={14} />
@@ -225,7 +222,7 @@ export default function MyPostings() {
                 onClick={() => handleDelete(confirmDeleteId)}
                 disabled={deletingId === confirmDeleteId}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-                  bg-error hover:bg-red-700 text-white font-medium text-sm
+                  bg-error hover:bg-error/90 text-white font-medium text-sm
                   disabled:opacity-50 transition-colors"
               >
                 {deletingId === confirmDeleteId

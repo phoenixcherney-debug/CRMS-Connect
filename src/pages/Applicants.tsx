@@ -4,15 +4,16 @@ import { ChevronLeft, ExternalLink, User, Calendar, MessageSquare } from 'lucide
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { sendPushToUser } from '../lib/sendPush'
 import type { Application, ApplicationStatus, Job } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string; dot: string }> = {
-  pending: { label: 'Pending', classes: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-400' },
-  reviewed: { label: 'Under review', classes: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-400' },
-  accepted: { label: 'Accepted', classes: 'bg-success-bg text-success border-green-200', dot: 'bg-success' },
-  rejected: { label: 'Not selected', classes: 'bg-error-bg text-error border-red-200', dot: 'bg-error' },
+  pending: { label: 'Pending', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
+  reviewed: { label: 'Under review', classes: 'bg-status-reviewed-bg text-status-reviewed-text border-status-reviewed-border', dot: 'bg-status-reviewed-dot' },
+  accepted: { label: 'Accepted', classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
+  rejected: { label: 'Not selected', classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border', dot: 'bg-status-rejected-dot' },
 }
 
 const STATUS_OPTIONS: ApplicationStatus[] = ['pending', 'reviewed', 'accepted', 'rejected']
@@ -62,6 +63,23 @@ export default function Applicants() {
       setApplications((prev) =>
         prev.map((a) => (a.id === appId ? { ...a, status } : a))
       )
+      // Notify the applicant of their status update (best-effort)
+      const app = applications.find((a) => a.id === appId)
+      const applicantId = (app?.profiles as { id?: string } | null)?.id
+      if (applicantId && job) {
+        const STATUS_PUSH: Record<ApplicationStatus, string> = {
+          pending:  'Your application is pending review.',
+          reviewed: 'Your application is under review.',
+          accepted: 'Your application was accepted!',
+          rejected: 'Your application was not selected.',
+        }
+        sendPushToUser(
+          applicantId,
+          `Application update: ${job.title}`,
+          STATUS_PUSH[status],
+          `/my-applications`
+        )
+      }
     }
     setUpdatingId(null)
   }
@@ -98,7 +116,7 @@ export default function Applicants() {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">Applicants</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Applicants</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
           {job.title} · {job.company} ·{' '}
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs border border-border text-ink-secondary bg-primary-faint">
@@ -127,7 +145,7 @@ export default function Applicants() {
       )}
 
       {updateError && (
-        <div className="mb-4 rounded-lg bg-error-bg border border-red-200 px-4 py-3 text-sm text-error">
+        <div className="mb-4 rounded-lg bg-error-bg border border-status-rejected-border px-4 py-3 text-sm text-error">
           {updateError}
         </div>
       )}

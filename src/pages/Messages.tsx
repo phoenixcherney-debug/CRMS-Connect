@@ -191,13 +191,12 @@ export default function Messages() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Messages</h1>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Messages</h1>
           <p className="text-ink-secondary text-sm mt-0.5">Your direct conversations</p>
         </div>
         <button
           onClick={() => setComposeOpen(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary hover:bg-primary-light
-            text-white text-sm font-medium transition-colors"
+          className="btn-gold px-4 py-2"
           title="New conversation"
         >
           <SquarePen size={15} />

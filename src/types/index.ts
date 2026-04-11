@@ -1,5 +1,6 @@
 export type Role = 'student' | 'alumni' | 'parent'
 export type JobType = 'internship' | 'part-time' | 'full-time' | 'volunteer'
+export type LocationType = 'remote' | 'in-person' | 'hybrid'
 export type ApplicationStatus = 'pending' | 'reviewed' | 'accepted' | 'rejected'
 
 export interface Profile {
@@ -9,7 +10,34 @@ export interface Profile {
   graduation_year?: number | null
   bio?: string | null
   avatar_url?: string | null
+  company?: string | null
+  industry?: string | null
+  open_to_mentorship: boolean
   onboarding_complete: boolean
+  created_at: string
+}
+
+export interface CareerHistory {
+  id: string
+  profile_id: string
+  company: string
+  title: string
+  start_year: number
+  end_year?: number | null
+  is_current: boolean
+  created_at: string
+}
+
+export interface AvailabilitySlot {
+  id: string
+  user_id: string
+  title: string | null
+  date: string                  // YYYY-MM-DD
+  start_time: string            // HH:MM or HH:MM:SS
+  end_time: string              // HH:MM or HH:MM:SS
+  is_recurring: boolean
+  recurrence_pattern: 'daily' | 'weekly' | 'monthly' | null
+  recurrence_end_date: string | null  // YYYY-MM-DD
   created_at: string
 }
 
@@ -24,6 +52,8 @@ export interface Job {
   description: string
   how_to_apply: string
   contact_email: string
+  location_type: LocationType
+  industry?: string | null
   deadline: string | null
   is_active: boolean
   // Joined
@@ -80,8 +110,38 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   rejected: 'Rejected',
 }
 
+export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
+  remote: 'Remote',
+  'in-person': 'In-Person',
+  hybrid: 'Hybrid',
+}
+
 export const ROLE_LABELS: Record<Role, string> = {
   student: 'Student',
   alumni: 'Alumni',
   parent: 'Parent',
 }
+
+export const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
+
+export const INDUSTRY_OPTIONS = [
+  'Technology',
+  'Finance & Banking',
+  'Healthcare & Medicine',
+  'Education',
+  'Law & Legal',
+  'Arts & Entertainment',
+  'Environmental & Sustainability',
+  'Non-Profit & Social Impact',
+  'Engineering',
+  'Marketing & Communications',
+  'Consulting',
+  'Government & Public Policy',
+  'Agriculture & Ranching',
+  'Hospitality & Tourism',
+  'Science & Research',
+  'Architecture & Design',
+  'Real Estate',
+  'Sports & Recreation',
+  'Other',
+] as const

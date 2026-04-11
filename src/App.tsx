@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
@@ -21,6 +22,8 @@ const PostJob        = lazy(() => import('./pages/PostJob'))
 const MyPostings     = lazy(() => import('./pages/MyPostings'))
 const Applicants     = lazy(() => import('./pages/Applicants'))
 const MyApplications = lazy(() => import('./pages/MyApplications'))
+const Availability   = lazy(() => import('./pages/Availability'))
+const MyBookings     = lazy(() => import('./pages/MyBookings'))
 const Messages       = lazy(() => import('./pages/Messages'))
 const Conversation   = lazy(() => import('./pages/Conversation'))
 const Profile        = lazy(() => import('./pages/Profile'))
@@ -29,6 +32,7 @@ const PublicProfile  = lazy(() => import('./pages/PublicProfile'))
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-screen">
@@ -106,6 +110,12 @@ export default function App() {
                 <Layout><MyApplications /></Layout>
               </ProtectedRoute>
             } />
+            <Route path="/availability" element={
+              <ProtectedRoute><Layout><Availability /></Layout></ProtectedRoute>
+            } />
+            <Route path="/my-bookings" element={
+              <ProtectedRoute><Layout><MyBookings /></Layout></ProtectedRoute>
+            } />
 
             {/* ── Inbox / Messages ─────────────────────────────────────── */}
             <Route path="/messages" element={
@@ -130,6 +140,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

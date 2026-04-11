@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Briefcase, Bell, RefreshCw } from 'lucide-react'
-import { formatDistanceToNow, parseISO } from 'date-fns'
+import { formatDistanceToNow, parseISO, isPast } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Profile } from '../types'
@@ -38,8 +38,10 @@ export default function Feed() {
 
     const feed: FeedItem[] = []
 
-    // Job postings
+    // Job postings (skip closed/expired)
     for (const j of (jobs as Job[]) ?? []) {
+      if (!j.is_active) continue
+      if (j.deadline && isPast(parseISO(j.deadline))) continue
       feed.push({ kind: 'job', ts: j.created_at, job: j, key: `job-${j.id}` })
     }
 
@@ -61,7 +63,7 @@ export default function Feed() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Feed</h1>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Feed</h1>
           <p className="text-ink-secondary text-sm mt-0.5">New jobs and members in the community</p>
         </div>
         <button

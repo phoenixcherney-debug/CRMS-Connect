@@ -4,12 +4,13 @@ import { Search, Plus, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react'
 import { isPast, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Job, JobType } from '../types'
-import { JOB_TYPE_LABELS } from '../types'
+import type { Job, JobType, LocationType } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS } from '../types'
 import JobCard from '../components/JobCard'
 import Spinner from '../components/Spinner'
 
 const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer']
+const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
 type SortOption = 'newest' | 'deadline' | 'company'
 
 export default function Jobs() {
@@ -21,6 +22,8 @@ export default function Jobs() {
   const [retryCount, setRetryCount] = useState(0)
   const [search, setSearch] = useState(searchParams.get('q') ?? '')
   const [filter, setFilter] = useState<JobType | ''>('')
+  const [locFilter, setLocFilter] = useState<LocationType | ''>('')
+  const [indFilter, setIndFilter] = useState('')
   const [sort, setSort] = useState<SortOption>('newest')
 
   const isPoster = profile?.role === 'alumni' || profile?.role === 'parent'
@@ -51,7 +54,9 @@ export default function Jobs() {
       j.company.toLowerCase().includes(search.toLowerCase()) ||
       j.description.toLowerCase().includes(search.toLowerCase())
     const matchesType = filter === '' || j.job_type === filter
-    return matchesSearch && matchesType
+    const matchesLoc = locFilter === '' || j.location_type === locFilter
+    const matchesInd = indFilter === '' || j.industry === indFilter
+    return matchesSearch && matchesType && matchesLoc && matchesInd
   })
 
   const isJobActive = (j: Job) => j.is_active && (!j.deadline || !isPast(parseISO(j.deadline)))
@@ -71,7 +76,7 @@ export default function Jobs() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Opportunities</h1>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Opportunities</h1>
           <p className="text-ink-secondary text-sm mt-0.5">
             {loading
               ? 'Loading…'
@@ -81,9 +86,7 @@ export default function Jobs() {
         {isPoster && (
           <Link
             to="/jobs/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg
-              bg-primary hover:bg-primary-light text-white font-medium text-sm
-              transition-colors shrink-0"
+            className="btn-gold shrink-0"
           >
             <Plus size={16} />
             Post an opportunity
@@ -148,6 +151,34 @@ export default function Jobs() {
             </div>
           </div>
 
+          <div className="flex gap-1.5 flex-wrap">
+            {LOCATION_TYPES.map((t) => (
+              <button
+                key={t}
+                onClick={() => setLocFilter(locFilter === t ? '' : t)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                  ${locFilter === t
+                    ? 'bg-primary-muted border-primary text-primary'
+                    : 'border-border text-ink-secondary hover:bg-primary-faint'
+                  }`}
+              >
+                {LOCATION_TYPE_LABELS[t]}
+              </button>
+            ))}
+          </div>
+
+          <select
+            value={indFilter}
+            onChange={(e) => setIndFilter(e.target.value)}
+            className="px-2 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-ink-secondary
+              focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+          >
+            <option value="">All Industries</option>
+            {INDUSTRY_OPTIONS.map((ind) => (
+              <option key={ind} value={ind}>{ind}</option>
+            ))}
+          </select>
+
           <div className="flex items-center gap-1.5">
             <ArrowUpDown size={13} className="text-ink-muted" />
             <select
@@ -180,11 +211,11 @@ export default function Jobs() {
           </button>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-ink-muted text-base">No opportunities match your search.</p>
-          {(search || filter) && (
+        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
+          <p className="text-ink-muted text-base">No opportunities match your filters.</p>
+          {(search || filter || locFilter || indFilter) && (
             <button
-              onClick={() => { setSearch(''); setFilter('') }}
+              onClick={() => { setSearch(''); setFilter(''); setLocFilter(''); setIndFilter('') }}
               className="mt-3 text-sm text-primary hover:text-primary-light font-medium"
             >
               Clear filters

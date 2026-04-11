@@ -58,24 +58,26 @@ export default function ResetPassword() {
       style={{ backgroundColor: 'var(--color-background)' }}
     >
       <div className="mb-8 text-center">
-        <img
-          src="https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png"
-          alt="Colorado Rocky Mountain School"
-          className="h-12 w-auto object-contain mx-auto mb-4"
-          onError={(e) => {
-            const el = e.currentTarget
-            el.style.display = 'none'
-            const fallback = el.nextElementSibling as HTMLElement | null
-            if (fallback) fallback.style.removeProperty('display')
-          }}
-        />
-        <div
-          className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary text-white text-xl font-black mb-3"
-          style={{ display: 'none' }}
-        >
-          C
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ backgroundColor: 'var(--color-primary)' }}>
+          <img
+            src="https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png"
+            alt="Colorado Rocky Mountain School"
+            className="h-10 w-auto object-contain brightness-0 invert"
+            onError={(e) => {
+              const el = e.currentTarget
+              el.style.display = 'none'
+              const fallback = el.nextElementSibling as HTMLElement | null
+              if (fallback) fallback.style.removeProperty('display')
+            }}
+          />
+          <span
+            className="text-2xl font-black"
+            style={{ display: 'none', color: 'var(--color-accent)' }}
+          >
+            C
+          </span>
         </div>
-        <h1 className="text-2xl font-bold text-ink">CRMS Connect</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>CRMS Connect</h1>
       </div>
 
       <div
@@ -108,7 +110,7 @@ export default function ResetPassword() {
             </div>
 
             {error && (
-              <div className="mb-4 rounded-lg bg-error-bg border border-red-200 px-4 py-3 text-sm text-error">
+              <div className="mb-4 rounded-lg bg-error-bg border border-status-rejected-border px-4 py-3 text-sm text-error">
                 {error}
               </div>
             )}
@@ -165,9 +167,7 @@ export default function ResetPassword() {
               <button
                 type="submit"
                 disabled={submitting || !password || !confirm}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-                  bg-primary hover:bg-primary-light text-white font-medium text-sm
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-2"
+                className="btn-gold w-full mt-2"
               >
                 {submitting && <Spinner size="sm" className="border-white/30 border-t-white" />}
                 {submitting ? 'Updating…' : 'Update password'}

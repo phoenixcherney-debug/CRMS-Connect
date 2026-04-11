@@ -145,7 +145,7 @@ export default function Notifications() {
   }
   const ICON_BG: Record<NotifType, string> = {
     message: 'bg-primary-muted text-primary',
-    app_out: 'bg-amber-50 text-amber-600',
+    app_out: 'bg-notif-app-out-bg text-notif-app-out-text',
     app_in:  'bg-success-bg text-success',
   }
 
@@ -153,7 +153,7 @@ export default function Notifications() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-ink flex items-center gap-2" style={{ fontFamily: 'var(--font-serif)' }}>
             Notifications
             {unreadCount > 0 && (
               <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-bold">

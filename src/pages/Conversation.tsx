@@ -5,6 +5,7 @@ import { ChevronLeft, Send } from 'lucide-react'
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { sendPushToUser } from '../lib/sendPush'
 import type { Message, Profile } from '../types'
 import Spinner from '../components/Spinner'
 
@@ -214,6 +215,15 @@ export default function Conversation() {
     }
     setSendError(null)
     inputRef.current?.focus()
+    // Notify the recipient (best-effort, non-blocking)
+    if (otherProfile) {
+      sendPushToUser(
+        otherProfile.id,
+        `New message from ${profile.full_name}`,
+        text.length > 100 ? `${text.slice(0, 100)}…` : text,
+        `/messages/${id}`
+      )
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -320,9 +330,12 @@ export default function Conversation() {
                       <div
                         className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap
                           ${isMine
-                            ? 'bg-primary text-white rounded-br-sm'
+                            ? 'text-white rounded-br-sm'
                             : 'bg-surface border border-border text-ink rounded-bl-sm'
                           }`}
+                        style={isMine ? {
+                          background: 'linear-gradient(135deg, #2D5016 0%, #3A6B1E 50%, #4A7C2F 100%)',
+                        } : undefined}
                       >
                         {msg.content}
                       </div>
@@ -365,9 +378,11 @@ export default function Conversation() {
         <button
           type="submit"
           disabled={!content.trim() || sending}
-          className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl
-            bg-primary hover:bg-primary-light text-white
-            disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl text-white
+            disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          style={{ background: 'linear-gradient(135deg, #2D5016 0%, #3A6B1E 50%, #4A7C2F 100%)' }}
+          onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = 'linear-gradient(135deg, #3A6B1E 0%, #4A7C2F 50%, #5A8F3A 100%)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'linear-gradient(135deg, #2D5016 0%, #3A6B1E 50%, #4A7C2F 100%)' }}
           aria-label="Send message"
         >
           {sending ? <Spinner size="sm" className="border-white/30 border-t-white" /> : <Send size={16} />}

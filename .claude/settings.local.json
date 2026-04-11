@@ -18,7 +18,17 @@
       "Bash(npx vercel:*)",
       "Bash(supabase db:*)",
       "Bash(curl:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(vercel --version)",
+      "Bash(vercel --prod)",
+      "Bash(npm --version)",
+      "Bash(find /Users/phoenixcherney/Desktop/crms-connect -type d -not -path */node_modules* -not -path */.git/*)",
+      "Bash(echo \"EXIT:$?\")",
+      "WebSearch",
+      "WebFetch(domain:www.crms.org)",
+      "Bash(grep -E \"\\\\.tsx$|\\\\.ts$|\\\\.css$\")",
+      "Bash(grep \"\\\\.tsx$\")",
+      "Bash(kill -9 25267 45492)"
     ]
   }
 }

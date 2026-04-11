@@ -5,16 +5,19 @@ import { ChevronLeft, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { JobType } from '../types'
-import { JOB_TYPE_LABELS } from '../types'
+import type { JobType, LocationType } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
 
 const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer']
+const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
 
 interface JobForm {
   title: string
   company: string
   location: string
+  location_type: LocationType
+  industry: string
   job_type: JobType
   description: string
   how_to_apply: string
@@ -26,6 +29,8 @@ const DEFAULT_FORM: JobForm = {
   title: '',
   company: '',
   location: '',
+  location_type: 'in-person',
+  industry: '',
   job_type: 'internship',
   description: '',
   how_to_apply: '',
@@ -54,6 +59,8 @@ export default function PostJob() {
           title: data.title,
           company: data.company,
           location: data.location,
+          location_type: data.location_type ?? 'in-person',
+          industry: data.industry ?? '',
           job_type: data.job_type,
           description: data.description,
           how_to_apply: data.how_to_apply,
@@ -78,6 +85,7 @@ export default function PostJob() {
 
     const payload = {
       ...form,
+      industry: form.industry || null,
       deadline: form.deadline || null,
       posted_by: profile.id,
       is_active: true,
@@ -122,7 +130,7 @@ export default function PostJob() {
       </Link>
 
       <div className="bg-surface rounded-2xl border border-border p-6 sm:p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
-        <h1 className="text-xl font-bold text-ink mb-1">
+        <h1 className="text-xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
           {isEdit ? 'Edit listing' : 'Post an opportunity'}
         </h1>
         <p className="text-sm text-ink-secondary mb-6">
@@ -130,7 +138,7 @@ export default function PostJob() {
         </p>
 
         {error && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-lg bg-error-bg border border-red-200 px-4 py-3">
+          <div className="mb-5 flex items-start gap-2.5 rounded-lg bg-error-bg border border-status-rejected-border px-4 py-3">
             <AlertCircle size={15} className="text-error shrink-0 mt-0.5" />
             <p className="text-sm text-error">{error}</p>
           </div>
@@ -196,6 +204,41 @@ export default function PostJob() {
                 placeholder="Denver, CO or Remote"
                 className="field"
               />
+            </div>
+          </div>
+
+          {/* Row: Location Type + Industry */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                Location type <span className="text-error">*</span>
+              </label>
+              <select
+                required
+                value={form.location_type}
+                onChange={(e) => set('location_type', e.target.value as LocationType)}
+                className="field"
+              >
+                {LOCATION_TYPES.map((t) => (
+                  <option key={t} value={t}>{LOCATION_TYPE_LABELS[t]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                Industry{' '}
+                <span className="text-ink-muted font-normal">(optional)</span>
+              </label>
+              <select
+                value={form.industry}
+                onChange={(e) => set('industry', e.target.value)}
+                className="field"
+              >
+                <option value="">Select an industry…</option>
+                {INDUSTRY_OPTIONS.map((ind) => (
+                  <option key={ind} value={ind}>{ind}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -266,9 +309,7 @@ export default function PostJob() {
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg
-                bg-primary hover:bg-primary-light text-white font-medium text-sm
-                disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="btn-gold px-5 py-2.5"
             >
               {submitting && <Spinner size="sm" className="border-white/30 border-t-white" />}
               {submitting

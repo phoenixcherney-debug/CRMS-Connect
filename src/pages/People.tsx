@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Search, MessageSquare, X } from 'lucide-react'
+import { Search, MessageSquare, X, Heart } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile, Role } from '../types'
@@ -15,22 +15,30 @@ export default function People() {
 
   const [people, setPeople] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | Role>('all')
+  const [mentorOnly, setMentorOnly] = useState(false)
   const [creatingFor, setCreatingFor] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data } = await supabase
+      setFetchError(false)
+      const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, role, graduation_year, bio, avatar_url, created_at')
+        .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, created_at')
         .order('full_name', { ascending: true })
-      setPeople((data as Profile[]) ?? [])
+      if (error) {
+        setFetchError(true)
+      } else {
+        setPeople((data as Profile[]) ?? [])
+      }
       setLoading(false)
     }
     load()
-  }, [])
+  }, [retryCount])
 
   async function openConversation(otherId: string) {
     if (!profile || creatingFor) return
@@ -65,6 +73,7 @@ export default function People() {
   const filtered = people.filter((p) => {
     if (p.id === profile?.id) return false
     if (roleFilter !== 'all' && p.role !== roleFilter) return false
+    if (mentorOnly && !p.open_to_mentorship) return false
     if (search && !p.full_name.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
@@ -77,10 +86,12 @@ export default function People() {
     {} as Record<Role, number>
   )
 
+  const mentorCount = people.filter((p) => p.id !== profile?.id && p.open_to_mentorship).length
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink">People</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>People</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
           {loading ? 'Loading…' : `${people.filter((p) => p.id !== profile?.id).length} members in the CRMS community`}
         </p>
@@ -137,16 +148,48 @@ export default function People() {
               )}
             </button>
           ))}
+          {mentorCount > 0 && (
+            <button
+              onClick={() => setMentorOnly(!mentorOnly)}
+              className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1
+                ${mentorOnly
+                  ? 'bg-success-bg border-status-accepted-border text-success'
+                  : 'border-border text-ink-secondary hover:bg-primary-faint'
+                }`}
+            >
+              <Heart size={11} />
+              Mentors
+              <span className="ml-0.5 text-ink-muted">({mentorCount})</span>
+            </button>
+          )}
         </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+      ) : fetchError ? (
+        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
+          <p className="text-ink-muted">Failed to load people.</p>
+          <button
+            onClick={() => setRetryCount((n) => n + 1)}
+            className="mt-3 text-sm text-primary hover:text-primary-light font-medium"
+          >
+            Try again
+          </button>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted text-sm">
-            {search ? `No members found for "${search}"` : 'No members in this category yet.'}
+            {search ? `No members found for "${search}"` : mentorOnly ? 'No mentors available yet.' : 'No members in this category yet.'}
           </p>
+          {(search || mentorOnly || roleFilter !== 'all') && (
+            <button
+              onClick={() => { setSearch(''); setMentorOnly(false); setRoleFilter('all') }}
+              className="mt-3 text-sm text-primary hover:text-primary-light font-medium"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -158,6 +201,7 @@ export default function People() {
               .toUpperCase()
               .slice(0, 2)
             const isSelf = person.id === profile?.id
+            const isPoster = person.role === 'alumni' || person.role === 'parent'
 
             return (
               <div
@@ -187,7 +231,17 @@ export default function People() {
                       {person.graduation_year && (
                         <span className="text-xs text-ink-muted">Class of {person.graduation_year}</span>
                       )}
+                      {isPoster && person.open_to_mentorship && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-md bg-success-bg text-success font-medium flex items-center gap-0.5">
+                          <Heart size={9} /> Mentor
+                        </span>
+                      )}
                     </div>
+                    {isPoster && (person.industry || person.company) && (
+                      <p className="text-xs text-ink-muted mt-1">
+                        {[person.industry, person.company].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                   </div>
                 </div>
 
