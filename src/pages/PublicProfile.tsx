@@ -124,7 +124,7 @@ export default function PublicProfile() {
             style={{ background: 'radial-gradient(circle at 40% 30%, rgba(255,255,255,0.1) 0%, transparent 70%)' }} />
         </div>
 
-        <div className="px-6 pb-6">
+        <div className="px-6 pb-6 relative">
           {/* Avatar + name */}
           <div className="-mt-8 mb-5 flex items-end gap-4">
             <div className="w-16 h-16 rounded-2xl border-4 border-surface bg-primary-muted flex items-center justify-center overflow-hidden shrink-0">
