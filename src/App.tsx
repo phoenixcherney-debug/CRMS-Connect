@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -44,6 +45,7 @@ export default function App() {
       <ThemeProvider>
       <AuthProvider>
         <ScrollToTop />
+        <SpeedInsights />
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-screen">
             <div className="w-10 h-10 border-[3px] rounded-full border-primary-muted border-t-primary animate-spin" />
