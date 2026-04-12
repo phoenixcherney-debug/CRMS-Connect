@@ -31,7 +31,7 @@ export default function MyStudentPosts() {
     setInterests(profile?.interests ?? [])
     setAvailability(profile?.weekly_availability ?? '')
     setPitch('')
-    openForm()
+    setShowForm(true)
   }
 
   useEffect(() => {
