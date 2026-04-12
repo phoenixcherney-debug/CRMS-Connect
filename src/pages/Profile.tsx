@@ -230,7 +230,7 @@ export default function Profile() {
       <div className="bg-surface rounded-2xl border border-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
         {/* Banner */}
         <div
-          className="h-20 relative overflow-hidden"
+          className="h-32 relative overflow-hidden"
           style={{
             background: `
               radial-gradient(ellipse 70% 120% at 80% 10%, rgba(74,124,47,0.7) 0%, transparent 60%),
