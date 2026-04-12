@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
 import type { Job, Application, ApplicationStatus } from '../types'
-import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS, ROLE_LABELS } from '../types'
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string; dot: string }> = {
   pending:    { label: 'Pending review', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
@@ -183,7 +183,7 @@ export default function JobDetail() {
   if (!job) {
     return (
       <div className="text-center py-20">
-        <p className="text-ink-muted">This listing could not be found.</p>
+        <p className="text-ink-muted">This opportunity could not be found.</p>
         <Link to="/jobs" className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
           ← Back to Jobs
         </Link>
@@ -222,6 +222,13 @@ export default function JobDetail() {
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
                   {JOB_TYPE_LABELS[job.job_type]}
                 </span>
+                {job.opportunity_type && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
+                    {job.opportunity_type === 'other' && job.opportunity_type_other
+                      ? job.opportunity_type_other
+                      : OPPORTUNITY_TYPE_LABELS[job.opportunity_type]}
+                  </span>
+                )}
                 {job.location_type && (
                   <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
                     {LOCATION_TYPE_LABELS[job.location_type]}
@@ -283,6 +290,17 @@ export default function JobDetail() {
                 Posted {format(parseISO(job.created_at), 'MMM d, yyyy')}
               </span>
             )}
+            {(job.start_date || job.end_date) && (
+              <span className="flex items-center gap-1.5">
+                <Calendar size={14} />
+                {job.start_date && job.end_date
+                  ? `${format(parseISO(job.start_date), 'MMM d, yyyy')} – ${format(parseISO(job.end_date), 'MMM d, yyyy')}`
+                  : job.start_date
+                  ? `Starts ${format(parseISO(job.start_date), 'MMM d, yyyy')}`
+                  : `Ends ${format(parseISO(job.end_date!), 'MMM d, yyyy')}`
+                }
+              </span>
+            )}
           </div>
 
           {/* Posted by */}
@@ -293,7 +311,7 @@ export default function JobDetail() {
               </div>
               <div className="text-sm">
                 <span className="font-medium text-ink">{job.profiles.full_name}</span>
-                <span className="text-ink-muted ml-1.5 capitalize">· {job.profiles.role}</span>
+                <span className="text-ink-muted ml-1.5">· {ROLE_LABELS[job.profiles.role as import('../types').Role] ?? job.profiles.role}</span>
               </div>
               {/* Message button (shown to everyone except the poster themselves) */}
               {!isPoster && (
@@ -490,7 +508,7 @@ export default function JobDetail() {
           <div className="bg-surface rounded-2xl border border-border p-6 max-w-sm w-full" style={{ boxShadow: 'var(--shadow-modal)' }}>
             <h3 className="font-semibold text-ink mb-2">Delete this posting?</h3>
             <p className="text-sm text-ink-secondary mb-5 leading-relaxed">
-              This action is permanent. The listing and all applications will be removed.
+              This action is permanent. The opportunity and all applications will be removed.
             </p>
             {deleteError && (
               <p className="mb-3 text-sm text-error">{deleteError}</p>

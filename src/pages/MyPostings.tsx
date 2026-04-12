@@ -67,7 +67,7 @@ export default function MyPostings() {
         <div>
           <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>My Postings</h1>
           <p className="text-ink-secondary text-sm mt-0.5">
-            {loading ? 'Loading…' : `${postings.length} listing${postings.length !== 1 ? 's' : ''}`}
+            {loading ? 'Loading…' : `${postings.length} opportunit${postings.length !== 1 ? 'ies' : 'y'}`}
           </p>
         </div>
         <Link
@@ -87,7 +87,7 @@ export default function MyPostings() {
             to="/jobs/new"
             className="btn-gold"
           >
-            <Plus size={15} /> Post your first listing
+            <Plus size={15} /> Post your first opportunity
           </Link>
         </div>
       ) : (
@@ -173,7 +173,7 @@ export default function MyPostings() {
                         ? 'border-status-pending-border text-status-pending-text hover:bg-status-pending-bg'
                         : 'border-status-accepted-border text-success hover:bg-success-bg'
                       }`}
-                    title={job.is_active ? 'Close this listing' : 'Reopen this listing'}
+                    title={job.is_active ? 'Close this opportunity' : 'Reopen this opportunity'}
                   >
                     {job.is_active ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
                     {job.is_active ? 'Close' : 'Reopen'}
@@ -212,7 +212,7 @@ export default function MyPostings() {
               <span className="font-medium text-ink">{jobToDelete?.title}</span> at {jobToDelete?.company}
             </p>
             <p className="text-sm text-ink-secondary mb-5 leading-relaxed">
-              This action is permanent. The listing and all applications will be removed.
+              This action is permanent. The opportunity and all applications will be removed.
             </p>
             {deleteError && (
               <p className="mb-3 text-sm text-error">{deleteError}</p>

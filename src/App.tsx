@@ -6,28 +6,31 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
 // Pages
-const Explore        = lazy(() => import('./pages/Explore'))
-const Feed           = lazy(() => import('./pages/Feed'))
-const Jobs           = lazy(() => import('./pages/Jobs'))
-const Events         = lazy(() => import('./pages/Events'))
-const People         = lazy(() => import('./pages/People'))
-const Employers      = lazy(() => import('./pages/Employers'))
-const Notifications  = lazy(() => import('./pages/Notifications'))
-const Login          = lazy(() => import('./pages/Login'))
-const Signup         = lazy(() => import('./pages/Signup'))
-const ResetPassword  = lazy(() => import('./pages/ResetPassword'))
-const Onboarding     = lazy(() => import('./pages/Onboarding'))
-const JobDetail      = lazy(() => import('./pages/JobDetail'))
-const PostJob        = lazy(() => import('./pages/PostJob'))
-const MyPostings     = lazy(() => import('./pages/MyPostings'))
-const Applicants     = lazy(() => import('./pages/Applicants'))
-const MyApplications = lazy(() => import('./pages/MyApplications'))
-const Availability   = lazy(() => import('./pages/Availability'))
-const MyBookings     = lazy(() => import('./pages/MyBookings'))
-const Messages       = lazy(() => import('./pages/Messages'))
-const Conversation   = lazy(() => import('./pages/Conversation'))
-const Profile        = lazy(() => import('./pages/Profile'))
-const PublicProfile  = lazy(() => import('./pages/PublicProfile'))
+const Explore           = lazy(() => import('./pages/Explore'))
+const Feed              = lazy(() => import('./pages/Feed'))
+const Jobs              = lazy(() => import('./pages/Jobs'))
+const Events            = lazy(() => import('./pages/Events'))
+const People            = lazy(() => import('./pages/People'))
+const Employers         = lazy(() => import('./pages/Employers'))
+const Notifications     = lazy(() => import('./pages/Notifications'))
+const Login             = lazy(() => import('./pages/Login'))
+const Signup            = lazy(() => import('./pages/Signup'))
+const ResetPassword     = lazy(() => import('./pages/ResetPassword'))
+const VerifyEmail       = lazy(() => import('./pages/VerifyEmail'))
+const Onboarding        = lazy(() => import('./pages/Onboarding'))
+const JobDetail         = lazy(() => import('./pages/JobDetail'))
+const PostJob           = lazy(() => import('./pages/PostJob'))
+const MyPostings        = lazy(() => import('./pages/MyPostings'))
+const Applicants        = lazy(() => import('./pages/Applicants'))
+const MyApplications    = lazy(() => import('./pages/MyApplications'))
+const Availability      = lazy(() => import('./pages/Availability'))
+const MyBookings        = lazy(() => import('./pages/MyBookings'))
+const Messages          = lazy(() => import('./pages/Messages'))
+const Conversation      = lazy(() => import('./pages/Conversation'))
+const Profile           = lazy(() => import('./pages/Profile'))
+const PublicProfile     = lazy(() => import('./pages/PublicProfile'))
+const StudentPosts      = lazy(() => import('./pages/StudentPosts'))
+const MyStudentPosts    = lazy(() => import('./pages/MyStudentPosts'))
 
 export default function App() {
   return (
@@ -45,6 +48,7 @@ export default function App() {
             <Route path="/login"          element={<Login />} />
             <Route path="/signup"         element={<Signup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email"   element={<VerifyEmail />} />
 
             {/* ── Onboarding (auth required, onboarding check skipped) ── */}
             <Route
@@ -69,14 +73,18 @@ export default function App() {
             <Route path="/people" element={
               <ProtectedRoute><Layout><People /></Layout></ProtectedRoute>
             } />
-            <Route path="/employers" element={
-              <ProtectedRoute><Layout><Employers /></Layout></ProtectedRoute>
-            } />
             <Route path="/notifications" element={
               <ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>
             } />
 
-            {/* ── Jobs ─────────────────────────────────────────────────── */}
+            {/* ── Employers & Mentors (students only) ──────────────────── */}
+            <Route path="/employers" element={
+              <ProtectedRoute roles={['student']}>
+                <Layout><Employers /></Layout>
+              </ProtectedRoute>
+            } />
+
+            {/* ── Jobs / Opportunities ─────────────────────────────────── */}
             <Route path="/jobs" element={
               <ProtectedRoute><Layout><Jobs /></Layout></ProtectedRoute>
             } />
@@ -84,32 +92,46 @@ export default function App() {
               <ProtectedRoute><Layout><JobDetail /></Layout></ProtectedRoute>
             } />
             <Route path="/jobs/new" element={
-              <ProtectedRoute roles={['alumni', 'parent']}>
+              <ProtectedRoute roles={['employer_mentor']}>
                 <Layout><PostJob /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/jobs/:id/edit" element={
-              <ProtectedRoute roles={['alumni', 'parent']}>
+              <ProtectedRoute roles={['employer_mentor']}>
                 <Layout><PostJob /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/jobs/:id/applicants" element={
-              <ProtectedRoute roles={['alumni', 'parent']}>
+              <ProtectedRoute roles={['employer_mentor']}>
                 <Layout><Applicants /></Layout>
               </ProtectedRoute>
             } />
 
-            {/* ── My pages ─────────────────────────────────────────────── */}
+            {/* ── Employer/mentor: my postings + student posts feed ────── */}
             <Route path="/my-postings" element={
-              <ProtectedRoute roles={['alumni', 'parent']}>
+              <ProtectedRoute roles={['employer_mentor']}>
                 <Layout><MyPostings /></Layout>
               </ProtectedRoute>
             } />
+            <Route path="/postings" element={
+              <ProtectedRoute roles={['employer_mentor']}>
+                <Layout><StudentPosts /></Layout>
+              </ProtectedRoute>
+            } />
+
+            {/* ── Student: applications + my posts ─────────────────────── */}
             <Route path="/my-applications" element={
               <ProtectedRoute roles={['student']}>
                 <Layout><MyApplications /></Layout>
               </ProtectedRoute>
             } />
+            <Route path="/my-posts" element={
+              <ProtectedRoute roles={['student']}>
+                <Layout><MyStudentPosts /></Layout>
+              </ProtectedRoute>
+            } />
+
+            {/* ── Availability / Bookings ───────────────────────────────── */}
             <Route path="/availability" element={
               <ProtectedRoute><Layout><Availability /></Layout></ProtectedRoute>
             } />

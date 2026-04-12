@@ -4,7 +4,7 @@ import { ChevronLeft, MessageSquare, User, Briefcase, Heart } from 'lucide-react
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile, CareerHistory } from '../types'
-import { ROLE_LABELS } from '../types'
+import { ROLE_LABELS, MENTOR_TYPE_LABELS, STUDENT_SEEKING_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 
 export default function PublicProfile() {
@@ -15,19 +15,23 @@ export default function PublicProfile() {
   const [loading, setLoading] = useState(true)
   const [careerHistory, setCareerHistory] = useState<CareerHistory[]>([])
 
-  const isPoster = person?.role === 'alumni' || person?.role === 'parent'
+  const isEM = person?.role === 'employer_mentor'
 
   useEffect(() => {
     async function load() {
       if (!id) return
       const { data } = await supabase
         .from('profiles')
-        .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, created_at')
+        .select(`
+          id, full_name, role, graduation_year, bio, avatar_url, company, industry,
+          open_to_mentorship, created_at, interests, weekly_availability,
+          grade, mentor_type, mentor_type_other, student_seeking, student_seeking_other
+        `)
         .eq('id', id)
         .single()
       setPerson(data as Profile)
 
-      if (data && (data.role === 'alumni' || data.role === 'parent')) {
+      if (data && data.role === 'employer_mentor') {
         const { data: career } = await supabase
           .from('career_history')
           .select('*')
@@ -82,29 +86,26 @@ export default function PublicProfile() {
     )
   }
 
-  const initials = person.full_name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-
+  const initials = person.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
   const isSelf = person.id === myProfile?.id
+
+  // Display labels for sub-role fields
+  const mentorTypeLabel = person.mentor_type === 'other'
+    ? (person.mentor_type_other || 'Other')
+    : person.mentor_type ? MENTOR_TYPE_LABELS[person.mentor_type] : null
+  const studentSeekingLabel = person.student_seeking === 'other'
+    ? (person.student_seeking_other || 'Other')
+    : person.student_seeking ? STUDENT_SEEKING_LABELS[person.student_seeking] : null
 
   return (
     <div className="max-w-xl mx-auto">
-      <Link
-        to="/people"
-        className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6"
-      >
+      <Link to="/people" className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6">
         <ChevronLeft size={16} />
         People
       </Link>
 
-      <div
-        className="bg-surface rounded-2xl border border-border overflow-hidden"
-        style={{ boxShadow: 'var(--shadow-card)' }}
-      >
+      <div className="bg-surface rounded-2xl border border-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+        {/* Banner */}
         <div
           className="h-20 relative overflow-hidden"
           style={{
@@ -124,6 +125,7 @@ export default function PublicProfile() {
         </div>
 
         <div className="px-6 pb-6">
+          {/* Avatar + name */}
           <div className="-mt-8 mb-5 flex items-end gap-4">
             <div className="w-16 h-16 rounded-2xl border-4 border-surface bg-primary-muted flex items-center justify-center overflow-hidden shrink-0">
               {person.avatar_url ? (
@@ -144,7 +146,12 @@ export default function PublicProfile() {
                   <User size={11} />
                   {ROLE_LABELS[person.role]}
                 </span>
-                {isPoster && person.open_to_mentorship && (
+                {person.grade && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-border text-ink-secondary text-xs font-medium">
+                    {person.grade}
+                  </span>
+                )}
+                {isEM && person.open_to_mentorship && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-success-bg text-success text-xs font-medium">
                     <Heart size={11} />
                     Open to mentorship
@@ -160,13 +167,10 @@ export default function PublicProfile() {
               <div className="flex gap-2">
                 <span className="font-medium text-ink w-28 shrink-0">Member since</span>
                 <span className="text-ink-secondary">
-                  {new Date(person.created_at).toLocaleDateString('en-US', {
-                    month: 'long',
-                    year: 'numeric',
-                  })}
+                  {new Date(person.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </span>
               </div>
-              {person.graduation_year && person.role !== 'parent' && (
+              {person.graduation_year && (
                 <div className="flex gap-2">
                   <span className="font-medium text-ink w-28 shrink-0">
                     {person.role === 'student' ? 'Graduating' : 'Graduated'}
@@ -174,34 +178,64 @@ export default function PublicProfile() {
                   <span className="text-ink-secondary">{person.graduation_year}</span>
                 </div>
               )}
-              {isPoster && person.company && (
+              {person.role === 'student' && studentSeekingLabel && (
+                <div className="flex gap-2">
+                  <span className="font-medium text-ink w-28 shrink-0">Looking for</span>
+                  <span className="text-ink-secondary">{studentSeekingLabel}</span>
+                </div>
+              )}
+              {isEM && person.company && (
                 <div className="flex gap-2">
                   <span className="font-medium text-ink w-28 shrink-0">Company</span>
                   <span className="text-ink-secondary">{person.company}</span>
                 </div>
               )}
-              {isPoster && person.industry && (
+              {isEM && person.industry && (
                 <div className="flex gap-2">
                   <span className="font-medium text-ink w-28 shrink-0">Industry</span>
                   <span className="text-ink-secondary">{person.industry}</span>
                 </div>
               )}
+              {isEM && mentorTypeLabel && (
+                <div className="flex gap-2">
+                  <span className="font-medium text-ink w-28 shrink-0">Type</span>
+                  <span className="text-ink-secondary">{mentorTypeLabel}</span>
+                </div>
+              )}
+              {person.weekly_availability && (
+                <div className="flex gap-2">
+                  <span className="font-medium text-ink w-28 shrink-0">Availability</span>
+                  <span className="text-ink-secondary">{person.weekly_availability}</span>
+                </div>
+              )}
             </div>
+
+            {/* Interests (students) */}
+            {person.interests && person.interests.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-ink mb-1.5">Interests</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {person.interests.map((interest) => (
+                    <span key={interest} className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-primary-muted text-primary">
+                      {interest}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Bio */}
             {person.bio ? (
               <div>
                 <p className="text-sm font-medium text-ink mb-1.5">Bio</p>
-                <p className="text-sm text-ink-secondary leading-relaxed whitespace-pre-wrap">
-                  {person.bio}
-                </p>
+                <p className="text-sm text-ink-secondary leading-relaxed whitespace-pre-wrap">{person.bio}</p>
               </div>
             ) : (
               <p className="text-sm text-ink-muted italic">This user hasn't added a bio yet.</p>
             )}
 
-            {/* Career History */}
-            {isPoster && (
+            {/* Career History (employer/mentor only) */}
+            {isEM && (
               <div>
                 <p className="text-sm font-medium text-ink mb-2 flex items-center gap-1.5">
                   <Briefcase size={14} className="text-ink-muted" />
@@ -212,9 +246,7 @@ export default function PublicProfile() {
                     {careerHistory.map((entry) => (
                       <div key={entry.id} className="p-3 rounded-lg bg-primary-faint border border-border text-sm">
                         <p className="font-medium text-ink">{entry.title}</p>
-                        <p className="text-ink-secondary">
-                          {entry.company} · {entry.start_year}–{entry.is_current ? 'Present' : entry.end_year ?? ''}
-                        </p>
+                        <p className="text-ink-secondary">{entry.company} · {entry.start_year}–{entry.is_current ? 'Present' : entry.end_year ?? ''}</p>
                       </div>
                     ))}
                   </div>

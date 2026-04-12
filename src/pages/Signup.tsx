@@ -9,12 +9,11 @@ import Spinner from '../components/Spinner'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
 
-const ROLES: Role[] = ['student', 'alumni', 'parent']
+const ROLES: Role[] = ['student', 'employer_mentor']
 
 const ROLE_DESCRIPTIONS: Record<Role, string> = {
-  student: 'Browse and apply to opportunities. Requires @crms.org email.',
-  alumni: 'Post jobs and connect with students. Use your personal email.',
-  parent: 'Share opportunities from your network. Use your personal email.',
+  student: 'Browse and apply to opportunities. Requires your @crms.org school email.',
+  employer_mentor: 'Post opportunities and connect with students. Use your personal email.',
 }
 
 export default function Signup() {
@@ -32,12 +31,10 @@ export default function Signup() {
   const [success, setSuccess] = useState(false)
   const [logoError, setLogoError] = useState(false)
 
-  // Real-time email domain validation — must be before any early returns
   useEffect(() => {
     setEmailError(validateEmailForRole(email, role))
   }, [email, role])
 
-  // Already logged in
   if (!loading && user?.email_confirmed_at) {
     return <Navigate to="/jobs" replace />
   }
@@ -103,7 +100,7 @@ export default function Signup() {
   return (
     <div className="min-h-screen flex">
 
-      {/* ── Left panel: CRMS branding ── */}
+      {/* ── Left panel ── */}
       <div
         className="hidden lg:flex lg:w-5/12 flex-col justify-between p-12 relative overflow-hidden"
         style={{
@@ -114,49 +111,31 @@ export default function Signup() {
           `,
         }}
       >
-        {/* Decorative bubbles */}
         <div className="absolute top-[8%] right-[10%] w-44 h-44 rounded-full opacity-[0.12] border border-white/20"
           style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15) 0%, transparent 70%)' }} />
         <div className="absolute top-[25%] right-[30%] w-24 h-24 rounded-full opacity-[0.09] border border-white/10"
           style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
         <div className="absolute bottom-[12%] left-[5%] w-32 h-32 rounded-full opacity-[0.10] border border-white/15"
           style={{ background: 'radial-gradient(circle at 40% 30%, rgba(255,255,255,0.1) 0%, transparent 70%)' }} />
-        <div className="absolute bottom-[35%] right-[15%] w-14 h-14 rounded-full opacity-[0.08] border border-white/10"
-          style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15) 0%, transparent 70%)' }} />
-        <div className="absolute top-[55%] left-[25%] w-10 h-10 rounded-full opacity-[0.07]"
-          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)' }} />
 
-        {/* Logo */}
         <div className="relative z-10">
           {logoError ? (
-            <span className="text-white font-black text-2xl tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>
-              CRMS
-            </span>
+            <span className="text-white font-black text-2xl tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>CRMS</span>
           ) : (
-            <img
-              src={CRMS_LOGO}
-              alt="Colorado Rocky Mountain School"
-              className="h-12 w-auto object-contain brightness-0 invert"
-              onError={() => setLogoError(true)}
-            />
+            <img src={CRMS_LOGO} alt="Colorado Rocky Mountain School" className="h-12 w-auto object-contain brightness-0 invert" onError={() => setLogoError(true)} />
           )}
         </div>
 
-        {/* Center message */}
         <div className="relative z-10">
           <div className="w-12 h-1 rounded-full mb-6" style={{ backgroundColor: 'var(--color-accent)' }} />
-          <h2
-            className="text-3xl font-bold text-white leading-tight mb-4"
-            style={{ fontFamily: 'var(--font-serif)' }}
-          >
+          <h2 className="text-3xl font-bold text-white leading-tight mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
             Your community<br />starts here
           </h2>
           <p className="text-white/65 text-base leading-relaxed">
-            Students, alumni, and parents — all in one place. Discover opportunities, find mentors, and build the future together.
+            Students, employers, and mentors — all in one place. Discover opportunities, find mentors, and build the future together.
           </p>
         </div>
 
-        {/* Bottom tagline */}
         <div className="relative z-10">
           <p className="text-white/40 text-sm font-semibold uppercase tracking-widest">
             Colorado Rocky Mountain School
@@ -164,30 +143,16 @@ export default function Signup() {
         </div>
       </div>
 
-      {/* ── Right panel: form ── */}
+      {/* ── Right panel ── */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
-        {/* Mobile logo */}
         <div className="lg:hidden mb-8 text-center">
-          {logoError ? (
-            <div
-              className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-3"
-              style={{ backgroundColor: 'var(--color-primary)' }}
-            >
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-3" style={{ backgroundColor: 'var(--color-primary)' }}>
+            {logoError ? (
               <span className="text-2xl font-black" style={{ color: 'var(--color-accent)' }}>C</span>
-            </div>
-          ) : (
-            <div
-              className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-3"
-              style={{ backgroundColor: 'var(--color-primary)' }}
-            >
-              <img
-                src={CRMS_LOGO}
-                alt="CRMS"
-                className="h-9 w-auto brightness-0 invert"
-                onError={() => setLogoError(true)}
-              />
-            </div>
-          )}
+            ) : (
+              <img src={CRMS_LOGO} alt="CRMS" className="h-9 w-auto brightness-0 invert" onError={() => setLogoError(true)} />
+            )}
+          </div>
           <p className="text-sm text-ink-muted font-semibold uppercase tracking-wider">CRMS Connect</p>
         </div>
 
@@ -229,15 +194,15 @@ export default function Signup() {
             {/* Role selector */}
             <div>
               <label className="block text-sm text-ink mb-1.5" style={{ fontWeight: 700 }}>
-                I am a…
+                I am joining as a…
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {ROLES.map((r) => (
                   <button
                     key={r}
                     type="button"
                     onClick={() => setRole(r)}
-                    className={`px-3 py-2 rounded-lg border text-sm font-semibold transition-colors text-center
+                    className={`px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors text-center
                       ${role === r
                         ? 'border-primary text-primary'
                         : 'border-border text-ink-secondary hover:border-border-strong hover:bg-primary-faint'
@@ -269,10 +234,7 @@ export default function Signup() {
                 className={`w-full px-3.5 py-2.5 rounded-lg border bg-surface text-ink text-sm
                   placeholder:text-ink-placeholder
                   focus:outline-none focus:ring-2 focus:border-primary transition-colors
-                  ${emailError
-                    ? 'border-error focus:ring-error/20'
-                    : 'border-border focus:ring-primary/20'
-                  }`}
+                  ${emailError ? 'border-error focus:ring-error/20' : 'border-border focus:ring-primary/20'}`}
               />
               {emailError && (
                 <p className="mt-1.5 text-xs flex items-center gap-1" style={{ color: 'var(--color-error)' }}>
@@ -312,13 +274,10 @@ export default function Signup() {
                 </button>
               </div>
               {password && password.length < 8 && (
-                <p className="mt-1.5 text-xs text-ink-muted">
-                  Password must be at least 8 characters.
-                </p>
+                <p className="mt-1.5 text-xs text-ink-muted">Password must be at least 8 characters.</p>
               )}
             </div>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={!canSubmit}
@@ -331,7 +290,7 @@ export default function Signup() {
 
           <p className="mt-6 text-center text-sm text-ink-muted">
             Already have an account?{' '}
-            <Link to="/login" className="font-800 hover:underline" style={{ color: 'var(--color-primary)', fontWeight: 800 }}>
+            <Link to="/login" className="hover:underline" style={{ color: 'var(--color-primary)', fontWeight: 800 }}>
               Sign in
             </Link>
           </p>

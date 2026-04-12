@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
 import { MapPin, Calendar, Building2, Clock } from 'lucide-react'
-import { formatDistanceToNow, isPast, parseISO } from 'date-fns'
+import { formatDistanceToNow, isPast, parseISO, format } from 'date-fns'
 import type { Job, JobType, LocationType } from '../types'
-import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS } from '../types'
 
 const JOB_TYPE_COLORS: Record<JobType, string> = {
   internship: 'bg-badge-internship-bg text-badge-internship-text border-badge-internship-border',
@@ -52,7 +52,14 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
           </div>
 
           <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap justify-end">
+              {job.opportunity_type && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border bg-surface border-border text-ink-secondary">
+                  {job.opportunity_type === 'other'
+                    ? (job.opportunity_type_other || 'Other')
+                    : OPPORTUNITY_TYPE_LABELS[job.opportunity_type]}
+                </span>
+              )}
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${JOB_TYPE_COLORS[job.job_type]}`}
               >
@@ -84,6 +91,16 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
             <Calendar size={12} />
             {expired ? 'Expired' : deadline ? `Due ${formatDistanceToNow(deadline, { addSuffix: true })}` : 'Rolling'}
           </span>
+          {(job.start_date || job.end_date) && (
+            <span className="flex items-center gap-1">
+              <Clock size={12} />
+              {job.start_date && job.end_date
+                ? `${format(parseISO(job.start_date), 'MMM d')} – ${format(parseISO(job.end_date), 'MMM d, yyyy')}`
+                : job.start_date
+                  ? `Starts ${format(parseISO(job.start_date), 'MMM d, yyyy')}`
+                  : `Ends ${format(parseISO(job.end_date!), 'MMM d, yyyy')}`}
+            </span>
+          )}
           {job.profiles && (
             <span className="flex items-center gap-1">
               Posted by {job.profiles.full_name}

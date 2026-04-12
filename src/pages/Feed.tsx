@@ -1,21 +1,32 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Briefcase, Bell, RefreshCw } from 'lucide-react'
+import { Briefcase, Bell, RefreshCw, MessageSquare, UserCheck } from 'lucide-react'
 import { formatDistanceToNow, parseISO, isPast } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Job, Profile } from '../types'
-import { JOB_TYPE_LABELS, ROLE_LABELS } from '../types'
+import type { Job, Application } from '../types'
+import { OPPORTUNITY_TYPE_LABELS, JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 
+interface MsgItem {
+  conversation_id: string
+  sender_name: string
+  content: string
+  created_at: string
+}
+
 type FeedItem =
-  | { kind: 'job';         ts: string; job:    Job;         key: string }
-  | { kind: 'member';      ts: string; person: Profile;     key: string }
+  | { kind: 'job';         ts: string; job:  Job;         key: string }
+  | { kind: 'application'; ts: string; app:  Application; key: string }
+  | { kind: 'message';     ts: string; msg:  MsgItem;     key: string }
 
 export default function Feed() {
   const { profile } = useAuth()
-  const [items, setItems] = useState<FeedItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const isStudent       = profile?.role === 'student'
+  const isEmployerMentor = profile?.role === 'employer_mentor'
+
+  const [items, setItems]         = useState<FeedItem[]>([])
+  const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   async function load(quiet = false) {
@@ -23,48 +34,110 @@ export default function Feed() {
     if (quiet) setRefreshing(true)
     else setLoading(true)
 
-    const [{ data: jobs }, { data: people }] = await Promise.all([
-      supabase
-        .from('jobs')
-        .select('*, profiles(id, full_name, role)')
-        .order('created_at', { ascending: false })
-        .limit(20),
-      supabase
-        .from('profiles')
-        .select('id, full_name, role, graduation_year, avatar_url, created_at')
-        .order('created_at', { ascending: false })
-        .limit(20),
-    ])
-
     const feed: FeedItem[] = []
 
-    // Job postings (skip closed/expired)
-    for (const j of (jobs as Job[]) ?? []) {
-      if (!j.is_active) continue
-      if (j.deadline && isPast(parseISO(j.deadline))) continue
-      feed.push({ kind: 'job', ts: j.created_at, job: j, key: `job-${j.id}` })
+    // ── Students: matching opportunities ────────────────────────────────────
+    if (isStudent) {
+      const { data: jobs } = await supabase
+        .from('jobs')
+        .select('*, profiles(id, full_name, role)')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(40)
+
+      const studentInterests = profile.interests ?? []
+      for (const j of (jobs as Job[]) ?? []) {
+        if (j.deadline && isPast(parseISO(j.deadline))) continue
+        // Filter by student interests when set
+        if (studentInterests.length > 0 && j.industry && !studentInterests.includes(j.industry)) continue
+        feed.push({ kind: 'job', ts: j.created_at, job: j, key: `job-${j.id}` })
+      }
     }
 
-    // New members (exclude self)
-    for (const p of (people as Profile[]) ?? []) {
-      if (p.id === profile.id) continue
-      feed.push({ kind: 'member', ts: p.created_at, person: p, key: `member-${p.id}` })
+    // ── Employer/Mentors: applications to their jobs ─────────────────────────
+    if (isEmployerMentor) {
+      const { data: myJobs } = await supabase
+        .from('jobs')
+        .select('id')
+        .eq('posted_by', profile.id)
+
+      const myJobIds = ((myJobs ?? []) as { id: string }[]).map((j) => j.id)
+
+      if (myJobIds.length > 0) {
+        const { data: apps } = await supabase
+          .from('applications')
+          .select('*, profiles(id, full_name, avatar_url, graduation_year, grade), jobs(id, title, company)')
+          .in('job_id', myJobIds)
+          .order('created_at', { ascending: false })
+          .limit(40)
+
+        for (const app of (apps as Application[]) ?? []) {
+          feed.push({ kind: 'application', ts: app.created_at, app: app as Application, key: `app-${app.id}` })
+        }
+      }
+    }
+
+    // ── Both roles: recent messages from others ──────────────────────────────
+    const { data: convos } = await supabase
+      .from('conversations')
+      .select('id')
+      .or(`participant_one.eq.${profile.id},participant_two.eq.${profile.id}`)
+
+    const convoIds = ((convos ?? []) as { id: string }[]).map((c) => c.id)
+
+    if (convoIds.length > 0) {
+      const { data: msgs } = await supabase
+        .from('messages')
+        .select('id, content, created_at, conversation_id, sender_id, profiles(full_name)')
+        .in('conversation_id', convoIds)
+        .neq('sender_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      // One entry per conversation (the latest message)
+      const seen = new Set<string>()
+      for (const m of (msgs ?? []) as unknown as {
+        id: string
+        content: string
+        created_at: string
+        conversation_id: string
+        sender_id: string
+        profiles: { full_name: string } | null
+      }[]) {
+        if (seen.has(m.conversation_id)) continue
+        seen.add(m.conversation_id)
+        feed.push({
+          kind: 'message',
+          ts: m.created_at,
+          msg: {
+            conversation_id: m.conversation_id,
+            sender_name: m.profiles?.full_name ?? 'Someone',
+            content: m.content,
+            created_at: m.created_at,
+          },
+          key: `msg-${m.conversation_id}`,
+        })
+      }
     }
 
     feed.sort((a, b) => b.ts.localeCompare(a.ts))
-    setItems(feed.slice(0, 60))
+    setItems(feed.slice(0, 50))
     setLoading(false)
     setRefreshing(false)
   }
 
   useEffect(() => { load() }, [profile?.id])
 
+  const subtitle = isStudent
+    ? 'Opportunities matching your interests and recent messages'
+    : 'New applications to your postings and recent messages'
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Feed</h1>
-          <p className="text-ink-secondary text-sm mt-0.5">New jobs and members in the community</p>
+          <p className="text-ink-secondary text-sm mt-0.5">{subtitle}</p>
         </div>
         <button
           onClick={() => load(true)}
@@ -87,7 +160,11 @@ export default function Feed() {
       ) : (
         <div className="space-y-2">
           {items.map((item) => {
+            // ── Job opportunity card ─────────────────────────────────────────
             if (item.kind === 'job') {
+              const typeLabel = item.job.opportunity_type
+                ? OPPORTUNITY_TYPE_LABELS[item.job.opportunity_type]
+                : JOB_TYPE_LABELS[item.job.job_type]
               return (
                 <Link
                   key={item.key}
@@ -102,7 +179,7 @@ export default function Feed() {
                     <p className="text-sm text-ink">
                       <span className="font-semibold">{item.job.profiles?.full_name ?? 'Someone'}</span>
                       {' '}posted a{' '}
-                      <span className="font-medium">{JOB_TYPE_LABELS[item.job.job_type].toLowerCase()}</span>
+                      <span className="font-medium">{typeLabel.toLowerCase()}</span>
                       {' '}opportunity
                     </p>
                     <p className="text-sm font-semibold text-ink mt-0.5 truncate">
@@ -117,39 +194,63 @@ export default function Feed() {
               )
             }
 
-            if (item.kind === 'member') {
-              const p = item.person
-              const initials = p.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+            // ── Application card (employer/mentor view) ──────────────────────
+            if (item.kind === 'application') {
+              const applicant = item.app.profiles as { full_name?: string } | null
+              const job = item.app.jobs as { id?: string; title?: string; company?: string } | null
               return (
-                <div
+                <Link
                   key={item.key}
-                  className="flex items-start gap-4 p-4 bg-surface rounded-xl border border-border"
+                  to={`/jobs/${job?.id}/applicants`}
+                  className="flex items-start gap-4 p-4 bg-surface rounded-xl border border-border hover:bg-primary-faint transition-colors"
                   style={{ boxShadow: 'var(--shadow-card)' }}
                 >
-                  <div className="w-9 h-9 rounded-full bg-primary-muted flex items-center justify-center text-primary font-bold text-sm shrink-0 overflow-hidden">
-                    {p.avatar_url ? (
-                      <img
-                        src={p.avatar_url}
-                        alt={p.full_name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                      />
-                    ) : initials}
+                  <div className="w-9 h-9 rounded-xl bg-primary-muted flex items-center justify-center text-primary shrink-0">
+                    <UserCheck size={17} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-ink">
-                      <span className="font-semibold">{p.full_name}</span>
-                      {' '}joined as a{' '}
-                      <span className="capitalize font-medium">{ROLE_LABELS[p.role]}</span>
+                      <span className="font-semibold">{applicant?.full_name ?? 'Someone'}</span>
+                      {' '}applied to your opportunity
                     </p>
-                    {p.graduation_year && (
-                      <p className="text-xs text-ink-secondary mt-0.5">Class of {p.graduation_year}</p>
-                    )}
+                    <p className="text-sm font-semibold text-ink mt-0.5 truncate">
+                      {job?.title} · {job?.company}
+                    </p>
                     <p className="text-xs text-ink-muted mt-1">
                       {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
                     </p>
                   </div>
-                </div>
+                  <span className="text-xs text-primary font-medium shrink-0 self-center">View →</span>
+                </Link>
+              )
+            }
+
+            // ── Message card ─────────────────────────────────────────────────
+            if (item.kind === 'message') {
+              return (
+                <Link
+                  key={item.key}
+                  to={`/messages/${item.msg.conversation_id}`}
+                  className="flex items-start gap-4 p-4 bg-surface rounded-xl border border-border hover:bg-primary-faint transition-colors"
+                  style={{ boxShadow: 'var(--shadow-card)' }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-primary-muted flex items-center justify-center text-primary shrink-0">
+                    <MessageSquare size={17} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-ink">
+                      <span className="font-semibold">{item.msg.sender_name}</span>
+                      {' '}sent you a message
+                    </p>
+                    <p className="text-sm text-ink-secondary mt-0.5 truncate italic">
+                      "{item.msg.content}"
+                    </p>
+                    <p className="text-xs text-ink-muted mt-1">
+                      {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <span className="text-xs text-primary font-medium shrink-0 self-center">Reply →</span>
+                </Link>
               )
             }
 

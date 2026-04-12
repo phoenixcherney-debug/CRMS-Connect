@@ -35,7 +35,7 @@ const EVENT_TYPE_COLORS: Record<DBEvent['type'], string> = {
 
 export default function Events() {
   const { profile } = useAuth()
-  const isPoster = profile?.role === 'alumni' || profile?.role === 'parent'
+  const isPoster = profile?.role === 'employer_mentor'
 
   const [events, setEvents] = useState<DBEvent[]>([])
   const [loading, setLoading] = useState(true)

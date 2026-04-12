@@ -5,9 +5,9 @@ import Spinner from './Spinner'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  /** If provided, only these roles may access. Others are sent to /jobs. */
+  /** If provided, only these roles may access. Others are redirected to /jobs. */
   roles?: Role[]
-  /** Set true on the /onboarding route itself to avoid an infinite redirect loop. */
+  /** Set true on /onboarding to avoid redirect loop. */
   skipOnboarding?: boolean
 }
 
@@ -23,33 +23,22 @@ export default function ProtectedRoute({ children, roles, skipOnboarding }: Prot
     )
   }
 
-  // Not logged in → go to login, preserving intended destination
+  // Not logged in → go to login
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
   // Logged in but email not verified
   if (!user.email_confirmed_at) {
-    return (
-      <div className="flex items-center justify-center min-h-screen px-4">
-        <div className="max-w-sm w-full text-center bg-surface rounded-2xl border border-border p-8 shadow-sm">
-          <div className="text-4xl mb-4">📬</div>
-          <h2 className="text-xl font-semibold text-ink mb-2">Check your inbox</h2>
-          <p className="text-ink-secondary text-sm leading-relaxed">
-            We sent a verification link to <strong>{user.email}</strong>. Click the
-            link in that email to activate your account.
-          </p>
-        </div>
-      </div>
-    )
+    return <Navigate to="/verify-email" state={{ email: user.email }} replace />
   }
 
-  // New user who hasn't finished onboarding → send to setup screen
+  // New user who hasn't finished onboarding
   if (!skipOnboarding && profile && !profile.onboarding_complete) {
     return <Navigate to="/onboarding" replace />
   }
 
-  // Role restriction — redirect non-matching roles to jobs page
+  // Role restriction
   if (roles && profile && !roles.includes(profile.role)) {
     return <Navigate to="/jobs" replace />
   }

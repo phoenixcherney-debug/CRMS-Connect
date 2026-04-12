@@ -1,7 +1,13 @@
-export type Role = 'student' | 'alumni' | 'parent'
+export type Role = 'student' | 'employer_mentor'
 export type JobType = 'internship' | 'part-time' | 'full-time' | 'volunteer'
 export type LocationType = 'remote' | 'in-person' | 'hybrid'
 export type ApplicationStatus = 'pending' | 'reviewed' | 'accepted' | 'rejected' | 'waitlisted'
+export type MentorType = 'employer' | 'mentor' | 'both' | 'other'
+export type StudentSeeking = 'job' | 'mentor' | 'both' | 'other'
+export type OpportunityType = 'job_internship' | 'mentorship' | 'volunteer' | 'shadow' | 'other'
+
+export const STUDENT_GRADES = ['9th', '10th', '11th', '12th', 'Gap Year'] as const
+export type StudentGrade = typeof STUDENT_GRADES[number]
 
 export interface Profile {
   id: string
@@ -15,7 +21,13 @@ export interface Profile {
   open_to_mentorship: boolean
   onboarding_complete: boolean
   interests: string[]
+  interests_other?: string | null
   weekly_availability: string | null
+  mentor_type?: MentorType | null
+  mentor_type_other?: string | null
+  student_seeking?: StudentSeeking | null
+  student_seeking_other?: string | null
+  grade?: StudentGrade | null
   created_at: string
 }
 
@@ -34,12 +46,12 @@ export interface AvailabilitySlot {
   id: string
   user_id: string
   title: string | null
-  date: string                  // YYYY-MM-DD
-  start_time: string            // HH:MM or HH:MM:SS
-  end_time: string              // HH:MM or HH:MM:SS
+  date: string
+  start_time: string
+  end_time: string
   is_recurring: boolean
   recurrence_pattern: 'daily' | 'weekly' | 'monthly' | null
-  recurrence_end_date: string | null  // YYYY-MM-DD
+  recurrence_end_date: string | null
   created_at: string
 }
 
@@ -59,6 +71,24 @@ export interface Job {
   deadline: string | null
   is_active: boolean
   expected_weekly_hours?: string | null
+  opportunity_type?: OpportunityType | null
+  opportunity_type_other?: string | null
+  start_date?: string | null
+  end_date?: string | null
+  // Joined
+  profiles?: Profile | null
+}
+
+export interface StudentPost {
+  id: string
+  student_id: string
+  pitch: string
+  seeking: StudentSeeking
+  seeking_other?: string | null
+  interests: string[]
+  availability?: string | null
+  is_closed: boolean
+  created_at: string
   // Joined
   profiles?: Profile | null
 }
@@ -81,7 +111,6 @@ export interface Conversation {
   created_at: string
   participant_one: string
   participant_two: string
-  // Processed client-side
   otherProfile?: Profile
   lastMessage?: Message
   unreadCount?: number
@@ -94,16 +123,38 @@ export interface Message {
   sender_id: string
   content: string
   is_read: boolean
-  // Joined
   profiles?: Profile | null
 }
 
-// Helper: label map for UI
+// ─── Label maps ─────────────────────────────────────────────────────────────
+
 export const JOB_TYPE_LABELS: Record<JobType, string> = {
   internship: 'Internship',
   'part-time': 'Part-Time',
   'full-time': 'Full-Time',
   volunteer: 'Volunteer',
+}
+
+export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {
+  job_internship: 'Job / Internship',
+  mentorship: 'Mentorship',
+  volunteer: 'Volunteer',
+  shadow: 'Shadow',
+  other: 'Other',
+}
+
+export const MENTOR_TYPE_LABELS: Record<MentorType, string> = {
+  employer: 'Employer',
+  mentor: 'Mentor',
+  both: 'Both',
+  other: 'Other',
+}
+
+export const STUDENT_SEEKING_LABELS: Record<StudentSeeking, string> = {
+  job: 'A job / internship',
+  mentor: 'A mentor',
+  both: 'Both',
+  other: 'Other',
 }
 
 export const STATUS_LABELS: Record<ApplicationStatus, string> = {
@@ -131,8 +182,7 @@ export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
 
 export const ROLE_LABELS: Record<Role, string> = {
   student: 'Student',
-  alumni: 'Alumni',
-  parent: 'Parent',
+  employer_mentor: 'Employer / Mentor',
 }
 
 export const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
@@ -158,3 +208,5 @@ export const INDUSTRY_OPTIONS = [
   'Sports & Recreation',
   'Other',
 ] as const
+
+export const INTEREST_OPTIONS = INDUSTRY_OPTIONS

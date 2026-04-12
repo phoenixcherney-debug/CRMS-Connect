@@ -26,7 +26,7 @@ export default function Jobs() {
   const [indFilter, setIndFilter] = useState('')
   const [sort, setSort] = useState<SortOption>('newest')
 
-  const isPoster = profile?.role === 'alumni' || profile?.role === 'parent'
+  const isPoster = profile?.role === 'employer_mentor'
 
   useEffect(() => {
     async function fetchJobs() {

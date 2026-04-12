@@ -22,12 +22,10 @@ function PushBanner() {
 
   async function handleEnable() {
     setSubscribing(true)
-    const ok = await subscribe()
+    await subscribe()
     setSubscribing(false)
-    if (!ok) {
-      setDismissed(true)
-      localStorage.setItem(BANNER_DISMISSED_KEY, '1')
-    }
+    setDismissed(true)
+    localStorage.setItem(BANNER_DISMISSED_KEY, '1')
   }
 
   function handleDismiss() {

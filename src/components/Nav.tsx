@@ -2,7 +2,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom'
 import {
   Compass, Rss, Briefcase, Calendar, Users, Building2, Bell, Mail,
   LogOut, User, PlusSquare, ClipboardList, FileText, CalendarClock,
-  Moon, Sun, Menu, X,
+  Moon, Sun, Menu, X, BookOpen,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -11,13 +11,12 @@ import { useUnreadCount } from '../hooks/useUnreadCount'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
 
-// Base nav items (shared by all roles)
 const BASE_NAV = [
-  { to: '/explore',       label: 'Explore',       icon: Compass     },
-  { to: '/jobs',          label: 'Jobs',           icon: Briefcase   },
-  { to: '/people',        label: 'People',         icon: Users       },
-  { to: '/notifications', label: 'Notifications',  icon: Bell        },
-  { to: '/messages',      label: 'Inbox',          icon: Mail        },
+  { to: '/explore',       label: 'Explore',       icon: Compass  },
+  { to: '/jobs',          label: 'Jobs',           icon: Briefcase },
+  { to: '/people',        label: 'People',         icon: Users    },
+  { to: '/notifications', label: 'Notifications',  icon: Bell     },
+  { to: '/messages',      label: 'Inbox',          icon: Mail     },
 ] as const
 
 export default function Nav() {
@@ -28,27 +27,35 @@ export default function Nav() {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const isPoster = profile?.role === 'alumni' || profile?.role === 'parent'
+  const isEmployerMentor = profile?.role === 'employer_mentor'
   const isStudent = profile?.role === 'student'
 
-  // Build nav items based on role
   const NAV_ITEMS = [
     ...BASE_NAV.slice(0, 2), // Explore, Jobs
-    ...(isStudent ? [{ to: '/my-applications' as const, label: 'Applications' as const, icon: FileText }] : []),
-    ...(isPoster ? [{ to: '/my-postings' as const, label: 'Postings' as const, icon: ClipboardList }] : []),
+    ...(isStudent ? [
+      { to: '/my-applications' as const, label: 'Applications' as const, icon: FileText },
+    ] : []),
+    ...(isEmployerMentor ? [
+      { to: '/postings' as const, label: 'Postings' as const, icon: ClipboardList },
+    ] : []),
     ...BASE_NAV.slice(2), // People, Notifications, Inbox
   ]
 
-  // Secondary items (previously in avatar dropdown)
   const SECONDARY_ITEMS = [
     { to: '/profile', label: 'Profile', icon: User },
-    ...(isPoster ? [
-      { to: '/jobs/new', label: 'Post a Job', icon: PlusSquare },
+    ...(isEmployerMentor ? [
+      { to: '/jobs/new',     label: 'Post an Opportunity', icon: PlusSquare  },
+      { to: '/my-postings',  label: 'My Opportunities',    icon: ClipboardList },
+    ] : []),
+    ...(isStudent ? [
+      { to: '/my-posts', label: 'My Posts', icon: BookOpen },
     ] : []),
     { to: '/availability', label: 'My Calendar', icon: CalendarClock },
-    { to: '/feed', label: 'Feed', icon: Rss },
-    { to: '/events', label: 'Events', icon: Calendar },
-    { to: '/employers', label: 'Employers', icon: Building2 },
+    { to: '/feed',    label: 'Feed',   icon: Rss      },
+    { to: '/events',  label: 'Events', icon: Calendar  },
+    ...(isStudent ? [
+      { to: '/employers', label: 'Employers & Mentors', icon: Building2 },
+    ] : []),
   ]
 
   const initials = (profile?.full_name ?? '?')
@@ -64,7 +71,6 @@ export default function Nav() {
     navigate('/login')
   }
 
-  // Close menu on outside click
   useEffect(() => {
     if (!open) return
     function handler(e: MouseEvent) {
@@ -74,7 +80,6 @@ export default function Nav() {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  // Close menu on route change
   useEffect(() => {
     setOpen(false)
   }, [navigate])
@@ -87,6 +92,8 @@ export default function Nav() {
         ? 'bg-primary-muted text-primary'
         : 'text-ink-secondary hover:bg-primary-faint hover:text-ink'
     }`
+
+  const roleLabel = profile?.role === 'employer_mentor' ? 'Employer / Mentor' : 'Student'
 
   return (
     <div ref={menuRef}>
@@ -106,7 +113,6 @@ export default function Nav() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
 
-            {/* Left: Logo + divider + "Connect" */}
             <Link to="/explore" className="flex items-center gap-3 shrink-0">
               {logoError ? (
                 <div
@@ -132,7 +138,6 @@ export default function Nav() {
               </span>
             </Link>
 
-            {/* Right: Dark mode toggle + Hamburger */}
             <div className="flex items-center gap-1">
               <button
                 onClick={toggleTheme}
@@ -161,7 +166,6 @@ export default function Nav() {
         </div>
       </nav>
 
-      {/* Expandable menu panel */}
       {open && (
         <div
           className="fixed inset-x-0 z-30 border-b border-border overflow-y-auto"
@@ -173,7 +177,6 @@ export default function Nav() {
           }}
         >
           <div className="max-w-7xl mx-auto">
-            {/* User info header */}
             {profile && (
               <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
                 <div
@@ -191,12 +194,11 @@ export default function Nav() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-ink truncate">{profile.full_name}</p>
-                  <p className="text-xs text-ink-muted capitalize">{profile.role}</p>
+                  <p className="text-xs text-ink-muted">{roleLabel}</p>
                 </div>
               </div>
             )}
 
-            {/* Primary navigation */}
             <div className="py-1">
               <p className="px-4 pt-2 pb-1 text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
                 Navigation
@@ -227,7 +229,6 @@ export default function Nav() {
               })}
             </div>
 
-            {/* Secondary navigation */}
             <div className="py-1 border-t border-border">
               <p className="px-4 pt-2 pb-1 text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
                 More
@@ -245,7 +246,6 @@ export default function Nav() {
               ))}
             </div>
 
-            {/* Sign out */}
             <div className="py-2 border-t border-border">
               <button
                 onClick={handleSignOut}

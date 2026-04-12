@@ -10,7 +10,7 @@ export function validateEmailForRole(email: string, role: Role): string | null {
   if (role === 'student' && !isSchoolEmail) {
     return 'Student accounts require a @crms.org school email address.'
   }
-  if ((role === 'alumni' || role === 'parent') && isSchoolEmail) {
+  if (role === 'employer_mentor' && isSchoolEmail) {
     return 'Please use a personal email address, not your school email.'
   }
   return null
@@ -56,7 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile])
 
   useEffect(() => {
-    // Get the current session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       const u = session?.user ?? null
       setUser(u)
@@ -67,7 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })
 
-    // Listen for auth state changes (login, logout, token refresh, email confirm)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         const u = session?.user ?? null
@@ -96,11 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fullName: string
     role: Role
   }): Promise<{ error: string | null; needsVerification?: boolean }> {
-    // 1. Client-side guard (belt and suspenders)
     const clientError = validateEmailForRole(email, role)
     if (clientError) return { error: clientError }
 
-    // 2. Create the Supabase auth user (triggers profile auto-creation)
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -110,24 +106,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     if (error) {
-      // Supabase error messages can be verbose; normalize common ones
       if (error.message.includes('already registered')) {
         return { error: 'An account with this email already exists. Please log in.' }
       }
       return { error: error.message }
     }
 
-    // 3. Server-side validation is handled by two layers that don't require
-    //    a network call from the client:
-    //    a) The Postgres trigger `validate_profile_before_insert` rejects any
-    //       email/role mismatch at the DB level.
-    //    b) The `validate-signup` Edge Function can be wired as a Supabase Auth
-    //       Hook in the dashboard (Authentication → Hooks) for an additional layer.
-    //    Both operate server-side without blocking this client flow.
-
-    // If email confirmation is required, session will be null
     const needsVerification = !data.session
-
     return { error: null, needsVerification }
   }
 
@@ -139,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       if (error.message.includes('Email not confirmed')) {
-        return { error: 'Please verify your email before logging in.' }
+        return { error: 'unverified' }
       }
       if (error.message.includes('Invalid login credentials')) {
         return { error: 'Incorrect email or password.' }

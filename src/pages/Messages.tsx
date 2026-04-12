@@ -211,7 +211,7 @@ export default function Messages() {
           <MessageSquare size={36} className="mx-auto text-ink-muted mb-3" />
           <p className="text-ink-muted text-sm mb-1 font-medium">No conversations yet</p>
           <p className="text-ink-muted text-xs">
-            Hit <strong>New</strong> to start one, or message someone from a job listing.
+            Hit <strong>New</strong> to start one, or message someone from an opportunity.
           </p>
         </div>
       ) : (

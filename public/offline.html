@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRMS Connect — Offline</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #257200;
+        color: #fff;
+        text-align: center;
+        padding: 24px;
+      }
+      img { width: 80px; opacity: 0.9; }
+      h1 { font-size: 1.4rem; font-weight: 700; }
+      p  { font-size: 0.95rem; opacity: 0.8; max-width: 280px; line-height: 1.5; }
+      button {
+        margin-top: 8px;
+        padding: 10px 24px;
+        border: 2px solid rgba(255,255,255,0.6);
+        border-radius: 8px;
+        background: transparent;
+        color: #fff;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      button:hover { background: rgba(255,255,255,0.15); }
+    </style>
+  </head>
+  <body>
+    <img src="/pwa-192x192.png" alt="CRMS Connect" />
+    <h1>You're offline</h1>
+    <p>Check your connection and try again. Pages you've already visited are still available.</p>
+    <button onclick="location.reload()">Try again</button>
+  </body>
+</html>

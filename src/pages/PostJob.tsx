@@ -5,12 +5,14 @@ import { ChevronLeft, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { JobType, LocationType } from '../types'
-import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS } from '../types'
+import type { JobType, LocationType, OpportunityType } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS, OPPORTUNITY_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 
 const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer']
 const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
+
+const OPPORTUNITY_TYPES: OpportunityType[] = ['job_internship', 'mentorship', 'volunteer', 'shadow', 'other']
 
 interface JobForm {
   title: string
@@ -19,8 +21,12 @@ interface JobForm {
   location_type: LocationType
   industry: string
   job_type: JobType
+  opportunity_type: OpportunityType | ''
+  opportunity_type_other: string
   description: string
   deadline: string
+  start_date: string
+  end_date: string
   expected_weekly_hours: string
 }
 
@@ -31,8 +37,12 @@ const DEFAULT_FORM: JobForm = {
   location_type: 'in-person',
   industry: '',
   job_type: 'internship',
+  opportunity_type: '',
+  opportunity_type_other: '',
   description: '',
   deadline: '',
+  start_date: '',
+  end_date: '',
   expected_weekly_hours: '',
 }
 
@@ -60,8 +70,12 @@ export default function PostJob() {
           location_type: data.location_type ?? 'in-person',
           industry: data.industry ?? '',
           job_type: data.job_type,
+          opportunity_type: data.opportunity_type ?? '',
+          opportunity_type_other: data.opportunity_type_other ?? '',
           description: data.description,
-          deadline: data.deadline,
+          deadline: data.deadline ?? '',
+          start_date: data.start_date ?? '',
+          end_date: data.end_date ?? '',
           expected_weekly_hours: data.expected_weekly_hours ?? '',
         })
       }
@@ -84,7 +98,11 @@ export default function PostJob() {
       ...form,
       industry: form.industry || null,
       deadline: form.deadline || null,
+      start_date: form.start_date || null,
+      end_date: form.end_date || null,
       expected_weekly_hours: form.expected_weekly_hours || null,
+      opportunity_type: form.opportunity_type || null,
+      opportunity_type_other: form.opportunity_type === 'other' ? form.opportunity_type_other || null : null,
       how_to_apply: '',
       contact_email: '',
       posted_by: profile.id,
@@ -126,12 +144,12 @@ export default function PostJob() {
         className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6"
       >
         <ChevronLeft size={16} />
-        {isEdit ? 'Back to listing' : 'My postings'}
+        {isEdit ? 'Back to opportunity' : 'My postings'}
       </Link>
 
       <div className="bg-surface rounded-2xl border border-border p-6 sm:p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
         <h1 className="text-xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
-          {isEdit ? 'Edit listing' : 'Post an opportunity'}
+          {isEdit ? 'Edit opportunity' : 'Post an opportunity'}
         </h1>
         <p className="text-sm text-ink-secondary mb-6">
           Opportunities you share are visible to all CRMS students.
@@ -145,11 +163,11 @@ export default function PostJob() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-          {/* Row: Title + Type */}
+          {/* Row: Title + Job type */}
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-ink mb-1.5">
-                Job title <span className="text-error">*</span>
+                Title <span className="text-error">*</span>
               </label>
               <input
                 type="text"
@@ -162,7 +180,7 @@ export default function PostJob() {
             </div>
             <div>
               <label className="block text-sm font-medium text-ink mb-1.5">
-                Opportunity type <span className="text-error">*</span>
+                Category <span className="text-error">*</span>
               </label>
               <select
                 required
@@ -175,6 +193,41 @@ export default function PostJob() {
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Opportunity type */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                Opportunity type{' '}
+                <span className="text-ink-muted font-normal">(optional)</span>
+              </label>
+              <select
+                value={form.opportunity_type}
+                onChange={(e) => set('opportunity_type', e.target.value as OpportunityType | '')}
+                className="field"
+              >
+                <option value="">Select type…</option>
+                {OPPORTUNITY_TYPES.map((t) => (
+                  <option key={t} value={t}>{OPPORTUNITY_TYPE_LABELS[t]}</option>
+                ))}
+              </select>
+            </div>
+            {form.opportunity_type === 'other' && (
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1.5">
+                  Please describe <span className="text-error">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={form.opportunity_type_other}
+                  onChange={(e) => set('opportunity_type_other', e.target.value)}
+                  placeholder="Describe the opportunity type"
+                  className="field"
+                />
+              </div>
+            )}
           </div>
 
           {/* Row: Company + Location */}
@@ -276,7 +329,36 @@ export default function PostJob() {
             />
           </div>
 
-          {/* Deadline */}
+          {/* Timeframe: start + end */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                Start date{' '}
+                <span className="text-ink-muted font-normal">(optional)</span>
+              </label>
+              <input
+                type="date"
+                value={form.start_date}
+                onChange={(e) => set('start_date', e.target.value)}
+                className="field"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                End date{' '}
+                <span className="text-ink-muted font-normal">(optional)</span>
+              </label>
+              <input
+                type="date"
+                value={form.end_date}
+                onChange={(e) => set('end_date', e.target.value)}
+                min={form.start_date || undefined}
+                className="field"
+              />
+            </div>
+          </div>
+
+          {/* Application deadline */}
           <div className="sm:max-w-[calc(50%-0.5rem)]">
             <label className="block text-sm font-medium text-ink mb-1.5">
               Application deadline{' '}
@@ -301,7 +383,7 @@ export default function PostJob() {
               {submitting && <Spinner size="sm" className="border-white/30 border-t-white" />}
               {submitting
                 ? isEdit ? 'Saving…' : 'Publishing…'
-                : isEdit ? 'Save changes' : 'Publish listing'
+                : isEdit ? 'Save changes' : 'Publish opportunity'
               }
             </button>
             <Link

@@ -22,7 +22,7 @@ export default function Explore() {
   const [stats, setStats] = useState({ jobs: 0, people: 0, companies: 0 })
   const [loading, setLoading] = useState(true)
 
-  const isPoster = profile?.role === 'alumni' || profile?.role === 'parent'
+  const isEmployerMentor = profile?.role === 'employer_mentor'
   const isStudent = profile?.role === 'student'
 
   useEffect(() => {
@@ -121,16 +121,16 @@ export default function Explore() {
               : 'CRMS Connect'}
           </h1>
           <p className="text-white/65 mb-7 text-base max-w-lg">
-            {isPoster
+            {isEmployerMentor
               ? 'Share opportunities, mentor students, and stay connected with the CRMS community.'
-              : 'See what\u2019s happening in the CRMS community.'}
+              : 'Discover opportunities and connect with employers and mentors in the CRMS community.'}
           </p>
 
           {/* Inline stats */}
           {!loading && (
             <div className="flex items-center gap-0 mb-7">
               {[
-                { value: stats.jobs, label: 'Jobs' },
+                { value: stats.jobs, label: 'Opportunities' },
                 { value: stats.people, label: 'Members' },
                 { value: stats.companies, label: 'Companies' },
               ].map(({ value, label }, i) => (
@@ -172,17 +172,17 @@ export default function Explore() {
 
       {/* Quick links — role-aware */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {isPoster ? (
+        {isEmployerMentor ? (
           <>
             <Link to="/jobs/new" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <PlusSquare size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
-              <p className="text-sm font-semibold text-ink">Post a Job</p>
+              <p className="text-sm font-semibold text-ink">Post an Opportunity</p>
               <p className="text-xs text-ink-muted mt-0.5">Share opportunities</p>
             </Link>
             <Link to="/my-postings" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <ClipboardList size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
               <p className="text-sm font-semibold text-ink">My Postings</p>
-              <p className="text-xs text-ink-muted mt-0.5">Manage your listings</p>
+              <p className="text-xs text-ink-muted mt-0.5">Manage your opportunities</p>
             </Link>
             <Link to="/availability" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <CalendarClock size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
@@ -214,8 +214,8 @@ export default function Explore() {
             </Link>
             <Link to="/employers" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <Building2 size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
-              <p className="text-sm font-semibold text-ink">Employers</p>
-              <p className="text-xs text-ink-muted mt-0.5">Who's hiring</p>
+              <p className="text-sm font-semibold text-ink">Employers & Mentors</p>
+              <p className="text-xs text-ink-muted mt-0.5">Find mentors & employers</p>
             </Link>
           </>
         )}
@@ -285,12 +285,12 @@ export default function Explore() {
           <div className="text-center py-12 bg-surface rounded-2xl border border-border">
             <Briefcase size={32} className="mx-auto text-ink-muted mb-3" />
             <p className="text-ink-muted text-sm">No active opportunities right now.</p>
-            {isPoster && (
+            {isEmployerMentor && (
               <Link
                 to="/jobs/new"
                 className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary font-medium"
               >
-                Post the first one <ArrowRight size={13} />
+                Post an opportunity <ArrowRight size={13} />
               </Link>
             )}
           </div>

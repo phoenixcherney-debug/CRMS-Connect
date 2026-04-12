@@ -64,7 +64,7 @@ export default function Employers() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Employers</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Employers & Mentors</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
           {loading
             ? 'Loading…'
@@ -143,7 +143,7 @@ export default function Employers() {
                       <p className="font-semibold text-ink text-base">{employer.company}</p>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-xs text-ink-muted">
-                          {employer.jobs.length} total listing{employer.jobs.length !== 1 ? 's' : ''}
+                          {employer.jobs.length} total opportunit{employer.jobs.length !== 1 ? 'ies' : 'y'}
                         </span>
                         {employer.activeCount > 0 && (
                           <>
@@ -174,7 +174,7 @@ export default function Employers() {
                       {isExpanded ? (
                         <><ChevronUp size={13} /> Hide</>
                       ) : (
-                        <><ChevronDown size={13} /> Jobs</>
+                        <><ChevronDown size={13} /> View</>
                       )}
                     </button>
                   </div>
@@ -187,7 +187,7 @@ export default function Employers() {
                       <>
                         <div className="px-5 py-2 bg-primary-faint">
                           <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-                            Open Positions
+                            Open Opportunities
                           </p>
                         </div>
                         {activeJobs.map((job) => (
