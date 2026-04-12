@@ -1,5 +1,11 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  return null
+}
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -37,6 +43,7 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
       <AuthProvider>
+        <ScrollToTop />
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-screen">
             <div className="w-10 h-10 border-[3px] rounded-full border-primary-muted border-t-primary animate-spin" />

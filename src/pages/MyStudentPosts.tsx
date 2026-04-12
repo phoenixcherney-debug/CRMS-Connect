@@ -24,6 +24,16 @@ export default function MyStudentPosts() {
   const [interests, setInterests]       = useState<string[]>([])
   const [availability, setAvailability] = useState('')
 
+  function openForm() {
+    // Pre-fill from profile, but leave pitch blank (post-specific)
+    setSeeking((profile?.student_seeking as StudentSeeking | null) ?? '')
+    setSeekingOther(profile?.student_seeking_other ?? '')
+    setInterests(profile?.interests ?? [])
+    setAvailability(profile?.weekly_availability ?? '')
+    setPitch('')
+    openForm()
+  }
+
   useEffect(() => {
     load()
   }, [profile?.id])
@@ -103,7 +113,7 @@ export default function MyStudentPosts() {
         </div>
         {!showForm && (
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => openForm()}
             className="btn-gold flex items-center gap-1.5 px-4 py-2"
           >
             <Plus size={15} />
@@ -233,7 +243,7 @@ export default function MyStudentPosts() {
           <FileText size={32} className="mx-auto text-ink-muted mb-3" />
           <p className="text-ink-muted font-medium">No posts yet</p>
           <p className="text-xs text-ink-muted mt-1 mb-4">Post to let employers and mentors know what you're looking for.</p>
-          <button onClick={() => setShowForm(true)} className="btn-gold px-4 py-2">
+          <button onClick={() => openForm()} className="btn-gold px-4 py-2">
             <Plus size={14} /> Create your first post
           </button>
         </div>
