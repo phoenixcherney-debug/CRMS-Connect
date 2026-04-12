@@ -44,6 +44,7 @@ const Profile           = lazy(() => import('./pages/Profile'))
 const PublicProfile     = lazy(() => import('./pages/PublicProfile'))
 const StudentPosts      = lazy(() => import('./pages/StudentPosts'))
 const MyStudentPosts    = lazy(() => import('./pages/MyStudentPosts'))
+const MeetingRequests   = lazy(() => import('./pages/MeetingRequests'))
 
 export default function App() {
   return (
@@ -145,12 +146,15 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* ── Availability / Bookings ───────────────────────────────── */}
+            {/* ── Availability / Bookings / Meetings ───────────────────── */}
             <Route path="/availability" element={
               <ProtectedRoute><Layout><Availability /></Layout></ProtectedRoute>
             } />
             <Route path="/my-bookings" element={
               <ProtectedRoute><Layout><MyBookings /></Layout></ProtectedRoute>
+            } />
+            <Route path="/meetings" element={
+              <ProtectedRoute><Layout><MeetingRequests /></Layout></ProtectedRoute>
             } />
 
             {/* ── Inbox / Messages ─────────────────────────────────────── */}

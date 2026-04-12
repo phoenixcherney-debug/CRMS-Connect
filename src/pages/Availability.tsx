@@ -257,8 +257,22 @@ function SlotModal({
                   className={INPUT_CLS}
                 />
               </div>
+
+              {/* Open-ended recurring warning */}
+              {!endDate && (
+                <div className="flex items-start gap-2 p-2.5 rounded-lg bg-status-pending-bg border border-status-pending-border text-xs text-status-pending-text">
+                  <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                  This event will repeat indefinitely. Set an end date if you want it to stop.
+                </div>
+              )}
             </>
           )}
+
+          {/* Visibility tip */}
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary-faint border border-border text-xs text-ink-muted">
+            <AlertCircle size={13} className="shrink-0 mt-0.5 text-primary" />
+            Students who view your profile can see your upcoming slots and request meetings.
+          </div>
 
           {err && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-error-bg border border-status-rejected-border text-sm text-error">

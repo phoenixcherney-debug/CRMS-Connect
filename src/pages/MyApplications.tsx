@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ExternalLink, MapPin, Calendar } from 'lucide-react'
+import { ExternalLink, MapPin, Calendar, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -13,14 +13,14 @@ const STATUS_CONFIG: Record<
   { label: string; classes: string; dot: string }
 > = {
   pending: {
-    label: 'Pending review',
+    label: 'Submitted',
     classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border',
     dot: 'bg-status-pending-dot',
   },
   reviewed: {
-    label: 'Under review',
-    classes: 'bg-status-reviewed-bg text-status-reviewed-text border-status-reviewed-border',
-    dot: 'bg-status-reviewed-dot',
+    label: 'Submitted',
+    classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border',
+    dot: 'bg-status-pending-dot',
   },
   accepted: {
     label: 'Accepted',
@@ -32,9 +32,8 @@ const STATUS_CONFIG: Record<
     classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border',
     dot: 'bg-status-rejected-dot',
   },
-  // Waitlisted is shown to students as "Pending review" — never expose the word "waitlisted"
   waitlisted: {
-    label: 'Pending review',
+    label: 'Submitted',
     classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border',
     dot: 'bg-status-pending-dot',
   },
@@ -45,6 +44,7 @@ export default function MyApplications() {
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null)
 
   async function load() {
     if (!profile) return
@@ -64,6 +64,14 @@ export default function MyApplications() {
       setApplications((data as Application[]) ?? [])
     }
     setLoading(false)
+  }
+
+  async function handleWithdraw(appId: string) {
+    if (!profile) return
+    setWithdrawingId(appId)
+    const { error } = await supabase.from('applications').delete().eq('id', appId).eq('applicant_id', profile.id)
+    if (!error) setApplications((prev) => prev.filter((a) => a.id !== appId))
+    setWithdrawingId(null)
   }
 
   useEffect(() => {
@@ -184,6 +192,16 @@ export default function MyApplications() {
                       >
                         <ExternalLink size={11} /> Resume/Portfolio
                       </a>
+                    )}
+                    {app.status === 'pending' && (
+                      <button
+                        onClick={() => handleWithdraw(app.id)}
+                        disabled={withdrawingId === app.id}
+                        className="flex items-center gap-1 text-error hover:text-error/80 font-medium disabled:opacity-50"
+                      >
+                        <Trash2 size={11} />
+                        {withdrawingId === app.id ? 'Withdrawing…' : 'Withdraw'}
+                      </button>
                     )}
                   </div>
                 </div>

@@ -2,12 +2,13 @@ import { NavLink, Link, useNavigate } from 'react-router-dom'
 import {
   Compass, Rss, Briefcase, Calendar, Users, Building2, Bell, Mail,
   LogOut, User, PlusSquare, ClipboardList, FileText, CalendarClock,
-  Moon, Sun, Menu, X, BookOpen,
+  Moon, Sun, Menu, X, BookOpen, CalendarCheck,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useUnreadCount } from '../hooks/useUnreadCount'
+import { usePendingMeetings } from '../hooks/usePendingMeetings'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
 
@@ -24,6 +25,7 @@ export default function Nav() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const unreadCount = useUnreadCount()
+  const pendingMeetings = usePendingMeetings()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -51,7 +53,8 @@ export default function Nav() {
       { to: '/my-posts', label: 'My Posts', icon: BookOpen },
     ] : []),
     { to: '/availability', label: 'My Calendar', icon: CalendarClock },
-    { to: '/feed',    label: 'Feed',   icon: Rss      },
+    { to: '/meetings', label: 'Meetings', icon: CalendarCheck },
+    { to: '/feed',    label: 'Activity', icon: Rss      },
     { to: '/events',  label: 'Events', icon: Calendar  },
     ...(isStudent ? [
       { to: '/employers', label: 'Employers & Mentors', icon: Building2 },
@@ -79,10 +82,6 @@ export default function Nav() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
-
-  useEffect(() => {
-    setOpen(false)
-  }, [navigate])
 
   const [logoError, setLogoError] = useState(false)
 
@@ -233,17 +232,30 @@ export default function Nav() {
               <p className="px-4 pt-2 pb-1 text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
                 More
               </p>
-              {SECONDARY_ITEMS.map(({ to, label, icon: Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  onClick={() => setOpen(false)}
-                  className={menuItemClass}
-                >
-                  <Icon size={17} className="shrink-0" />
-                  {label}
-                </NavLink>
-              ))}
+              {SECONDARY_ITEMS.map(({ to, label, icon: Icon }) => {
+                const isMeetings = label === 'Meetings'
+                return (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setOpen(false)}
+                    className={menuItemClass}
+                  >
+                    <div className="relative">
+                      <Icon size={17} className="shrink-0" />
+                      {isMeetings && pendingMeetings > 0 && (
+                        <span
+                          className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 rounded-full text-[9px] font-bold leading-none"
+                          style={{ backgroundColor: 'var(--color-primary)', color: '#ffffff' }}
+                        >
+                          {pendingMeetings > 9 ? '9+' : pendingMeetings}
+                        </span>
+                      )}
+                    </div>
+                    {label}
+                  </NavLink>
+                )
+              })}
             </div>
 
             <div className="py-2 border-t border-border">

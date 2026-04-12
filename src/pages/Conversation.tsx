@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
 import type { Message, Profile } from '../types'
+import { ROLE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 
 const PAGE_SIZE = 50
@@ -241,7 +242,7 @@ export default function Conversation() {
     .slice(0, 2)
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col h-[calc(100vh-8rem)]">
+    <div className="max-w-2xl mx-auto flex flex-col" style={{ flex: 1, minHeight: 0, height: 'calc(100vh - 8rem)' }}>
       {/* Header */}
       <div className="flex items-center gap-4 mb-4 pb-4 border-b border-border shrink-0">
         <Link
@@ -259,7 +260,7 @@ export default function Conversation() {
             </div>
             <div>
               <p className="font-semibold text-ink text-sm leading-tight">{otherProfile.full_name}</p>
-              <p className="text-xs text-ink-muted capitalize">{otherProfile.role}</p>
+              <p className="text-xs text-ink-muted">{ROLE_LABELS[otherProfile.role]}</p>
             </div>
           </div>
         )}

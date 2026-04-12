@@ -6,6 +6,13 @@ export function useUnreadCount() {
   const { profile } = useAuth()
   const [count, setCount] = useState(0)
 
+  // Debounced to avoid flooding on rapid message inserts
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null
+  function scheduleFetch() {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => fetchCount(), 300)
+  }
+
   async function fetchCount() {
     if (!profile) return
 
@@ -43,7 +50,7 @@ export function useUnreadCount() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'messages' },
-        () => fetchCount()
+        () => scheduleFetch()
       )
       .subscribe()
 

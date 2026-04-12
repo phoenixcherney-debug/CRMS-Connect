@@ -81,6 +81,18 @@ export default function MyStudentPosts() {
     }
   }
 
+  async function handleUpdate(postId: string, updates: Partial<StudentPost>) {
+    const { data, error } = await supabase
+      .from('student_posts')
+      .update(updates)
+      .eq('id', postId)
+      .select()
+      .single()
+    if (!error && data) {
+      setPosts((prev) => prev.map((p) => p.id === postId ? (data as StudentPost) : p))
+    }
+  }
+
   async function toggleClosed(post: StudentPost) {
     const { error } = await supabase
       .from('student_posts')
@@ -252,7 +264,7 @@ export default function MyStudentPosts() {
           {/* Open posts */}
           {openPosts.length > 0 && (
             <div className="space-y-4">
-              {openPosts.map((post) => <PostCard key={post.id} post={post} onToggle={toggleClosed} onDelete={setDeleteId} />)}
+              {openPosts.map((post) => <PostCard key={post.id} post={post} onToggle={toggleClosed} onDelete={setDeleteId} onUpdate={handleUpdate} />)}
             </div>
           )}
 
@@ -261,7 +273,7 @@ export default function MyStudentPosts() {
             <div>
               <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Closed posts</p>
               <div className="space-y-4 opacity-60">
-                {closedPosts.map((post) => <PostCard key={post.id} post={post} onToggle={toggleClosed} onDelete={setDeleteId} />)}
+                {closedPosts.map((post) => <PostCard key={post.id} post={post} onToggle={toggleClosed} onDelete={setDeleteId} onUpdate={handleUpdate} />)}
               </div>
             </div>
           )}
@@ -293,11 +305,89 @@ interface PostCardProps {
   post: StudentPost
   onToggle: (post: StudentPost) => void
   onDelete: (id: string) => void
+  onUpdate: (id: string, updates: Partial<StudentPost>) => Promise<void>
 }
 
-function PostCard({ post, onToggle, onDelete }: PostCardProps) {
+function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
+  const [editing, setEditing] = useState(false)
+  const [editPitch, setEditPitch] = useState(post.pitch)
+  const [editSeeking, setEditSeeking] = useState<StudentSeeking | ''>(post.seeking)
+  const [editAvailability, setEditAvailability] = useState(post.availability ?? '')
+  const [editInterests, setEditInterests] = useState<string[]>(post.interests)
+  const [saving, setSaving] = useState(false)
+
   const seekingLabel = STUDENT_SEEKING_LABELS[post.seeking] ?? post.seeking
   const displaySeeking = post.seeking === 'other' && post.seeking_other ? post.seeking_other : seekingLabel
+
+  async function saveEdit() {
+    if (!editSeeking) return
+    setSaving(true)
+    await onUpdate(post.id, {
+      pitch: editPitch.trim(),
+      seeking: editSeeking,
+      interests: editInterests,
+      availability: editAvailability || null,
+    })
+    setSaving(false)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="bg-surface rounded-xl border border-primary p-5" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-semibold text-ink text-sm">Edit post</p>
+          <button onClick={() => setEditing(false)} className="text-ink-muted hover:text-ink"><X size={15} /></button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-ink mb-1.5">Looking for</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(Object.entries(STUDENT_SEEKING_LABELS) as [StudentSeeking, string][]).map(([val, label]) => (
+                <button key={val} type="button" onClick={() => setEditSeeking(val === editSeeking ? '' : val)}
+                  className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${editSeeking === val ? 'border-primary text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}
+                  style={editSeeking === val ? { backgroundColor: 'var(--color-primary-muted)' } : {}}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-ink mb-1">About you</label>
+            <textarea rows={3} value={editPitch} onChange={(e) => setEditPitch(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-ink mb-1">Availability</label>
+            <select value={editAvailability} onChange={(e) => setEditAvailability(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors">
+              <option value="">Select…</option>
+              {WEEKLY_AVAILABILITY_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-ink mb-1.5">Interests</label>
+            <div className="flex flex-wrap gap-1">
+              {INTEREST_OPTIONS.map((opt) => {
+                const sel = editInterests.includes(opt)
+                return (
+                  <button key={opt} type="button"
+                    onClick={() => setEditInterests((p) => sel ? p.filter((i) => i !== opt) : [...p, opt])}
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-medium border transition-colors ${sel ? 'bg-primary text-white border-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}>
+                    {opt}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={saveEdit} disabled={saving || !editSeeking} className="btn-gold px-4 py-1.5 text-xs">
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button onClick={() => setEditing(false)} className="px-3 py-1.5 rounded-lg border border-border text-xs text-ink-secondary hover:bg-primary-faint transition-colors">Cancel</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-surface rounded-xl border border-border p-5" style={{ boxShadow: 'var(--shadow-card)' }}>
@@ -332,6 +422,13 @@ function PostCard({ post, onToggle, onDelete }: PostCardProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => setEditing(true)}
+            title="Edit post"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
+          >
+            Edit
+          </button>
           <button
             onClick={() => onToggle(post)}
             title={post.is_closed ? 'Reopen' : 'Close post'}

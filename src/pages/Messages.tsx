@@ -138,6 +138,7 @@ export default function Messages() {
         .from('profiles')
         .select('id, full_name, avatar_url, role')
         .neq('id', profile.id)
+        .neq('role', profile.role)
         .ilike('full_name', `%${q}%`)
         .limit(10)
 
@@ -255,8 +256,8 @@ export default function Messages() {
                       )}
                     </span>
                   </div>
-                  <p className="text-xs text-ink-muted capitalize mb-0.5">
-                    {conv.otherProfile.role}
+                  <p className="text-xs text-ink-muted mb-0.5">
+                    {ROLE_LABELS[conv.otherProfile.role]}
                   </p>
                   {conv.lastMessage ? (
                     <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-ink-secondary font-medium' : 'text-ink-muted'}`}>

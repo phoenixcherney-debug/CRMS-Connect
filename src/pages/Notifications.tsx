@@ -19,10 +19,11 @@ interface NotifItem {
 }
 
 const STATUS_TEXT: Record<string, string> = {
-  pending:  'Pending review',
-  reviewed: 'Under review',
-  accepted: 'Accepted — congrats!',
-  rejected: 'Not selected',
+  pending:    'Submitted',
+  reviewed:   'Submitted',
+  waitlisted: 'Submitted',
+  accepted:   'Accepted — congrats!',
+  rejected:   'Not selected',
 }
 
 export default function Notifications() {
@@ -30,11 +31,21 @@ export default function Notifications() {
   const [items, setItems]     = useState<NotifItem[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [seenAt, setSeenAt] = useState<string | null>(null)
 
   async function load(quiet = false) {
     if (!profile) return
     if (quiet) setRefreshing(true)
     else setLoading(true)
+
+    // Fetch notifications_seen_at so we can dim items already seen
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('notifications_seen_at')
+      .eq('id', profile.id)
+      .single()
+    const currentSeenAt: string | null = (profileData as any)?.notifications_seen_at ?? null
+    setSeenAt(currentSeenAt)
 
     const notifs: NotifItem[] = []
 
@@ -82,7 +93,7 @@ export default function Notifications() {
         const jobTitle   = (a.jobs as any)?.title   ?? 'a position'
         const jobCompany = (a.jobs as any)?.company ?? ''
         // Mark as unread only for statuses that changed recently (not pending - that's the student's own action)
-        const isActionable = a.status === 'accepted' || a.status === 'reviewed' || a.status === 'rejected'
+        const isActionable = a.status === 'accepted' || a.status === 'rejected'
         notifs.push({
           id:       `app-${a.id}`,
           type:     'app_out',
@@ -134,9 +145,19 @@ export default function Notifications() {
     setRefreshing(false)
   }
 
-  useEffect(() => { load() }, [profile?.id])
+  useEffect(() => {
+    load()
+  }, [profile?.id])
 
-  const unreadCount = items.filter((i) => i.unread).length
+  // Mark all as seen when the page is visited
+  useEffect(() => {
+    if (!profile) return
+    supabase.from('profiles').update({ notifications_seen_at: new Date().toISOString() }).eq('id', profile.id)
+  }, [profile?.id])
+
+  // An item is "new" if it arrived after the last seen timestamp
+  const isNew = (item: NotifItem) => !seenAt || item.ts > seenAt
+  const unreadCount = items.filter(isNew).length
 
   const ICON: Record<NotifType, typeof Bell> = {
     message: MessageSquare,
@@ -192,14 +213,14 @@ export default function Notifications() {
               <Link
                 key={item.id}
                 to={item.link}
-                className={`flex items-start gap-4 px-5 py-4 hover:bg-primary-faint transition-colors ${item.unread ? 'bg-primary-faint/60' : ''}`}
+                className={`flex items-start gap-4 px-5 py-4 hover:bg-primary-faint transition-colors ${isNew(item) ? 'bg-primary-faint/60' : ''}`}
               >
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${bgColor}`}>
                   <Icon size={16} />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm leading-snug ${item.unread ? 'font-semibold text-ink' : 'font-medium text-ink'}`}>
+                  <p className={`text-sm leading-snug ${isNew(item) ? 'font-semibold text-ink' : 'font-medium text-ink'}`}>
                     {item.title}
                   </p>
                   <p className="text-xs text-ink-secondary mt-0.5 line-clamp-1">{item.subtitle}</p>
@@ -208,7 +229,7 @@ export default function Notifications() {
                   </p>
                 </div>
 
-                {item.unread && (
+                {isNew(item) && (
                   <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
                 )}
               </Link>

@@ -92,6 +92,12 @@ export default function PostJob() {
     e.preventDefault()
     if (!profile) return
     setError(null)
+
+    if (form.end_date && form.start_date && form.end_date < form.start_date) {
+      setError('End date must be after start date.')
+      return
+    }
+
     setSubmitting(true)
 
     const payload = {

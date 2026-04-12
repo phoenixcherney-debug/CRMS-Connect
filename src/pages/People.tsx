@@ -90,10 +90,16 @@ export default function People() {
     if (p.id === profile?.id) return false
     if (search && !p.full_name.toLowerCase().includes(search.toLowerCase())) return false
 
-    // Interest filter: person has at least one matching interest
+    // Interest/Industry filter
     if (filterInterests.length > 0) {
-      const personInterests = p.interests ?? []
-      if (!filterInterests.some((fi) => personInterests.includes(fi))) return false
+      if (isStudent) {
+        // Students browsing EMs: filter by industry
+        if (!p.industry || !filterInterests.includes(p.industry)) return false
+      } else {
+        // EMs browsing students: filter by interests
+        const personInterests = p.interests ?? []
+        if (!filterInterests.some((fi) => personInterests.includes(fi))) return false
+      }
     }
 
     // Availability filter
@@ -137,7 +143,7 @@ export default function People() {
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>People</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>{pageTitle}</h1>
         <p className="text-ink-secondary text-sm mt-0.5">{pageSubtitle}</p>
       </div>
 
@@ -269,9 +275,11 @@ export default function People() {
             </div>
           </div>
 
-          {/* Interests */}
+          {/* Interests / Industry */}
           <div>
-            <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Interests</p>
+            <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
+              {isStudent ? 'Industry' : 'Interests'}
+            </p>
             <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
               {INTEREST_OPTIONS.map((opt) => (
                 <button

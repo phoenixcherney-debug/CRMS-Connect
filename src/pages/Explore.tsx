@@ -42,6 +42,7 @@ export default function Explore() {
         supabase
           .from('profiles')
           .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, created_at')
+          .eq('role', isEmployerMentor ? 'student' : 'employer_mentor')
           .order('created_at', { ascending: false })
           .limit(12),
         supabase
@@ -62,7 +63,7 @@ export default function Explore() {
 
       setRecentJobs(jobList)
       setRecentPeople(peopleList)
-      setMentors(peopleList.filter((p) => p.open_to_mentorship && p.id !== profile?.id))
+      setMentors(peopleList.filter((p) => p.open_to_mentorship && p.role === 'employer_mentor' && p.id !== profile?.id))
       setStats({
         jobs: totalJobs ?? jobList.length,
         people: totalPeople ?? peopleList.length,

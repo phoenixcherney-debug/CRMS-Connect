@@ -9,7 +9,7 @@ import type { Application, ApplicationStatus, Job, StudentSeeking, OpportunityTy
 import { JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 
-type Tab = 'inbox' | 'waitlist' | 'decided'
+type Tab = 'inbox' | 'decided'
 
 interface ApplicantProfile {
   id: string
@@ -101,9 +101,9 @@ export default function Applicants() {
       const applicantId = (app?.profiles as { id?: string } | null)?.id
       if (applicantId && job) {
         const STATUS_PUSH: Record<ApplicationStatus, string> = {
-          pending:    'Your application is pending review.',
-          reviewed:   'Your application is under review.',
-          waitlisted: "You've been added to the waitlist.",
+          pending:    'Your application has been submitted.',
+          reviewed:   'Your application has been submitted.',
+          waitlisted: 'Your application has been submitted.',
           accepted:   'Your application was accepted!',
           rejected:   'Your application was not selected.',
         }
@@ -138,16 +138,14 @@ export default function Applicants() {
   const compatible  = allPending.filter((a) => isCompatibleApplicant(job, a.profiles as ApplicantProfile | null))
   const incompatible = allPending.filter((a) => !isCompatibleApplicant(job, a.profiles as ApplicantProfile | null))
 
-  const waitlist = applications.filter((a) => a.status === 'waitlisted')
   const decided  = applications.filter((a) => a.status === 'accepted' || a.status === 'rejected')
 
   const inbox = allPending
-  const tabApps = activeTab === 'inbox' ? inbox : activeTab === 'waitlist' ? waitlist : decided
+  const tabApps = activeTab === 'inbox' ? inbox : decided
 
   const TABS: { key: Tab; label: string; count: number }[] = [
-    { key: 'inbox',    label: 'Inbox',    count: inbox.length    },
-    { key: 'waitlist', label: 'Waitlist', count: waitlist.length },
-    { key: 'decided',  label: 'Decided',  count: decided.length  },
+    { key: 'inbox',   label: 'Inbox',   count: inbox.length   },
+    { key: 'decided', label: 'Decided', count: decided.length },
   ]
 
   return (
@@ -209,11 +207,7 @@ export default function Applicants() {
       {tabApps.length === 0 ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted">
-            {activeTab === 'inbox'
-              ? 'No new applicants.'
-              : activeTab === 'waitlist'
-              ? 'No one on the waitlist.'
-              : 'No decisions made yet.'}
+            {activeTab === 'inbox' ? 'No new applicants.' : 'No decisions made yet.'}
           </p>
         </div>
       ) : activeTab === 'inbox' ? (
@@ -341,7 +335,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
 
         {/* Action buttons */}
         <div className="flex items-start gap-2 shrink-0">
-          {(activeTab === 'inbox' || activeTab === 'waitlist') && (
+          {activeTab === 'inbox' && (
             <>
               <button
                 onClick={() => updateStatus(app.id, 'accepted')}
@@ -351,15 +345,6 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                 {isUpdating ? <Spinner size="sm" /> : <CheckCircle2 size={13} />}
                 Accept
               </button>
-              {activeTab === 'inbox' && (
-                <button
-                  onClick={() => updateStatus(app.id, 'waitlisted')}
-                  disabled={isUpdating}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-pending-bg text-status-pending-text border border-status-pending-border hover:opacity-80 transition-opacity disabled:opacity-40"
-                >
-                  Waitlist
-                </button>
-              )}
               <button
                 onClick={() => updateStatus(app.id, 'rejected')}
                 disabled={isUpdating}

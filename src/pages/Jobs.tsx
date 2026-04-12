@@ -69,7 +69,8 @@ export default function Jobs() {
     if (sort === 'company') return a.company.localeCompare(b.company)
     return b.created_at.localeCompare(a.created_at)
   })
-  const closedJobs = filtered.filter((j) => !isJobActive(j))
+  // Only show closed jobs belonging to the current user (don't expose other employers' closed postings)
+  const closedJobs = filtered.filter((j) => !isJobActive(j) && j.posted_by === profile?.id)
 
   return (
     <div>
@@ -209,6 +210,14 @@ export default function Jobs() {
           >
             Try again
           </button>
+        </div>
+      ) : activeJobs.length === 0 && isPoster ? (
+        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
+          <p className="text-ink-muted text-base mb-2">No active opportunities found.</p>
+          <p className="text-sm text-ink-muted">
+            Your opportunities are in{' '}
+            <Link to="/my-postings" className="text-primary hover:text-primary-light font-medium">My Postings →</Link>
+          </p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">

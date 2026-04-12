@@ -68,7 +68,7 @@ export default function Employers() {
         <p className="text-ink-secondary text-sm mt-0.5">
           {loading
             ? 'Loading…'
-            : `${employers.length} company${employers.length !== 1 ? 's' : ''} have posted opportunities`}
+            : `${employers.length} company${employers.length !== 1 ? 's' : ''} with posted opportunities — click a company to see who posted`}
         </p>
       </div>
 
@@ -220,6 +220,7 @@ export default function Employers() {
 
 function JobRow({ job, closed }: { job: Job; closed?: boolean }) {
   const deadline = job.deadline ? parseISO(job.deadline) : null
+  const posterName = (job.profiles as any)?.full_name as string | undefined
   return (
     <Link
       to={`/jobs/${job.id}`}
@@ -227,7 +228,10 @@ function JobRow({ job, closed }: { job: Job; closed?: boolean }) {
     >
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-ink truncate">{job.title}</p>
-        <p className="text-xs text-ink-muted mt-0.5">{job.location}</p>
+        <p className="text-xs text-ink-muted mt-0.5">
+          {job.location}
+          {posterName && <span className="ml-2 text-ink-muted/70">· Posted by {posterName}</span>}
+        </p>
       </div>
       <div className="flex items-center gap-2 shrink-0 text-xs text-ink-muted">
         <span>{JOB_TYPE_LABELS[job.job_type]}</span>

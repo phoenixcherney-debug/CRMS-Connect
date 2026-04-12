@@ -1,11 +1,12 @@
 import { useState } from 'react'
+import type React from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, GraduationCap, Sparkles, Building2, Layers } from 'lucide-react'
+import { ArrowRight, GraduationCap, Sparkles, Building2, Layers, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  INDUSTRY_OPTIONS,
+  INDUSTRY_OPTIONS, INTEREST_OPTIONS,
   MENTOR_TYPE_LABELS, STUDENT_SEEKING_LABELS, STUDENT_GRADES,
 } from '../types'
 import type { MentorType, StudentSeeking, StudentGrade } from '../types'
@@ -41,9 +42,13 @@ export default function Onboarding() {
   const [mentorTypeOther, setMentorTypeOther] = useState('')
   const [studentSeeking, setStudentSeeking] = useState<StudentSeeking | ''>('')
   const [studentSeekingOther, setStudentSeekingOther] = useState('')
+  const [interests, setInterests] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [logoError, setLogoError] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null)
+  const [avatarBroken, setAvatarBroken] = useState(false)
 
   if (!profile) return null
 
@@ -51,12 +56,33 @@ export default function Onboarding() {
   const isStudent = profile.role === 'student'
   const isEmployerMentor = profile.role === 'employer_mentor'
 
-  // Validation: sub-role fields are required
+  // Validation: sub-role fields + industry (EM) + interests (student) are required
   const canSubmit = isEmployerMentor
-    ? mentorType !== '' && (mentorType !== 'other' || mentorTypeOther.trim() !== '')
+    ? mentorType !== '' && (mentorType !== 'other' || mentorTypeOther.trim() !== '') && industry !== ''
     : isStudent
-    ? studentSeeking !== '' && (studentSeeking !== 'other' || studentSeekingOther.trim() !== '')
+    ? studentSeeking !== '' && (studentSeeking !== 'other' || studentSeekingOther.trim() !== '') && interests.length > 0
     : true
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    setAvatarUploadError(null)
+    setAvatarUploading(true)
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const path = `${profile.id}/avatar.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (uploadError) {
+      setAvatarUploadError('Upload failed — please try again or paste a URL below.')
+      setAvatarUploading(false)
+      return
+    }
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    setAvatarUrl(publicUrl)
+    setAvatarBroken(false)
+    setAvatarUploading(false)
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -76,6 +102,7 @@ export default function Onboarding() {
       updates.grade = grade || null
       updates.student_seeking = studentSeeking || null
       updates.student_seeking_other = studentSeeking === 'other' ? studentSeekingOther.trim() || null : null
+      updates.interests = interests
     }
 
     if (isEmployerMentor) {
@@ -89,22 +116,6 @@ export default function Onboarding() {
     if (error) {
       setSaving(false)
       setSaveError('Failed to save your profile. Please try again.')
-      return
-    }
-    await refreshProfile()
-    navigate(isStudent ? '/jobs' : '/explore', { replace: true })
-  }
-
-  async function handleSkip() {
-    setSaving(true)
-    setSaveError(null)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ onboarding_complete: true })
-      .eq('id', profile!.id)
-    if (error) {
-      setSaving(false)
-      setSaveError('Something went wrong. Please try again.')
       return
     }
     await refreshProfile()
@@ -325,8 +336,7 @@ export default function Onboarding() {
                   <label className="block text-sm font-medium text-ink mb-1.5">
                     <span className="flex items-center gap-1.5">
                       <Layers size={14} className="text-ink-muted" />
-                      Industry / Area of expertise
-                      <span className="text-ink-muted font-normal">(optional)</span>
+                      Industry / Area of expertise <span className="text-error">*</span>
                     </span>
                   </label>
                   <select
@@ -342,6 +352,34 @@ export default function Onboarding() {
                   </select>
                 </div>
               </>
+            )}
+
+            {/* ── Student interests (REQUIRED) ── */}
+            {isStudent && (
+              <div>
+                <label className="block text-sm font-semibold text-ink mb-2">
+                  Areas of interest <span className="text-error">*</span>
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {INTEREST_OPTIONS.map((opt) => {
+                    const selected = interests.includes(opt)
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setInterests((prev) => selected ? prev.filter((i) => i !== opt) : [...prev, opt])}
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors
+                          ${selected ? 'bg-primary text-white border-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}
+                      >
+                        {opt}
+                      </button>
+                    )
+                  })}
+                </div>
+                {interests.length === 0 && (
+                  <p className="mt-1 text-xs text-ink-muted">Select at least one interest to continue.</p>
+                )}
+              </div>
             )}
 
             {/* ── Bio ── */}
@@ -365,18 +403,60 @@ export default function Onboarding() {
               />
             </div>
 
-            {/* ── Avatar URL ── */}
+            {/* ── Profile photo ── */}
             <div>
               <label className="block text-sm font-medium text-ink mb-1.5">
-                Profile photo URL{' '}
+                Profile photo{' '}
                 <span className="text-ink-muted font-normal">(optional)</span>
               </label>
+
+              {/* Preview */}
+              {avatarUrl && !avatarBroken && (
+                <div className="mb-2 flex items-center gap-3">
+                  <img
+                    src={avatarUrl}
+                    alt="Preview"
+                    className="w-12 h-12 rounded-xl object-cover border border-border"
+                    onError={() => setAvatarBroken(true)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUrl('')}
+                    className="text-xs text-error hover:text-error/80 font-medium"
+                  >
+                    Remove photo
+                  </button>
+                </div>
+              )}
+
+              {/* File upload */}
+              <label className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-border
+                bg-primary-faint hover:bg-primary-faint/80 cursor-pointer text-sm text-ink-secondary transition-colors">
+                {avatarUploading
+                  ? <><Spinner size="sm" /> Uploading…</>
+                  : <><Upload size={15} /> Upload a photo</>
+                }
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={avatarUploading}
+                  onChange={handleAvatarUpload}
+                />
+              </label>
+
+              {avatarUploadError && (
+                <p className="mt-1 text-xs text-error">{avatarUploadError}</p>
+              )}
+
+              {/* Fallback URL */}
+              <p className="mt-2 text-xs text-ink-muted">Or paste a URL:</p>
               <input
                 type="url"
                 value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="Paste a link to your photo (e.g. Google Drive, Imgur)"
-                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                onChange={(e) => { setAvatarUrl(e.target.value); setAvatarBroken(false) }}
+                placeholder="https://example.com/photo.jpg"
+                className="mt-1 w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
                   placeholder:text-ink-placeholder
                   focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
               />
@@ -391,16 +471,6 @@ export default function Onboarding() {
               >
                 {saving ? <Spinner size="sm" className="border-white/30 border-t-white" /> : <ArrowRight size={16} />}
                 {saving ? 'Saving…' : 'Complete setup'}
-              </button>
-              <button
-                type="button"
-                onClick={handleSkip}
-                disabled={saving}
-                className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-muted
-                  hover:bg-primary-faint hover:text-ink-secondary transition-colors
-                  disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Skip for now
               </button>
             </div>
           </form>

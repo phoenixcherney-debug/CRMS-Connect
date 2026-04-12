@@ -12,12 +12,11 @@ import type { Job, Application, ApplicationStatus } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS, ROLE_LABELS } from '../types'
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string; dot: string }> = {
-  pending:    { label: 'Pending review', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
-  reviewed:   { label: 'Under review',  classes: 'bg-status-reviewed-bg text-status-reviewed-text border-status-reviewed-border', dot: 'bg-status-reviewed-dot' },
-  accepted:   { label: 'Accepted',      classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
-  rejected:   { label: 'Not selected',  classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border', dot: 'bg-status-rejected-dot' },
-  // Students see waitlisted as pending — never expose the word "waitlisted" in student-facing UI
-  waitlisted: { label: 'Pending review', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
+  pending:    { label: 'Submitted',    classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
+  reviewed:   { label: 'Submitted',   classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
+  accepted:   { label: 'Accepted',    classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
+  rejected:   { label: 'Not selected', classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border', dot: 'bg-status-rejected-dot' },
+  waitlisted: { label: 'Submitted',   classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
 }
 import Spinner from '../components/Spinner'
 
@@ -375,27 +374,69 @@ export default function JobDetail() {
               const IconComponent = isRejected ? AlertCircle : CheckCircle2
               const iconClass = isRejected ? 'text-error' : isAccepted ? 'text-success' : 'text-primary'
               return (
-                <div className={`flex items-center gap-3 p-4 rounded-xl border ${bgClass}`}>
-                  <IconComponent size={20} className={`${iconClass} shrink-0`} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-ink">
-                      {isRejected ? 'Application not selected' : isAccepted ? 'Application accepted!' : 'Application submitted'}
-                    </p>
-                    <div className="mt-1.5">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${s.classes}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                        {s.label}
-                      </span>
+                <div className="space-y-3">
+                  <div className={`flex items-center gap-3 p-4 rounded-xl border ${bgClass}`}>
+                    <IconComponent size={20} className={`${iconClass} shrink-0`} />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-ink">
+                        {isRejected ? 'Application not selected' : isAccepted ? 'Application accepted!' : 'Application submitted'}
+                      </p>
+                      <div className="mt-1.5">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${s.classes}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                          {s.label}
+                        </span>
+                      </div>
                     </div>
+                    {status === 'pending' && (
+                      <button
+                        onClick={handleWithdraw}
+                        disabled={withdrawing}
+                        className="text-xs text-error hover:text-error/80 font-medium disabled:opacity-50"
+                      >
+                        {withdrawing ? 'Withdrawing…' : 'Withdraw'}
+                      </button>
+                    )}
                   </div>
-                  {status === 'pending' && (
-                    <button
-                      onClick={handleWithdraw}
-                      disabled={withdrawing}
-                      className="text-xs text-error hover:text-error/80 font-medium disabled:opacity-50"
-                    >
-                      {withdrawing ? 'Withdrawing…' : 'Withdraw'}
-                    </button>
+
+                  {/* What was shared — shown right after a new submission */}
+                  {applySuccess && (
+                    <div className="rounded-xl border border-border bg-surface p-4 text-sm">
+                      <p className="font-medium text-ink mb-3">What was shared with the poster</p>
+                      <dl className="space-y-2">
+                        {profile?.interests && profile.interests.length > 0 && (
+                          <div className="flex gap-2">
+                            <dt className="text-ink-muted w-36 shrink-0">Interests</dt>
+                            <dd className="text-ink flex flex-wrap gap-1">
+                              {profile.interests.map((i) => (
+                                <span key={i} className="inline-flex px-2 py-0.5 rounded-md bg-primary-muted text-primary text-xs font-medium">{i}</span>
+                              ))}
+                            </dd>
+                          </div>
+                        )}
+                        {profile?.grade && (
+                          <div className="flex gap-2">
+                            <dt className="text-ink-muted w-36 shrink-0">Grade</dt>
+                            <dd className="text-ink">{profile.grade}</dd>
+                          </div>
+                        )}
+                        {profile?.weekly_availability && (
+                          <div className="flex gap-2">
+                            <dt className="text-ink-muted w-36 shrink-0">Weekly availability</dt>
+                            <dd className="text-ink">{profile.weekly_availability}</dd>
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <dt className="text-ink-muted w-36 shrink-0">Resume / Portfolio</dt>
+                          <dd className="text-ink">
+                            {resumeLink.trim()
+                              ? <a href={resumeLink.trim()} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-light underline break-all">{resumeLink.trim()}</a>
+                              : <span className="text-ink-muted italic">Not provided</span>
+                            }
+                          </dd>
+                        </div>
+                      </dl>
+                    </div>
                   )}
                 </div>
               )

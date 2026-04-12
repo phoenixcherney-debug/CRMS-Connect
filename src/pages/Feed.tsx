@@ -129,14 +129,14 @@ export default function Feed() {
   useEffect(() => { load() }, [profile?.id])
 
   const subtitle = isStudent
-    ? 'Opportunities matching your interests and recent messages'
-    : 'New applications to your postings and recent messages'
+    ? 'Recent opportunities and community activity'
+    : 'New applications to your postings and community activity'
 
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Feed</h1>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Activity</h1>
           <p className="text-ink-secondary text-sm mt-0.5">{subtitle}</p>
         </div>
         <button

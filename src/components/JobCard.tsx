@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MapPin, Calendar, Building2, Clock } from 'lucide-react'
+import { MapPin, Calendar, Building2, Clock, Users } from 'lucide-react'
 import { formatDistanceToNow, isPast, parseISO, format } from 'date-fns'
 import type { Job, JobType, LocationType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS } from '../types'
@@ -119,7 +119,7 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
         <div className="px-5 py-3 border-t border-border flex items-center justify-between">
           {applicantCount !== undefined && (
             <span className="text-xs text-ink-muted font-medium flex items-center gap-1">
-              <Clock size={12} />
+              <Users size={12} />
               {applicantCount} {applicantCount === 1 ? 'applicant' : 'applicants'}
             </span>
           )}

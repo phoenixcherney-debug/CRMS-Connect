@@ -26,14 +26,16 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false)
   const [role, setRole] = useState<Role>('student')
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [emailTouched, setEmailTouched] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [logoError, setLogoError] = useState(false)
 
+  // Re-validate when role changes after field was already touched
   useEffect(() => {
-    setEmailError(validateEmailForRole(email, role))
-  }, [email, role])
+    if (emailTouched) setEmailError(validateEmailForRole(email, role))
+  }, [role])
 
   if (!loading && user?.email_confirmed_at) {
     return <Navigate to="/jobs" replace />
@@ -230,6 +232,7 @@ export default function Signup() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => { setEmailTouched(true); setEmailError(validateEmailForRole(email, role)) }}
                 placeholder={role === 'student' ? 'you@crms.org' : 'you@example.com'}
                 className={`w-full px-3.5 py-2.5 rounded-lg border bg-surface text-ink text-sm
                   placeholder:text-ink-placeholder

@@ -28,7 +28,18 @@
       "WebFetch(domain:www.crms.org)",
       "Bash(grep -E \"\\\\.tsx$|\\\\.ts$|\\\\.css$\")",
       "Bash(grep \"\\\\.tsx$\")",
-      "Bash(kill -9 25267 45492)"
+      "Bash(kill -9 25267 45492)",
+      "Bash(npm list:*)",
+      "Bash(vercel ls:*)",
+      "Bash(vercel:*)",
+      "Read(//tmp/**)",
+      "Bash(identify /tmp/crms-logo.png)",
+      "Bash(sips -g all /tmp/crms-logo.png)",
+      "Bash(convert --version)",
+      "Bash(python3 -c \"from PIL import Image; print\\('PIL ok'\\)\")",
+      "Bash(python3 -m pip install pillow -q)",
+      "Bash(python3:*)",
+      "Bash(grep -i \"availability_slots\\\\|CREATE TABLE.*avail\" /Users/phoenixcherney/Desktop/crms-connect/supabase/migrations/*.sql)"
     ]
   }
 }

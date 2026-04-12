@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type React from 'react'
 import {
-  CheckCircle2, AlertCircle, User, Pencil, X, Plus, Trash2, Briefcase, Heart,
+  CheckCircle2, AlertCircle, User, Pencil, X, Plus, Trash2, Briefcase, Heart, Upload,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -11,6 +11,7 @@ import {
 } from '../types'
 import type { CareerHistory, MentorType, StudentSeeking } from '../types'
 import Spinner from '../components/Spinner'
+import { usePushNotifications } from '../hooks/usePushNotifications'
 
 export default function Profile() {
   const { profile, user, refreshProfile, loading } = useAuth()
@@ -40,11 +41,15 @@ export default function Profile() {
   const [addingEntry, setAddingEntry] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
 
-  const [saving, setSaving]           = useState(false)
-  const [saveSuccess, setSaveSuccess] = useState(false)
-  const [saveError, setSaveError]     = useState<string | null>(null)
+  const [saving, setSaving]               = useState(false)
+  const [saveSuccess, setSaveSuccess]     = useState(false)
+  const [saveError, setSaveError]         = useState<string | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null)
 
   const isEmployerMentor = profile?.role === 'employer_mentor'
+  const { permission, isSubscribed, subscribe, unsubscribe } = usePushNotifications()
+  const [pushLoading, setPushLoading] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -117,6 +122,26 @@ export default function Profile() {
     setGrade(profile!.grade ?? '')
     setSaveError(null)
     setEditing(false)
+  }
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    setAvatarUploadError(null)
+    setAvatarUploading(true)
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const path = `${profile.id}/avatar.${ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true, contentType: file.type })
+    if (uploadError) {
+      setAvatarUploadError('Upload failed — please try again or paste a URL below.')
+      setAvatarUploading(false)
+      return
+    }
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    setAvatarUrl(publicUrl)
+    setAvatarUploading(false)
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -376,6 +401,39 @@ export default function Profile() {
                         </div>
                       ))}
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Push notifications toggle */}
+              {permission !== 'unsupported' && permission !== 'loading' && (
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-primary-faint">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink">Push notifications</p>
+                    <p className="text-xs text-ink-muted mt-0.5">
+                      {permission === 'denied'
+                        ? 'Blocked in browser settings — allow notifications to enable.'
+                        : isSubscribed
+                        ? 'You\'ll be notified about new messages and updates.'
+                        : 'Get notified about new messages and activity.'
+                      }
+                    </p>
+                  </div>
+                  {permission !== 'denied' && (
+                    <button
+                      type="button"
+                      disabled={pushLoading}
+                      onClick={async () => {
+                        setPushLoading(true)
+                        if (isSubscribed) { await unsubscribe() } else { await subscribe() }
+                        setPushLoading(false)
+                      }}
+                      className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ml-3
+                        ${isSubscribed ? 'bg-primary' : 'bg-border-strong'} disabled:opacity-50`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform
+                        ${isSubscribed ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
                   )}
                 </div>
               )}
@@ -663,17 +721,60 @@ export default function Profile() {
                   />
                 </div>
 
-                {/* Avatar URL */}
+                {/* Profile photo */}
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">
-                    Profile photo URL <span className="text-ink-muted font-normal">(optional)</span>
+                    Profile photo <span className="text-ink-muted font-normal">(optional)</span>
                   </label>
+
+                  {/* Preview */}
+                  {avatarUrl && !avatarBroken && (
+                    <div className="mb-2 flex items-center gap-3">
+                      <img
+                        src={avatarUrl}
+                        alt="Preview"
+                        className="w-12 h-12 rounded-xl object-cover border border-border"
+                        onError={() => setAvatarBroken(true)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAvatarUrl('')}
+                        className="text-xs text-error hover:text-error/80 font-medium"
+                      >
+                        Remove photo
+                      </button>
+                    </div>
+                  )}
+
+                  {/* File upload */}
+                  <label className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-border
+                    bg-primary-faint hover:bg-primary-faint/80 cursor-pointer text-sm text-ink-secondary
+                    transition-colors">
+                    {avatarUploading
+                      ? <><Spinner size="sm" /> Uploading…</>
+                      : <><Upload size={15} /> Upload a photo</>
+                    }
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      disabled={avatarUploading}
+                      onChange={handleAvatarUpload}
+                    />
+                  </label>
+
+                  {avatarUploadError && (
+                    <p className="mt-1 text-xs text-error">{avatarUploadError}</p>
+                  )}
+
+                  {/* Fallback URL */}
+                  <p className="mt-2 text-xs text-ink-muted">Or paste a URL:</p>
                   <input
                     type="url"
                     value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    placeholder="Paste a link to your photo (e.g. Google Drive, Imgur)"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                    onChange={(e) => { setAvatarUrl(e.target.value); setAvatarBroken(false) }}
+                    placeholder="https://example.com/photo.jpg"
+                    className="mt-1 w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
                       placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                   />
                 </div>
