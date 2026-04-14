@@ -38,6 +38,7 @@ export default function Onboarding() {
   const [avatarUrl, setAvatarUrl] = useState('')
   const [company, setCompany] = useState('')
   const [industry, setIndustry] = useState('')
+  const [industryOther, setIndustryOther] = useState('')
   const [mentorType, setMentorType] = useState<MentorType | ''>('')
   const [mentorTypeOther, setMentorTypeOther] = useState('')
   const [studentSeeking, setStudentSeeking] = useState<StudentSeeking | ''>('')
@@ -58,7 +59,7 @@ export default function Onboarding() {
 
   // Validation: sub-role fields + industry (EM) + interests (student) are required
   const canSubmit = isEmployerMentor
-    ? mentorType !== '' && (mentorType !== 'other' || mentorTypeOther.trim() !== '') && industry !== ''
+    ? mentorType !== '' && (mentorType !== 'other' || mentorTypeOther.trim() !== '') && industry !== '' && (industry !== 'Other' || industryOther.trim() !== '')
     : isStudent
     ? studentSeeking !== '' && (studentSeeking !== 'other' || studentSeekingOther.trim() !== '') && interests.length > 0
     : true
@@ -107,7 +108,7 @@ export default function Onboarding() {
 
     if (isEmployerMentor) {
       updates.company = company.trim() || null
-      updates.industry = industry || null
+      updates.industry = industry === 'Other' ? (industryOther.trim() || null) : (industry || null)
       updates.mentor_type = mentorType || null
       updates.mentor_type_other = mentorType === 'other' ? mentorTypeOther.trim() || null : null
     }
@@ -350,6 +351,20 @@ export default function Onboarding() {
                       <option key={opt} value={opt}>{opt}</option>
                     ))}
                   </select>
+                  {industry === 'Other' && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        required
+                        value={industryOther}
+                        onChange={(e) => setIndustryOther(e.target.value)}
+                        placeholder="Please describe your industry…"
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                          placeholder:text-ink-placeholder
+                          focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                      />
+                    </div>
+                  )}
                 </div>
               </>
             )}

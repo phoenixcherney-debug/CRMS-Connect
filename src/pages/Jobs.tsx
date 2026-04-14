@@ -48,6 +48,8 @@ export default function Jobs() {
   }, [retryCount])
 
   const filtered = jobs.filter((j) => {
+    // Employers/mentors only see their own posts
+    if (isPoster && j.posted_by !== profile?.id) return false
     const matchesSearch =
       search === '' ||
       j.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -69,7 +71,7 @@ export default function Jobs() {
     if (sort === 'company') return a.company.localeCompare(b.company)
     return b.created_at.localeCompare(a.created_at)
   })
-  // Only show closed jobs belonging to the current user (don't expose other employers' closed postings)
+  // Closed jobs: for employers the filter above already scopes to their own; for students still restrict to poster's own
   const closedJobs = filtered.filter((j) => !isJobActive(j) && j.posted_by === profile?.id)
 
   return (

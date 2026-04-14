@@ -23,6 +23,7 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl]                   = useState('')
   const [company, setCompany]                       = useState('')
   const [industry, setIndustry]                     = useState('')
+  const [industryOther, setIndustryOther]           = useState('')
   const [openToMentorship, setOpenToMentorship]     = useState(false)
   const [interests, setInterests]                   = useState<string[]>([])
   const [weeklyAvailability, setWeeklyAvailability] = useState('')
@@ -58,7 +59,10 @@ export default function Profile() {
       setGraduationYear(profile.graduation_year?.toString() ?? '')
       setAvatarUrl(profile.avatar_url ?? '')
       setCompany(profile.company ?? '')
-      setIndustry(profile.industry ?? '')
+      const savedIndustry = profile.industry ?? ''
+      const isCustomIndustry = savedIndustry !== '' && !(INDUSTRY_OPTIONS as readonly string[]).includes(savedIndustry)
+      setIndustry(isCustomIndustry ? 'Other' : savedIndustry)
+      setIndustryOther(isCustomIndustry ? savedIndustry : '')
       setOpenToMentorship(profile.open_to_mentorship ?? false)
       setInterests(profile.interests ?? [])
       setWeeklyAvailability(profile.weekly_availability ?? '')
@@ -111,7 +115,10 @@ export default function Profile() {
     setGraduationYear(profile!.graduation_year?.toString() ?? '')
     setAvatarUrl(profile!.avatar_url ?? '')
     setCompany(profile!.company ?? '')
-    setIndustry(profile!.industry ?? '')
+    const savedIndustry = profile!.industry ?? ''
+    const isCustomIndustry = savedIndustry !== '' && !(INDUSTRY_OPTIONS as readonly string[]).includes(savedIndustry)
+    setIndustry(isCustomIndustry ? 'Other' : savedIndustry)
+    setIndustryOther(isCustomIndustry ? savedIndustry : '')
     setOpenToMentorship(profile!.open_to_mentorship ?? false)
     setInterests(profile!.interests ?? [])
     setWeeklyAvailability(profile!.weekly_availability ?? '')
@@ -159,7 +166,7 @@ export default function Profile() {
 
     if (isEmployerMentor) {
       updates.company          = company.trim() || null
-      updates.industry         = industry || null
+      updates.industry         = industry === 'Other' ? (industryOther.trim() || null) : (industry || null)
       updates.open_to_mentorship = openToMentorship
       updates.mentor_type      = mentorType || null
       updates.mentor_type_other = mentorType === 'other' ? mentorTypeOther.trim() || null : null
@@ -664,6 +671,16 @@ export default function Profile() {
                         <option value="">Select an industry…</option>
                         {INDUSTRY_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
+                      {industry === 'Other' && (
+                        <input
+                          type="text"
+                          value={industryOther}
+                          onChange={(e) => setIndustryOther(e.target.value)}
+                          placeholder="Please describe your industry…"
+                          className="mt-2 w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                            placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                        />
+                      )}
                     </div>
 
                     {/* Weekly availability */}
