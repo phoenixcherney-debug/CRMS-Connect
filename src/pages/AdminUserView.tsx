@@ -252,7 +252,7 @@ export default function AdminUserView() {
                           <p className="text-xs text-ink-muted">
                             {(app.jobs as any)?.company ?? ''}
                             {(app.jobs as any)?.job_type && (
-                              <span className="ml-1">· {JOB_TYPE_LABELS[(app.jobs as any).job_type] ?? (app.jobs as any).job_type}</span>
+                              <span className="ml-1">· {JOB_TYPE_LABELS[(app.jobs as any).job_type as keyof typeof JOB_TYPE_LABELS] ?? (app.jobs as any).job_type}</span>
                             )}
                           </p>
                         </div>

@@ -48,7 +48,7 @@ export default function AdminPanel() {
         .order('created_at', { ascending: false }),
     ])
     if (usersRes.data) setUsers(usersRes.data as AdminUser[])
-    if (jobsRes.data) setJobs(jobsRes.data as AdminJob[])
+    if (jobsRes.data) setJobs(jobsRes.data as unknown as AdminJob[])
     setLoading(false)
   }
 
