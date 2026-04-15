@@ -11,7 +11,7 @@ const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-
 
 const ROLES: Role[] = ['student', 'employer_mentor']
 
-const ROLE_DESCRIPTIONS: Record<Role, string> = {
+const ROLE_DESCRIPTIONS: Record<'student' | 'employer_mentor', string> = {
   student: 'Browse and apply to opportunities. Requires your @crms.org school email.',
   employer_mentor: 'Post opportunities and connect with students. Use your personal email.',
 }

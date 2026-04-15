@@ -1,4 +1,4 @@
-export type Role = 'student' | 'employer_mentor'
+export type Role = 'student' | 'employer_mentor' | 'admin'
 export type JobType = 'internship' | 'part-time' | 'full-time' | 'volunteer'
 export type LocationType = 'remote' | 'in-person' | 'hybrid'
 export type ApplicationStatus = 'pending' | 'reviewed' | 'accepted' | 'rejected' | 'waitlisted'
@@ -29,6 +29,7 @@ export interface Profile {
   student_seeking_other?: string | null
   grade?: StudentGrade | null
   created_at: string
+  banned_at?: string | null
 }
 
 export interface CareerHistory {
@@ -183,6 +184,7 @@ export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
 export const ROLE_LABELS: Record<Role, string> = {
   student: 'Student',
   employer_mentor: 'Employer / Mentor',
+  admin: 'Admin',
 }
 
 export const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const

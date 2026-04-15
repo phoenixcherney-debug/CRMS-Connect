@@ -5,6 +5,7 @@ import type { Profile, Role } from '../types'
 
 // ─── Email validation (client-side) ───────────────────────────────────────────
 export function validateEmailForRole(email: string, role: Role): string | null {
+  if (role === 'admin') return null
   if (!email || !email.includes('@')) return 'Please enter a valid email address.'
   const isSchoolEmail = email.trim().toLowerCase().endsWith('@crms.org')
   if (role === 'student' && !isSchoolEmail) {

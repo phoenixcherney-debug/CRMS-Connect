@@ -45,6 +45,9 @@ const PublicProfile     = lazy(() => import('./pages/PublicProfile'))
 const StudentPosts      = lazy(() => import('./pages/StudentPosts'))
 const MyStudentPosts    = lazy(() => import('./pages/MyStudentPosts'))
 const MeetingRequests   = lazy(() => import('./pages/MeetingRequests'))
+const AdminPanel        = lazy(() => import('./pages/AdminPanel'))
+const AdminUserView     = lazy(() => import('./pages/AdminUserView'))
+const BannedPage        = lazy(() => import('./pages/BannedPage'))
 
 export default function App() {
   return (
@@ -171,6 +174,21 @@ export default function App() {
             } />
             <Route path="/people/:id" element={
               <ProtectedRoute><Layout><PublicProfile /></Layout></ProtectedRoute>
+            } />
+
+            {/* ── Banned (no ProtectedRoute — avoids redirect loop) ────── */}
+            <Route path="/banned" element={<BannedPage />} />
+
+            {/* ── Admin ─────────────────────────────────────────────────── */}
+            <Route path="/admin" element={
+              <ProtectedRoute roles={['admin']}>
+                <Layout><AdminPanel /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/users/:id" element={
+              <ProtectedRoute roles={['admin']}>
+                <Layout><AdminUserView /></Layout>
+              </ProtectedRoute>
             } />
 
             {/* ── Defaults ─────────────────────────────────────────────── */}

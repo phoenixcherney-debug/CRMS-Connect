@@ -2,10 +2,11 @@ import { NavLink, Link, useNavigate } from 'react-router-dom'
 import {
   Compass, Rss, Briefcase, Calendar, Users, Building2, Bell, Mail,
   LogOut, User, PlusSquare, ClipboardList, FileText, CalendarClock,
-  Moon, Sun, Menu, X, BookOpen, CalendarCheck,
+  Moon, Sun, Menu, X, BookOpen, CalendarCheck, Shield,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { ROLE_LABELS } from '../types'
 import { useTheme } from '../contexts/ThemeContext'
 import { useUnreadCount } from '../hooks/useUnreadCount'
 import { usePendingMeetings } from '../hooks/usePendingMeetings'
@@ -29,6 +30,7 @@ export default function Nav() {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  const isAdmin = profile?.role === 'admin'
   const isEmployerMentor = profile?.role === 'employer_mentor'
   const isStudent = profile?.role === 'student'
 
@@ -45,6 +47,9 @@ export default function Nav() {
 
   const SECONDARY_ITEMS = [
     { to: '/profile', label: 'Profile', icon: User },
+    ...(isAdmin ? [
+      { to: '/admin', label: 'Admin Panel', icon: Shield },
+    ] : []),
     ...(isEmployerMentor ? [
       { to: '/jobs/new',     label: 'Post an Opportunity', icon: PlusSquare  },
       { to: '/my-postings',  label: 'My Opportunities',    icon: ClipboardList },
@@ -92,7 +97,7 @@ export default function Nav() {
         : 'text-ink-secondary hover:bg-primary-faint hover:text-ink'
     }`
 
-  const roleLabel = profile?.role === 'employer_mentor' ? 'Employer / Mentor' : 'Student'
+  const roleLabel = profile?.role ? (ROLE_LABELS[profile.role] ?? 'Student') : 'Student'
 
   return (
     <div ref={menuRef}>

@@ -33,13 +33,20 @@ export default function ProtectedRoute({ children, roles, skipOnboarding }: Prot
     return <Navigate to="/verify-email" state={{ email: user.email }} replace />
   }
 
-  // New user who hasn't finished onboarding
-  if (!skipOnboarding && profile && !profile.onboarding_complete) {
+  // Banned user — redirect to suspension page (check before onboarding/role)
+  if (profile?.banned_at && location.pathname !== '/banned') {
+    return <Navigate to="/banned" replace />
+  }
+
+  const isAdmin = profile?.role === 'admin'
+
+  // Admin bypasses onboarding (admin accounts are created via SQL, not signup)
+  if (!isAdmin && !skipOnboarding && profile && !profile.onboarding_complete) {
     return <Navigate to="/onboarding" replace />
   }
 
-  // Role restriction
-  if (roles && profile && !roles.includes(profile.role)) {
+  // Role restriction — admin always passes
+  if (!isAdmin && roles && profile && !roles.includes(profile.role)) {
     return <Navigate to="/jobs" replace />
   }
 

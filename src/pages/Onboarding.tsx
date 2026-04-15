@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type React from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -50,6 +50,10 @@ export default function Onboarding() {
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null)
   const [avatarBroken, setAvatarBroken] = useState(false)
+
+  useEffect(() => {
+    if (profile?.role === 'admin') navigate('/admin', { replace: true })
+  }, [profile, navigate])
 
   if (!profile) return null
 
