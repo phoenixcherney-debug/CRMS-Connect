@@ -216,7 +216,7 @@ export default function Signup() {
                 ))}
               </div>
               <p className="mt-2 text-xs text-ink-muted leading-relaxed">
-                {ROLE_DESCRIPTIONS[role]}
+                {ROLE_DESCRIPTIONS[role as 'student' | 'employer_mentor']}
               </p>
             </div>
 
