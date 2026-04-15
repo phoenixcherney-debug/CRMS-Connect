@@ -1,5 +1,5 @@
 -- ============================================================
--- CRMS Connect — Full Database Setup (Migrations 001–017)
+-- CRMS Connect — Full Database Setup (Migrations 001–022)
 -- Paste this entire script into Supabase SQL Editor and run.
 -- Safe to run on a fresh database. All statements are guarded
 -- with IF NOT EXISTS / DROP IF EXISTS / EXCEPTION handlers.
@@ -639,6 +639,193 @@ CREATE POLICY "events_insert_employer_mentor" ON events FOR INSERT TO authentica
   auth.uid() = host_id
   AND (SELECT role FROM profiles WHERE id = auth.uid()) = 'employer_mentor'
 );
+
+
+-- ════════════════════════════════════════════════════════════════
+-- 023 — MEETING REQUESTS + PUBLIC AVAILABILITY SLOTS
+-- ════════════════════════════════════════════════════════════════
+
+-- Allow any authenticated user to read any user's availability slots
+-- (app layer filters by date; needed for PublicProfile slot display)
+DROP POLICY IF EXISTS "slots_select_others" ON availability_slots;
+CREATE POLICY "slots_select_others"
+  ON availability_slots FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE TABLE IF NOT EXISTS meeting_requests (
+  id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at            TIMESTAMPTZ DEFAULT now() NOT NULL,
+  requester_id          UUID        REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  recipient_id          UUID        REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  slot_id               UUID        REFERENCES availability_slots(id) ON DELETE SET NULL,
+  requested_date        DATE        NOT NULL,
+  requested_start_time  TIME        NOT NULL,
+  requested_end_time    TIME        NOT NULL,
+  note                  TEXT,
+  status                TEXT        NOT NULL DEFAULT 'pending'
+                          CHECK (status IN ('pending', 'accepted', 'declined')),
+  CONSTRAINT no_self_request CHECK (requester_id <> recipient_id)
+);
+CREATE INDEX IF NOT EXISTS idx_meeting_requests_requester ON meeting_requests(requester_id);
+CREATE INDEX IF NOT EXISTS idx_meeting_requests_recipient ON meeting_requests(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_meeting_requests_slot      ON meeting_requests(slot_id);
+ALTER TABLE meeting_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "meeting_requests_select" ON meeting_requests;
+CREATE POLICY "meeting_requests_select" ON meeting_requests FOR SELECT TO authenticated
+  USING (requester_id = auth.uid() OR recipient_id = auth.uid());
+
+DROP POLICY IF EXISTS "meeting_requests_insert" ON meeting_requests;
+CREATE POLICY "meeting_requests_insert" ON meeting_requests FOR INSERT TO authenticated
+  WITH CHECK (requester_id = auth.uid());
+
+DROP POLICY IF EXISTS "meeting_requests_update" ON meeting_requests;
+CREATE POLICY "meeting_requests_update" ON meeting_requests FOR UPDATE TO authenticated
+  USING (recipient_id = auth.uid()) WITH CHECK (recipient_id = auth.uid());
+
+DROP POLICY IF EXISTS "meeting_requests_delete" ON meeting_requests;
+CREATE POLICY "meeting_requests_delete" ON meeting_requests FOR DELETE TO authenticated
+  USING (requester_id = auth.uid());
+
+
+-- ════════════════════════════════════════════════════════════════
+-- 024 — ADMIN ROLE, BANNED ACCOUNTS, ADMIN PANEL FUNCTIONS
+-- ════════════════════════════════════════════════════════════════
+
+-- Add admin enum value
+ALTER TYPE role_type ADD VALUE IF NOT EXISTS 'admin';
+
+-- banned_at column on profiles
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS banned_at TIMESTAMPTZ DEFAULT NULL;
+
+-- is_admin() helper — used by RLS policies and action functions
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$;
+
+-- Update email validation trigger to skip admin and block deprecated roles on new signups
+CREATE OR REPLACE FUNCTION public.validate_profile_email_role()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE user_email TEXT;
+BEGIN
+  IF NEW.role = 'admin' THEN RETURN NEW; END IF;
+  SELECT email INTO user_email FROM auth.users WHERE id = NEW.id;
+  IF NEW.role = 'student' AND lower(user_email) NOT LIKE '%@crms.org' THEN
+    RAISE EXCEPTION 'Student accounts require a @crms.org school email address.';
+  END IF;
+  IF NEW.role IN ('alumni', 'parent', 'employer_mentor') AND lower(user_email) LIKE '%@crms.org' THEN
+    RAISE EXCEPTION 'Please use a personal email address, not your school email.';
+  END IF;
+  IF NEW.role IN ('alumni', 'parent') THEN
+    RAISE EXCEPTION 'These account types are no longer available. Please sign up as Employer/Mentor.';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- profiles UPDATE: admin can update any profile (used for banning)
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "profiles_update_own" ON profiles;
+CREATE POLICY "profiles_update_own_or_admin" ON profiles FOR UPDATE TO authenticated
+  USING  (auth.uid() = id OR public.is_admin())
+  WITH CHECK (auth.uid() = id OR public.is_admin());
+
+-- jobs SELECT: admin sees all
+DROP POLICY IF EXISTS "jobs_select_authenticated" ON jobs;
+CREATE POLICY "jobs_select_authenticated" ON jobs FOR SELECT TO authenticated USING (
+  public.is_admin()
+  OR auth.uid() = posted_by
+  OR (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'student'
+);
+
+-- jobs DELETE: admin can delete any job
+DROP POLICY IF EXISTS "jobs_delete_own" ON jobs;
+CREATE POLICY "jobs_delete_own_or_admin" ON jobs FOR DELETE TO authenticated
+  USING (auth.uid() = posted_by OR public.is_admin());
+
+-- applications SELECT: admin sees all
+DROP POLICY IF EXISTS "applications_select" ON applications;
+CREATE POLICY "applications_select" ON applications FOR SELECT TO authenticated USING (
+  public.is_admin()
+  OR auth.uid() = applicant_id
+  OR auth.uid() = (SELECT posted_by FROM public.jobs WHERE id = job_id)
+);
+
+-- student_posts SELECT: admin sees all including closed
+DROP POLICY IF EXISTS "student_posts_read_open" ON student_posts;
+DROP POLICY IF EXISTS "student_posts_select" ON student_posts;
+CREATE POLICY "student_posts_read_open_or_admin" ON student_posts FOR SELECT USING (
+  public.is_admin() OR is_closed = false OR student_id = auth.uid()
+);
+
+-- Admin action functions
+CREATE OR REPLACE FUNCTION public.admin_ban_user(target_id UUID)
+RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  IF NOT public.is_admin() THEN RAISE EXCEPTION 'Forbidden: admin only'; END IF;
+  IF target_id = auth.uid() THEN RAISE EXCEPTION 'Admin cannot ban themselves'; END IF;
+  UPDATE public.profiles SET banned_at = now() WHERE id = target_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_unban_user(target_id UUID)
+RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  IF NOT public.is_admin() THEN RAISE EXCEPTION 'Forbidden: admin only'; END IF;
+  UPDATE public.profiles SET banned_at = NULL WHERE id = target_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_list_users()
+RETURNS TABLE (
+  id UUID, full_name TEXT, role TEXT, created_at TIMESTAMPTZ,
+  banned_at TIMESTAMPTZ, onboarding_complete BOOLEAN, email TEXT
+)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  IF NOT public.is_admin() THEN RAISE EXCEPTION 'Forbidden: admin only'; END IF;
+  RETURN QUERY
+    SELECT p.id, p.full_name, p.role::TEXT, p.created_at,
+           p.banned_at, p.onboarding_complete, u.email
+    FROM public.profiles p
+    JOIN auth.users u ON u.id = p.id
+    ORDER BY p.created_at DESC;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_get_user_email(target_id UUID)
+RETURNS TEXT LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  IF NOT public.is_admin() THEN RAISE EXCEPTION 'Forbidden: admin only'; END IF;
+  RETURN (SELECT email FROM auth.users WHERE id = target_id);
+END;
+$$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- HOW TO BECOME ADMIN
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 1. Sign up normally through the app (any email, any role)
+-- 2. Run this in Supabase Dashboard → SQL Editor (replace with your email):
+--
+--   UPDATE public.profiles
+--   SET role = 'admin'
+--   WHERE id = (SELECT id FROM auth.users WHERE email = 'your@email.com');
+--
+-- The email validation trigger only fires on INSERT, not UPDATE, so this
+-- is safe regardless of your email domain.
+-- ─────────────────────────────────────────────────────────────────────────────
 
 
 -- ════════════════════════════════════════════════════════════════
