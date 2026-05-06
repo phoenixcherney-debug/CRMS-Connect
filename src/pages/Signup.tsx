@@ -183,6 +183,7 @@ export default function Signup() {
                 type="text"
                 autoComplete="name"
                 required
+                maxLength={60}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Alex Johnson"
@@ -196,7 +197,7 @@ export default function Signup() {
             {/* Role selector */}
             <div>
               <label className="block text-sm text-ink mb-1.5" style={{ fontWeight: 700 }}>
-                I am joining as a…
+                Your role
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {ROLES.map((r) => (

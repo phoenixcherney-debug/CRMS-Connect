@@ -344,26 +344,32 @@ export default function JobDetail() {
           <div className="px-6 sm:px-8 pb-8">
             {/* Profile completeness gate — shown if student hasn't filled in interests/availability */}
         {isStudent && !applySuccess && !myApplication && !expired && job.is_active &&
-          (!(profile?.interests?.length) || !profile?.weekly_availability) && (
-          <div className="mb-4 flex items-start gap-3 rounded-xl border border-status-pending-border bg-status-pending-bg px-4 py-3">
-            <AlertCircle size={16} className="text-status-pending-text shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium text-ink">Complete your profile before applying</p>
-              <p className="text-ink-secondary mt-0.5">
-                Please add your{' '}
-                {!profile?.interests?.length && !profile?.weekly_availability
-                  ? 'areas of interest and weekly availability'
-                  : !profile?.interests?.length
-                  ? 'areas of interest'
-                  : 'weekly availability'}{' '}
-                so this opportunity's poster can evaluate your fit.{' '}
-                <Link to="/profile" className="text-primary font-medium hover:text-primary-light underline">
-                  Update profile →
-                </Link>
-              </p>
-            </div>
-          </div>
-        )}
+          (!(profile?.interests?.length) || (job.job_type !== 'full-time' && !profile?.weekly_availability)) && (() => {
+            const missingInterests = !profile?.interests?.length
+            const missingAvailability = job.job_type !== 'full-time' && !profile?.weekly_availability
+            const ctaTo = missingAvailability ? '/availability' : '/profile'
+            const ctaLabel = missingAvailability ? 'Add availability →' : 'Update profile →'
+            const fieldText =
+              missingInterests && missingAvailability
+                ? 'areas of interest and at least one weekly availability slot'
+                : missingInterests
+                ? 'areas of interest'
+                : 'at least one weekly availability slot'
+            return (
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-status-pending-border bg-status-pending-bg px-4 py-3">
+                <AlertCircle size={16} className="text-status-pending-text shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-ink">Complete your profile before applying</p>
+                  <p className="text-ink-secondary mt-0.5">
+                    Please add your {fieldText} so the poster can see when you're free.{' '}
+                    <Link to={ctaTo} className="text-primary font-medium hover:text-primary-light underline">
+                      {ctaLabel}
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            )
+          })()}
 
         {applySuccess || myApplication ? (() => {
               const status = myApplication?.status ?? 'pending'
@@ -532,9 +538,13 @@ export default function JobDetail() {
             ) : (
               <button
                 onClick={() => setApplying(true)}
-                disabled={!profile?.interests?.length || !profile?.weekly_availability}
+                disabled={!profile?.interests?.length || (job.job_type !== 'full-time' && !profile?.weekly_availability)}
                 className="btn-gold w-full sm:w-auto px-6 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={!profile?.interests?.length || !profile?.weekly_availability ? 'Complete your profile to apply' : undefined}
+                title={
+                  !profile?.interests?.length || (job.job_type !== 'full-time' && !profile?.weekly_availability)
+                    ? 'Complete your profile to apply'
+                    : undefined
+                }
               >
                 Apply now
               </button>

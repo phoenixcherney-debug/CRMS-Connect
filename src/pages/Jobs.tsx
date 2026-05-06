@@ -130,7 +130,7 @@ export default function Jobs() {
             <div className="flex gap-1.5 flex-wrap">
               <button
                 onClick={() => setFilter('')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
                   ${filter === ''
                     ? 'bg-primary-muted border-primary text-primary'
                     : 'border-border text-ink-secondary hover:bg-primary-faint'
@@ -142,7 +142,7 @@ export default function Jobs() {
                 <button
                   key={t}
                   onClick={() => setFilter(filter === t ? '' : t)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                  className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
                     ${filter === t
                       ? 'bg-primary-muted border-primary text-primary'
                       : 'border-border text-ink-secondary hover:bg-primary-faint'
@@ -159,7 +159,7 @@ export default function Jobs() {
               <button
                 key={t}
                 onClick={() => setLocFilter(locFilter === t ? '' : t)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+                className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
                   ${locFilter === t
                     ? 'bg-primary-muted border-primary text-primary'
                     : 'border-border text-ink-secondary hover:bg-primary-faint'
@@ -173,7 +173,7 @@ export default function Jobs() {
           <select
             value={indFilter}
             onChange={(e) => setIndFilter(e.target.value)}
-            className="px-2 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-ink-secondary
+            className="px-2 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border border-border bg-surface text-ink-secondary
               focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           >
             <option value="">All Industries</option>
@@ -187,7 +187,7 @@ export default function Jobs() {
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortOption)}
-              className="px-2 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-ink-secondary
+              className="px-2 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border border-border bg-surface text-ink-secondary
                 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
             >
               <option value="newest">Newest first</option>
@@ -218,7 +218,7 @@ export default function Jobs() {
           <p className="text-ink-muted text-base mb-2">No active opportunities found.</p>
           <p className="text-sm text-ink-muted">
             Your opportunities are in{' '}
-            <Link to="/my-postings" className="text-primary hover:text-primary-light font-medium">My Postings →</Link>
+            <Link to="/my-postings" className="text-primary hover:text-primary-light font-medium">My Opportunities →</Link>
           </p>
         </div>
       ) : filtered.length === 0 ? (

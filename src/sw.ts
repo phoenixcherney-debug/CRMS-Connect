@@ -2,7 +2,7 @@
 /// <reference no-default-lib="true" />
 
 import { clientsClaim } from 'workbox-core'
-import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching'
+import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
 import { NetworkFirst, StaleWhileRevalidate } from 'workbox-strategies'
 
@@ -12,18 +12,31 @@ declare const self: ServiceWorkerGlobalScope
 self.skipWaiting()
 clientsClaim()
 
-// Precache the full app shell (URLs injected by vite-plugin-pwa at build time)
+// Precache hashed assets (JS/CSS bundles, icons) so the app shell still works offline.
+// Note: precacheAndRoute will not handle navigations — index.html is served via the
+// network-first NavigationRoute below so a stale precached shell can never strand
+// the user on a permanent loading screen.
 precacheAndRoute(self.__WB_MANIFEST)
+cleanupOutdatedCaches()
 
-// SPA routing: serve the precached index.html for all navigation requests.
-// Falls back to offline.html if neither the network nor the cache can respond.
-const navigationHandler = createHandlerBoundToURL('/index.html')
+// SPA routing: network-first for navigation requests so users always get the
+// latest index.html when online; fall back to the cached shell if offline.
+const navigationStrategy = new NetworkFirst({
+  cacheName: 'pages-cache',
+  networkTimeoutSeconds: 4,
+})
+
 registerRoute(
   new NavigationRoute(
     async (params) => {
       try {
-        return await navigationHandler(params)
+        return await navigationStrategy.handle({
+          ...params,
+          request: new Request('/index.html', { headers: params.request.headers }),
+        })
       } catch {
+        const cached = await caches.match('/index.html')
+        if (cached) return cached
         return (await caches.match('/offline.html')) ??
           new Response('<h1>You\'re offline</h1>', {
             headers: { 'Content-Type': 'text/html' },
@@ -34,10 +47,19 @@ registerRoute(
   )
 )
 
-// Cache Supabase API responses with network-first (10s timeout before cache)
+// Never cache Supabase auth requests — a stale auth response can hang the auth
+// bootstrap forever. Always go to network.
+registerRoute(
+  ({ url }: { url: URL }) =>
+    url.hostname.endsWith('.supabase.co') &&
+    (url.pathname.startsWith('/auth/') || url.pathname.startsWith('/realtime/')),
+  async ({ request }: { request: Request }) => fetch(request)
+)
+
+// Cache other Supabase API responses with network-first (4s timeout before cache)
 registerRoute(
   ({ url }: { url: URL }) => url.hostname.endsWith('.supabase.co'),
-  new NetworkFirst({ cacheName: 'supabase-cache', networkTimeoutSeconds: 10 })
+  new NetworkFirst({ cacheName: 'supabase-cache', networkTimeoutSeconds: 4 })
 )
 
 // Cache static assets (fonts, images) with stale-while-revalidate
@@ -46,6 +68,13 @@ registerRoute(
     request.destination === 'font' || request.destination === 'image',
   new StaleWhileRevalidate({ cacheName: 'static-assets' })
 )
+
+// Allow the page to ask the SW to skip waiting and activate the new version.
+self.addEventListener('message', (event: ExtendableMessageEvent) => {
+  if ((event.data as { type?: string })?.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
 
 // ─── Push Notifications ────────────────────────────────────────────────────────
 

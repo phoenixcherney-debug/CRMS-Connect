@@ -61,11 +61,32 @@ export default function Onboarding() {
   const isStudent = profile.role === 'student'
   const isEmployerMentor = profile.role === 'employer_mentor'
 
-  // Validation: sub-role fields + industry (EM) + interests (student) are required
+  // Sanity-check graduation year: between (current year − 80) and (current year + 8)
+  const currentYear = new Date().getFullYear()
+  const minGradYear = currentYear - 80
+  const maxGradYear = currentYear + 8
+  const parsedGradYear = graduationYear ? parseInt(graduationYear, 10) : NaN
+  const gradYearValid =
+    !graduationYear ||
+    (!isNaN(parsedGradYear) && parsedGradYear >= minGradYear && parsedGradYear <= maxGradYear)
+
+  // Validation: sub-role fields + industry (EM, with company) + interests (student) are required.
+  // Employers must also fill in a company name now — the audit flagged it as
+  // a strange optional field for a platform connecting students with companies.
+  // (Mentor-only and "Both" don't need a company.)
+  const employerNeedsCompany =
+    isEmployerMentor && (mentorType === 'employer' || mentorType === 'both')
   const canSubmit = isEmployerMentor
-    ? mentorType !== '' && (mentorType !== 'other' || mentorTypeOther.trim() !== '') && industry !== '' && (industry !== 'Other' || industryOther.trim() !== '')
+    ? mentorType !== ''
+        && (mentorType !== 'other' || mentorTypeOther.trim() !== '')
+        && industry !== ''
+        && (industry !== 'Other' || industryOther.trim() !== '')
+        && (!employerNeedsCompany || company.trim().length > 0)
     : isStudent
-    ? studentSeeking !== '' && (studentSeeking !== 'other' || studentSeekingOther.trim() !== '') && interests.length > 0
+    ? studentSeeking !== ''
+        && (studentSeeking !== 'other' || studentSeekingOther.trim() !== '')
+        && interests.length > 0
+        && gradYearValid
     : true
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -304,8 +325,8 @@ export default function Onboarding() {
                 </label>
                 <input
                   type="number"
-                  min="1960"
-                  max="2040"
+                  min={minGradYear}
+                  max={maxGradYear}
                   value={graduationYear}
                   onChange={(e) => setGraduationYear(e.target.value)}
                   placeholder="e.g. 2027"
@@ -313,6 +334,11 @@ export default function Onboarding() {
                     placeholder:text-ink-placeholder
                     focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                 />
+                {graduationYear && !gradYearValid && (
+                  <p className="mt-1 text-xs" style={{ color: 'var(--color-error)' }}>
+                    Please enter a year between {minGradYear} and {maxGradYear}.
+                  </p>
+                )}
               </div>
             )}
 
@@ -324,11 +350,17 @@ export default function Onboarding() {
                     <span className="flex items-center gap-1.5">
                       <Building2 size={14} className="text-ink-muted" />
                       Company / Organization
-                      <span className="text-ink-muted font-normal">(optional)</span>
+                      {employerNeedsCompany ? (
+                        <span className="text-error">*</span>
+                      ) : (
+                        <span className="text-ink-muted font-normal">(optional)</span>
+                      )}
                     </span>
                   </label>
                   <input
                     type="text"
+                    required={employerNeedsCompany}
+                    maxLength={120}
                     value={company}
                     onChange={(e) => setCompany(e.target.value)}
                     placeholder="Where do you work?"

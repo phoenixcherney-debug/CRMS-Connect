@@ -45,11 +45,11 @@ export default function Feed() {
         .order('created_at', { ascending: false })
         .limit(40)
 
-      const studentInterests = profile.interests ?? []
+      // Don't drop jobs whose industry doesn't match the student's interests —
+      // the audit found the feed silently omitted active jobs. Show them all
+      // and let the dedicated /jobs filters do the narrowing.
       for (const j of (jobs as Job[]) ?? []) {
         if (j.deadline && isPast(parseISO(j.deadline))) continue
-        // Filter by student interests when set
-        if (studentInterests.length > 0 && j.industry && !studentInterests.includes(j.industry)) continue
         feed.push({ kind: 'job', ts: j.created_at, job: j, key: `job-${j.id}` })
       }
     }
@@ -165,6 +165,7 @@ export default function Feed() {
               const typeLabel = item.job.opportunity_type
                 ? OPPORTUNITY_TYPE_LABELS[item.job.opportunity_type]
                 : JOB_TYPE_LABELS[item.job.job_type]
+              const article = /^[aeiou]/i.test(typeLabel) ? 'an' : 'a'
               return (
                 <Link
                   key={item.key}
@@ -178,7 +179,7 @@ export default function Feed() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-ink">
                       <span className="font-semibold">{item.job.profiles?.full_name ?? 'Someone'}</span>
-                      {' '}posted a{' '}
+                      {' '}posted {article}{' '}
                       <span className="font-medium">{typeLabel.toLowerCase()}</span>
                       {' '}opportunity
                     </p>

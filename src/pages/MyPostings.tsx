@@ -65,7 +65,7 @@ export default function MyPostings() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>My Postings</h1>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>My Opportunities</h1>
           <p className="text-ink-secondary text-sm mt-0.5">
             {loading ? 'Loading…' : `${postings.length} opportunit${postings.length !== 1 ? 'ies' : 'y'}`}
           </p>

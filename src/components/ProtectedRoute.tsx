@@ -11,9 +11,50 @@ interface ProtectedRouteProps {
   skipOnboarding?: boolean
 }
 
+async function clearAppCachesAndReload() {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((k) => caches.delete(k)))
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map((r) => r.unregister()))
+    }
+  } finally {
+    window.location.reload()
+  }
+}
+
 export default function ProtectedRoute({ children, roles, skipOnboarding }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, bootstrapTimedOut } = useAuth()
   const location = useLocation()
+
+  if (bootstrapTimedOut) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center gap-4">
+        <h1 className="text-lg font-semibold text-ink">We couldn't load CRMS Connect</h1>
+        <p className="text-sm text-ink-secondary max-w-sm">
+          The app is taking too long to start. This usually means a network problem
+          or a stale cached version of the site.
+        </p>
+        <div className="flex gap-3 mt-2">
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-gold px-4 py-2.5"
+          >
+            Reload
+          </button>
+          <button
+            onClick={clearAppCachesAndReload}
+            className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors"
+          >
+            Reset & reload
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

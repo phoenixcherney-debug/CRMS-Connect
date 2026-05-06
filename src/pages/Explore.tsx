@@ -182,7 +182,7 @@ export default function Explore() {
             </Link>
             <Link to="/my-postings" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <ClipboardList size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
-              <p className="text-sm font-semibold text-ink">My Postings</p>
+              <p className="text-sm font-semibold text-ink">My Opportunities</p>
               <p className="text-xs text-ink-muted mt-0.5">Manage your opportunities</p>
             </Link>
             <Link to="/availability" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>

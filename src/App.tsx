@@ -1,4 +1,4 @@
-import { lazy, Suspense, useLayoutEffect } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -17,6 +17,55 @@ function ScrollToTop() {
   }, [pathname])
   return null
 }
+
+// Per-route document.title so multi-tab users and screen readers can tell pages
+// apart. Falls back to the default brand title.
+const ROUTE_TITLES: Record<string, string> = {
+  '/login': 'Sign in',
+  '/signup': 'Create account',
+  '/reset-password': 'Reset password',
+  '/verify-email': 'Verify email',
+  '/onboarding': 'Welcome',
+  '/explore': 'Explore',
+  '/feed': 'Activity',
+  '/events': 'Events',
+  '/people': 'People',
+  '/notifications': 'Notifications',
+  '/employers': 'Employers & Mentors',
+  '/jobs': 'Opportunities',
+  '/jobs/new': 'Post an opportunity',
+  '/my-postings': 'My Opportunities',
+  '/postings': 'Student Posts',
+  '/my-applications': 'My Applications',
+  '/my-posts': 'My Posts',
+  '/availability': 'My Calendar',
+  '/my-bookings': 'My Bookings',
+  '/meetings': 'Meetings',
+  '/messages': 'Inbox',
+  '/profile': 'Profile',
+  '/banned': 'Account suspended',
+  '/admin': 'Admin Panel',
+}
+
+function DocumentTitle() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    const exact = ROUTE_TITLES[pathname]
+    let title = exact
+    if (!title) {
+      // Match dynamic routes by their best-fitting prefix.
+      if (pathname.startsWith('/jobs/') && pathname.endsWith('/applicants')) title = 'Applicants'
+      else if (pathname.startsWith('/jobs/') && pathname.endsWith('/edit')) title = 'Edit opportunity'
+      else if (pathname.startsWith('/jobs/')) title = 'Opportunity'
+      else if (pathname.startsWith('/messages/')) title = 'Conversation'
+      else if (pathname.startsWith('/people/')) title = 'Profile'
+      else if (pathname.startsWith('/admin/users/')) title = 'User · Admin'
+    }
+    document.title = title ? `${title} · CRMS Connect` : 'CRMS Connect'
+  }, [pathname])
+  return null
+}
+
 
 // Pages
 const Explore           = lazy(() => import('./pages/Explore'))
@@ -55,6 +104,7 @@ export default function App() {
       <ThemeProvider>
       <AuthProvider>
         <ScrollToTop />
+        <DocumentTitle />
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-screen">
             <div className="w-10 h-10 border-[3px] rounded-full border-primary-muted border-t-primary animate-spin" />

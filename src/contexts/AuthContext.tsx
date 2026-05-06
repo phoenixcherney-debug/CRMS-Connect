@@ -17,11 +17,40 @@ export function validateEmailForRole(email: string, role: Role): string | null {
   return null
 }
 
+// ─── Friendly error mapper ────────────────────────────────────────────────────
+// "Failed to fetch" can mean three completely different things (offline, paused
+// project, real 5xx). Map known shapes to copy a user can act on.
+function friendlyAuthError(err: unknown): string {
+  if (!err) return 'Something went wrong. Please try again.'
+  const msg = (err as { message?: string }).message ?? String(err)
+  const lower = msg.toLowerCase()
+
+  if (lower.includes('already registered') || lower.includes('already been registered')) {
+    return 'An account with this email already exists. Please log in.'
+  }
+  if (lower.includes('rate limit') || lower.includes('too many')) {
+    return 'Too many attempts. Please wait a minute and try again.'
+  }
+  if (lower.includes('database error') || lower.includes('null value') || lower.includes('23502')) {
+    return "We couldn't finish setting up your account. Please contact CRMS support."
+  }
+  if (lower.includes('weak password') || lower.includes('password')) {
+    return 'Please use a stronger password (at least 8 characters).'
+  }
+  if (lower === 'failed to fetch' || lower.includes('networkerror') || lower.includes('network error')) {
+    return "We're having trouble reaching the server. Check your internet connection and try again."
+  }
+  // Surface server-provided message verbatim if it looks like a sentence.
+  if (msg && msg.length < 200) return msg
+  return 'Something went wrong. Please try again.'
+}
+
 // ─── Context types ─────────────────────────────────────────────────────────────
 interface AuthContextType {
   user: User | null
   profile: Profile | null
   loading: boolean
+  bootstrapTimedOut: boolean
   signUp: (params: {
     email: string
     password: string
@@ -36,10 +65,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
+const BOOTSTRAP_TIMEOUT_MS = 8000
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [bootstrapTimedOut, setBootstrapTimedOut] = useState(false)
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
@@ -57,7 +89,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile])
 
   useEffect(() => {
+    let resolved = false
+
+    // Hard timeout: if getSession() never resolves (stale SW, broken network,
+    // paused Supabase project), fall back to logged-out UI instead of spinning
+    // forever.
+    const timeoutId = window.setTimeout(() => {
+      if (!resolved) {
+        resolved = true
+        setBootstrapTimedOut(true)
+        setLoading(false)
+      }
+    }, BOOTSTRAP_TIMEOUT_MS)
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (resolved) return
+      resolved = true
+      window.clearTimeout(timeoutId)
       const u = session?.user ?? null
       setUser(u)
       if (u) {
@@ -65,6 +113,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setLoading(false)
       }
+    }).catch(() => {
+      if (resolved) return
+      resolved = true
+      window.clearTimeout(timeoutId)
+      setBootstrapTimedOut(true)
+      setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -77,10 +131,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null)
         }
         setLoading(false)
+        setBootstrapTimedOut(false)
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      window.clearTimeout(timeoutId)
+      subscription.unsubscribe()
+    }
   }, [fetchProfile])
 
   // ─── Sign Up ───────────────────────────────────────────────────────────────
@@ -98,23 +156,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const clientError = validateEmailForRole(email, role)
     if (clientError) return { error: clientError }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, role },
-      },
-    })
-
-    if (error) {
-      if (error.message.includes('already registered')) {
-        return { error: 'An account with this email already exists. Please log in.' }
-      }
-      return { error: error.message }
+    const trimmedName = fullName.trim().replace(/\s+/g, ' ')
+    if (trimmedName.length < 2 || trimmedName.length > 60) {
+      return { error: 'Please enter your full name (2–60 characters).' }
     }
 
-    const needsVerification = !data.session
-    return { error: null, needsVerification }
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: { full_name: trimmedName, role },
+        },
+      })
+
+      if (error) return { error: friendlyAuthError(error) }
+
+      const needsVerification = !data.session
+      return { error: null, needsVerification }
+    } catch (err) {
+      return { error: friendlyAuthError(err) }
+    }
   }
 
   // ─── Sign In ───────────────────────────────────────────────────────────────
@@ -122,17 +184,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string
   ): Promise<{ error: string | null }> {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      if (error.message.includes('Email not confirmed')) {
-        return { error: 'unverified' }
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      })
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          return { error: 'unverified' }
+        }
+        if (error.message.includes('Invalid login credentials')) {
+          return { error: 'Incorrect email or password.' }
+        }
+        return { error: friendlyAuthError(error) }
       }
-      if (error.message.includes('Invalid login credentials')) {
-        return { error: 'Incorrect email or password.' }
-      }
-      return { error: error.message }
+      return { error: null }
+    } catch (err) {
+      return { error: friendlyAuthError(err) }
     }
-    return { error: null }
   }
 
   // ─── Sign Out ──────────────────────────────────────────────────────────────
@@ -142,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, signUp, signIn, signOut, refreshProfile }}
+      value={{ user, profile, loading, bootstrapTimedOut, signUp, signIn, signOut, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>

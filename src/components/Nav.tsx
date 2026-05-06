@@ -34,13 +34,16 @@ export default function Nav() {
   const isEmployerMentor = profile?.role === 'employer_mentor'
   const isStudent = profile?.role === 'student'
 
+  // One canonical destination for an employer's own listings: "My Opportunities"
+  // (route /my-postings). The /postings route is the student-posts feed and is
+  // labeled accordingly so the two are not confused.
   const NAV_ITEMS = [
     ...BASE_NAV.slice(0, 2), // Explore, Jobs
     ...(isStudent ? [
       { to: '/my-applications' as const, label: 'Applications' as const, icon: FileText },
     ] : []),
     ...(isEmployerMentor ? [
-      { to: '/postings' as const, label: 'Postings' as const, icon: ClipboardList },
+      { to: '/my-postings' as const, label: 'My Opportunities' as const, icon: ClipboardList },
     ] : []),
     ...BASE_NAV.slice(2), // People, Notifications, Inbox
   ]
@@ -51,8 +54,8 @@ export default function Nav() {
       { to: '/admin', label: 'Admin Panel', icon: Shield },
     ] : []),
     ...(isEmployerMentor ? [
-      { to: '/jobs/new',     label: 'Post an Opportunity', icon: PlusSquare  },
-      { to: '/my-postings',  label: 'My Opportunities',    icon: ClipboardList },
+      { to: '/jobs/new',  label: 'Post an Opportunity', icon: PlusSquare  },
+      { to: '/postings',  label: 'Student Posts',       icon: BookOpen    },
     ] : []),
     ...(isStudent ? [
       { to: '/my-posts', label: 'My Posts', icon: BookOpen },

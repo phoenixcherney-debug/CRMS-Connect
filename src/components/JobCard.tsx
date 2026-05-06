@@ -1,9 +1,14 @@
 import { Link } from 'react-router-dom'
-import { MapPin, Calendar, Building2, Clock, Users } from 'lucide-react'
+import {
+  MapPin, Calendar, Building2, Clock, Users,
+  GraduationCap, Briefcase, Heart, Star, Wifi, Home, Globe,
+} from 'lucide-react'
 import { formatDistanceToNow, isPast, parseISO, format } from 'date-fns'
 import type { Job, JobType, LocationType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS } from '../types'
 
+// Pair each job type with both a color and a glyph so the difference doesn't
+// rely on color alone — important for color-blind users (audit finding).
 const JOB_TYPE_COLORS: Record<JobType, string> = {
   internship: 'bg-badge-internship-bg text-badge-internship-text border-badge-internship-border',
   'part-time': 'bg-badge-parttime-bg text-badge-parttime-text border-badge-parttime-border',
@@ -11,10 +16,23 @@ const JOB_TYPE_COLORS: Record<JobType, string> = {
   volunteer: 'bg-badge-volunteer-bg text-badge-volunteer-text border-badge-volunteer-border',
 }
 
+const JOB_TYPE_ICONS: Record<JobType, typeof Briefcase> = {
+  internship: GraduationCap,
+  'part-time': Star,
+  'full-time': Briefcase,
+  volunteer: Heart,
+}
+
 const LOCATION_TYPE_COLORS: Record<LocationType, string> = {
   remote: 'bg-badge-remote-bg text-badge-remote-text border-badge-remote-border',
   'in-person': 'bg-badge-inperson-bg text-badge-inperson-text border-badge-inperson-border',
   hybrid: 'bg-badge-hybrid-bg text-badge-hybrid-text border-badge-hybrid-border',
+}
+
+const LOCATION_TYPE_ICONS: Record<LocationType, typeof Briefcase> = {
+  remote: Wifi,
+  'in-person': Home,
+  hybrid: Globe,
 }
 
 interface JobCardProps {
@@ -60,18 +78,28 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
                     : OPPORTUNITY_TYPE_LABELS[job.opportunity_type]}
                 </span>
               )}
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${JOB_TYPE_COLORS[job.job_type]}`}
-              >
-                {JOB_TYPE_LABELS[job.job_type]}
-              </span>
-              {job.location_type && (
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${LOCATION_TYPE_COLORS[job.location_type]}`}
-                >
-                  {LOCATION_TYPE_LABELS[job.location_type]}
-                </span>
-              )}
+              {(() => {
+                const JobIcon = JOB_TYPE_ICONS[job.job_type]
+                return (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border ${JOB_TYPE_COLORS[job.job_type]}`}
+                  >
+                    <JobIcon size={11} aria-hidden="true" />
+                    {JOB_TYPE_LABELS[job.job_type]}
+                  </span>
+                )
+              })()}
+              {job.location_type && (() => {
+                const LocIcon = LOCATION_TYPE_ICONS[job.location_type]
+                return (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border ${LOCATION_TYPE_COLORS[job.location_type]}`}
+                  >
+                    <LocIcon size={11} aria-hidden="true" />
+                    {LOCATION_TYPE_LABELS[job.location_type]}
+                  </span>
+                )
+              })()}
             </div>
             {(expired || !job.is_active) && (
               <span className="text-[11px] font-medium text-ink-muted bg-border/40 px-1.5 py-0.5 rounded">

@@ -90,7 +90,7 @@ export default function PostJob() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!profile) return
+    if (!profile || submitting) return
     setError(null)
 
     if (form.end_date && form.start_date && form.end_date < form.start_date) {
@@ -100,39 +100,62 @@ export default function PostJob() {
 
     setSubmitting(true)
 
+    // Trim every text field on save so we don't keep trailing whitespace
+    // (caught in audit: "this is a test " with a trailing space).
+    const trim = (s: string) => s.trim()
     const payload = {
-      ...form,
+      title: trim(form.title),
+      company: trim(form.company),
+      location: trim(form.location),
+      location_type: form.location_type,
       industry: form.industry || null,
+      job_type: form.job_type,
+      description: trim(form.description),
       deadline: form.deadline || null,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       expected_weekly_hours: form.expected_weekly_hours || null,
       opportunity_type: form.opportunity_type || null,
-      opportunity_type_other: form.opportunity_type === 'other' ? form.opportunity_type_other || null : null,
-      how_to_apply: '',
-      contact_email: '',
+      opportunity_type_other:
+        form.opportunity_type === 'other' ? trim(form.opportunity_type_other) || null : null,
       posted_by: profile.id,
       is_active: true,
     }
 
-    let error
-    if (isEdit) {
-      // Use the same payload structure but exclude posted_by (can't change poster)
-      const { posted_by: _, ...updatePayload } = payload
-      const { error: e } = await supabase.from('jobs').update(updatePayload).eq('id', id!)
-      error = e
-    } else {
-      const { error: e } = await supabase.from('jobs').insert(payload)
-      error = e
-    }
+    // Hard 20s timeout so the button never sits at "Publishing…" forever
+    // when the network blips or the Supabase project is paused.
+    const TIMEOUT_MS = 20000
+    const timeout = new Promise<{ error: Error }>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timed out. Please try again.')), TIMEOUT_MS)
+    })
 
-    setSubmitting(false)
-    if (error) {
-      setError(error.message)
-      return
-    }
+    try {
+      let result: { error: { message: string } | null }
+      if (isEdit) {
+        const { posted_by: _omit, ...updatePayload } = payload
+        result = await Promise.race([
+          supabase.from('jobs').update(updatePayload).eq('id', id!),
+          timeout,
+        ]) as typeof result
+      } else {
+        result = await Promise.race([
+          supabase.from('jobs').insert(payload),
+          timeout,
+        ]) as typeof result
+      }
 
-    navigate(isEdit ? `/jobs/${id}` : '/my-postings')
+      if (result.error) {
+        setError(result.error.message || 'Could not save the opportunity. Please try again.')
+        return
+      }
+
+      navigate(isEdit ? `/jobs/${id}` : '/my-postings')
+    } catch (err) {
+      const msg = (err as { message?: string })?.message
+      setError(msg || 'Could not save the opportunity. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (loading) {
@@ -150,7 +173,7 @@ export default function PostJob() {
         className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6"
       >
         <ChevronLeft size={16} />
-        {isEdit ? 'Back to opportunity' : 'My postings'}
+        {isEdit ? 'Back to opportunity' : 'My Opportunities'}
       </Link>
 
       <div className="bg-surface rounded-2xl border border-border p-6 sm:p-8" style={{ boxShadow: 'var(--shadow-card)' }}>

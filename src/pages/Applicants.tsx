@@ -127,7 +127,7 @@ export default function Applicants() {
       <div className="text-center py-20">
         <p className="text-ink-muted">Opportunity not found.</p>
         <Link to="/my-postings" className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
-          ← My Postings
+          ← My Opportunities
         </Link>
       </div>
     )
