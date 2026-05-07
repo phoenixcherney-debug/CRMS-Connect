@@ -5,6 +5,7 @@ import { formatDistanceToNow, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Spinner from '../components/Spinner'
+import EmptyState from '../components/EmptyState'
 
 type NotifType = 'message' | 'app_out' | 'app_in'
 
@@ -216,11 +217,11 @@ export default function Notifications() {
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : items.length === 0 ? (
-        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
-          <CheckCircle2 size={36} className="mx-auto text-success mb-3" />
-          <p className="text-ink font-medium">You're all caught up!</p>
-          <p className="text-ink-muted text-sm mt-1">No notifications right now.</p>
-        </div>
+        <EmptyState
+          icon={CheckCircle2}
+          title="You're all caught up!"
+          description="No notifications right now."
+        />
       ) : (
         <div className="bg-surface rounded-2xl border border-border divide-y divide-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
           {items.map((item) => {

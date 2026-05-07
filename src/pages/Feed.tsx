@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import type { Job, Application } from '../types'
 import { OPPORTUNITY_TYPE_LABELS, JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
+import EmptyState from '../components/EmptyState'
 
 interface MsgItem {
   conversation_id: string
@@ -153,11 +154,11 @@ export default function Feed() {
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : items.length === 0 ? (
-        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
-          <Bell size={32} className="mx-auto text-ink-muted mb-3" />
-          <p className="text-ink-muted font-medium">Nothing here yet.</p>
-          <p className="text-xs text-ink-muted mt-1">Activity will appear as the community grows.</p>
-        </div>
+        <EmptyState
+          icon={Bell}
+          title="Nothing here yet."
+          description="Activity will appear as the community grows."
+        />
       ) : (
         <div className="space-y-2">
           {items.map((item) => {
