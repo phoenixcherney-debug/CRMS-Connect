@@ -292,6 +292,13 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={async () => {
+                    // Confirm because this clears every cache and the SW;
+                    // accidental clicks could cost a slow first reload on
+                    // the next visit.
+                    const ok = window.confirm(
+                      "This will clear cached data and reload the app. You'll stay signed in. Continue?"
+                    )
+                    if (!ok) return
                     try {
                       if ('caches' in window) {
                         const keys = await caches.keys()

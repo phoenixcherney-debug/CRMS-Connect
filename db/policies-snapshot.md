@@ -1,7 +1,7 @@
 # RLS policies snapshot
 
 **Schema:** `public`
-**Last reconstructed from migrations:** 2026-05-06 (migrations 001 → 029)
+**Last reconstructed from migrations:** 2026-05-06 (migrations 001 → 030)
 
 This file is the source-of-truth document for what RLS *should* look like on the
 production database. The auditor's brief asks us to commit this so future
@@ -20,7 +20,7 @@ section. Any drift between expected and live is something to investigate.
 
 | Policy | Cmd | Roles | Using | With check | Source |
 |---|---|---|---|---|---|
-| `profiles_select_authenticated` | `SELECT` | `authenticated` | `banned_at IS NULL OR id = auth.uid() OR is_admin()` | — | 023 |
+| `profiles_select_authenticated` | `SELECT` | `authenticated` | `id = auth.uid() OR is_admin() OR (role <> 'admin' AND banned_at IS NULL)` | — | 030 |
 | `profiles_update_own` | `UPDATE` | `authenticated` | `auth.uid() = id` | `auth.uid() = id` | 001 |
 | `profiles_insert_trigger` | `INSERT` | `authenticated` | — | `auth.uid() = id` | 001 |
 | `Users can update own profile` | `UPDATE` | `authenticated` | `auth.uid() = id` | `auth.uid() = id` | 020 |

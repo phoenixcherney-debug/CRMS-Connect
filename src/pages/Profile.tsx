@@ -536,8 +536,12 @@ export default function Profile() {
                   </label>
                   <input
                     type="number"
-                    min="1960"
-                    max="2040"
+                    /* Bounds mirror the DB CHECK from migration 023:
+                       graduation_year ∈ [currentYear − 80, currentYear + 8].
+                       Computing on each render keeps the UI in sync as the
+                       year ticks over without a manual edit. */
+                    min={new Date().getFullYear() - 80}
+                    max={new Date().getFullYear() + 8}
                     value={graduationYear}
                     onChange={(e) => setGraduationYear(e.target.value)}
                     placeholder={profile.role === 'student' ? 'e.g. 2026' : 'e.g. 2015'}
