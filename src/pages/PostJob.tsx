@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import type { JobType, LocationType, OpportunityType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS, OPPORTUNITY_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
+import { friendlyError } from '../lib/errors'
 
 const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer']
 const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
@@ -50,32 +51,7 @@ const DEFAULT_FORM: JobForm = {
   expected_weekly_hours: '',
 }
 
-// Map Postgres / Supabase errors to user-readable copy. Never show raw column or
-// constraint names to the user; log them to console for debugging instead.
-function friendlyJobError(err: { code?: string; message?: string } | null): string {
-  if (!err) return 'Could not save the opportunity. Please try again.'
-  console.error('[PostJob] supabase error:', err)
-  const msg = (err.message ?? '').toLowerCase()
-  if (err.code === '23502' || msg.includes('not-null') || msg.includes('null value')) {
-    return 'Please fill in all required fields and try again.'
-  }
-  if (err.code === '23505' || msg.includes('duplicate') || msg.includes('unique')) {
-    return 'An opportunity with these details already exists.'
-  }
-  if (err.code === '23503' || msg.includes('foreign key')) {
-    return "We couldn't link this opportunity to your account. Please refresh and try again."
-  }
-  if (err.code === '23514' || msg.includes('check constraint')) {
-    return 'One of the fields has an invalid value. Please review the form and try again.'
-  }
-  if (msg.includes('row-level security') || msg.includes('rls') || msg.includes('permission denied')) {
-    return "You don't have permission to do that."
-  }
-  if (msg.includes('timed out') || msg.includes('timeout')) {
-    return 'The request timed out. Please check your connection and try again.'
-  }
-  return 'Could not save the opportunity. Please try again.'
-}
+const SAVE_FAIL_MSG = 'Could not save the opportunity. Please try again.'
 
 export default function PostJob() {
   const { id } = useParams<{ id?: string }>()
@@ -184,13 +160,13 @@ export default function PostJob() {
       }
 
       if (result.error) {
-        setError(friendlyJobError(result.error as { code?: string; message?: string }))
+        setError(friendlyError(result.error, SAVE_FAIL_MSG))
         return
       }
 
       navigate(isEdit ? `/jobs/${id}` : '/my-postings')
     } catch (err) {
-      setError(friendlyJobError(err as { code?: string; message?: string }))
+      setError(friendlyError(err, SAVE_FAIL_MSG))
     } finally {
       setSubmitting(false)
     }

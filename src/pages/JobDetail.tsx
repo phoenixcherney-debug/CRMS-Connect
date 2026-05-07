@@ -8,6 +8,7 @@ import { format, isPast, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
+import { friendlyError } from '../lib/errors'
 import type { Job, Application, ApplicationStatus } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS, ROLE_LABELS } from '../types'
 
@@ -139,7 +140,7 @@ export default function JobDetail() {
       if (error.code === '23505') {
         setApplyError('You have already applied to this position.')
       } else {
-        setApplyError(error.message)
+        setApplyError(friendlyError(error, 'Could not submit your application. Please try again.'))
       }
       return
     }
