@@ -4,6 +4,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, ArrowLeft, RefreshCw } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { friendlyError } from '../lib/errors'
 import Spinner from '../components/Spinner'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
@@ -67,7 +68,7 @@ export default function Login() {
       redirectTo: `${window.location.origin}/reset-password`,
     })
     setResetSending(false)
-    if (err) setResetError(err.message)
+    if (err) setResetError(friendlyError(err, 'Could not send the reset email. Please try again.'))
     else setResetSent(true)
   }
 

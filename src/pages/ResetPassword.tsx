@@ -3,6 +3,7 @@ import type React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, KeyRound } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { friendlyError } from '../lib/errors'
 import Spinner from '../components/Spinner'
 
 export default function ResetPassword() {
@@ -45,7 +46,7 @@ export default function ResetPassword() {
     const { error: err } = await supabase.auth.updateUser({ password })
     setSubmitting(false)
     if (err) {
-      setError(err.message)
+      setError(friendlyError(err, 'Could not reset your password. Please try the email link again.'))
     } else {
       setDone(true)
       setTimeout(() => navigate('/login'), 2500)
