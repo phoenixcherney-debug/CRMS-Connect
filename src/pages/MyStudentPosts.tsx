@@ -7,6 +7,7 @@ import {
   STUDENT_SEEKING_LABELS, WEEKLY_AVAILABILITY_OPTIONS, INTEREST_OPTIONS,
 } from '../types'
 import Spinner from '../components/Spinner'
+import EmptyState from '../components/EmptyState'
 
 export default function MyStudentPosts() {
   const { profile } = useAuth()
@@ -251,14 +252,13 @@ export default function MyStudentPosts() {
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : posts.length === 0 && !showForm ? (
-        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
-          <FileText size={32} className="mx-auto text-ink-muted mb-3" />
-          <p className="text-ink-muted font-medium">No posts yet</p>
-          <p className="text-xs text-ink-muted mt-1 mb-4">Post to let employers and mentors know what you're looking for.</p>
-          <button onClick={() => openForm()} className="btn-gold px-4 py-2">
-            <Plus size={14} /> Create your first post
-          </button>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="No posts yet"
+          description="Post to let employers and mentors know what you're looking for."
+          ctaLabel="Create your first post"
+          ctaOnClick={() => openForm()}
+        />
       ) : (
         <div className="space-y-6">
           {/* Open posts */}

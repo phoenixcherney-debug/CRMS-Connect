@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import type { Conversation, Message, Profile } from '../types'
 import { ROLE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
+import EmptyState from '../components/EmptyState'
 
 type ConvWithMeta = Conversation & {
   otherProfile: Profile
@@ -208,13 +209,11 @@ export default function Messages() {
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : conversations.length === 0 ? (
-        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
-          <MessageSquare size={36} className="mx-auto text-ink-muted mb-3" />
-          <p className="text-ink-muted text-sm mb-1 font-medium">No conversations yet</p>
-          <p className="text-ink-muted text-xs">
-            Hit <strong>New</strong> to start one, or message someone from an opportunity.
-          </p>
-        </div>
+        <EmptyState
+          icon={MessageSquare}
+          title="No conversations yet"
+          description="Hit New to start one, or message someone from an opportunity."
+        />
       ) : (
         <div className="bg-surface rounded-2xl border border-border divide-y divide-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
           {conversations.map((conv) => {

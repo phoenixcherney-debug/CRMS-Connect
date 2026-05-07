@@ -94,6 +94,19 @@ export default function PostJob() {
     if (!profile || submitting) return
     setError(null)
 
+    // Trim and validate required fields up front. The browser's `required`
+    // attribute catches empty strings but not whitespace-only — strip first
+    // so " " is treated the same as "".
+    const trim = (s: string) => s.trim()
+    const title = trim(form.title)
+    const company = trim(form.company)
+    const location = trim(form.location)
+    const description = trim(form.description)
+    if (!title || !company || !location || !description) {
+      setError('Please fill in all required fields (title, company, location, and description).')
+      return
+    }
+
     if (form.end_date && form.start_date && form.end_date < form.start_date) {
       setError('End date must be after start date.')
       return
@@ -101,21 +114,18 @@ export default function PostJob() {
 
     setSubmitting(true)
 
-    // Trim every text field on save so we don't keep trailing whitespace
-    // (caught in audit: "this is a test " with a trailing space).
-    const trim = (s: string) => s.trim()
     // Always send `how_to_apply` and `contact_email` as strings — the live DB
     // currently has these as NOT NULL until migration 023 is applied. Empty
     // string is accepted by the existing schema and is what the previous code
     // wrote, so this works whether or not the migration has been run yet.
     const payload = {
-      title: trim(form.title),
-      company: trim(form.company),
-      location: trim(form.location),
+      title,
+      company,
+      location,
       location_type: form.location_type,
       industry: form.industry || null,
       job_type: form.job_type,
-      description: trim(form.description),
+      description,
       how_to_apply: trim(form.how_to_apply),
       contact_email: trim(form.contact_email),
       deadline: form.deadline || null,

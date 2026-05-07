@@ -120,6 +120,11 @@ export default function JobDetail() {
 
   async function handleApply() {
     if (!profile || !job) return
+    const note = coverNote.trim()
+    if (!note) {
+      setApplyError('Please write a short cover note before submitting.')
+      return
+    }
     setApplyError(null)
     setApplyLoading(true)
 
@@ -128,7 +133,7 @@ export default function JobDetail() {
       .insert({
         job_id: job.id,
         applicant_id: profile.id,
-        cover_note: coverNote.trim(),
+        cover_note: note,
         resume_link: resumeLink.trim() || null,
         status: 'pending',
       })
@@ -343,43 +348,13 @@ export default function JobDetail() {
         {/* Apply section — students only */}
         {isStudent && !isPoster && (
           <div className="px-6 sm:px-8 pb-8">
-            {/* Profile completeness gate — only if the student is missing core
-                profile fields the employer needs to evaluate fit. Always require
-                at least one interest. Require a weekly hours commitment except
-                on full-time roles, where weekly hours is the wrong question. */}
-        {(() => {
-          const requiresAvailability = job.job_type !== 'full-time'
-          const missingInterests = !profile?.interests?.length
-          const missingAvailability = requiresAvailability && !profile?.weekly_availability
-          const showGate = isStudent && !applySuccess && !myApplication && !expired && job.is_active &&
-            (missingInterests || missingAvailability)
-          if (!showGate) return null
-
-          const fieldText =
-            missingInterests && missingAvailability
-              ? 'areas of interest and weekly hours commitment'
-              : missingInterests
-              ? 'areas of interest'
-              : 'weekly hours commitment'
-
-          // Both fields live on /profile — the dropdown for weekly_availability
-          // and the interests chip selector. /availability is the slot
-          // calendar, which is unrelated to the gate.
-          return (
-            <div className="mb-4 flex items-start gap-3 rounded-xl border border-status-pending-border bg-status-pending-bg px-4 py-3">
-              <AlertCircle size={16} className="text-status-pending-text shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-ink">Complete your profile before applying</p>
-                <p className="text-ink-secondary mt-0.5">
-                  Please add your {fieldText} so the poster can evaluate fit.{' '}
-                  <Link to="/profile" className="text-primary font-medium hover:text-primary-light underline">
-                    Update profile →
-                  </Link>
-                </p>
-              </div>
-            </div>
-          )
-        })()}
+            {/* Profile-completeness gate removed (audit pass 4 §2 Option A).
+                Any authenticated student can apply directly. The "What was
+                shared with the poster" panel below already shows what the
+                poster will see (interests, grade, weekly availability). The
+                old gate's link routed to /availability while the field it
+                actually checked lived on /profile, which dead-ended new
+                students. */}
 
         {applySuccess || myApplication ? (() => {
               const status = myApplication?.status ?? 'pending'
@@ -545,21 +520,14 @@ export default function JobDetail() {
                   )}
                 </div>
               </div>
-            ) : (() => {
-              const requiresAvailability = job.job_type !== 'full-time'
-              const blocked = !profile?.interests?.length ||
-                (requiresAvailability && !profile?.weekly_availability)
-              return (
-                <button
-                  onClick={() => setApplying(true)}
-                  disabled={blocked}
-                  className="btn-gold w-full sm:w-auto px-6 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={blocked ? 'Complete your profile to apply' : undefined}
-                >
-                  Apply now
-                </button>
-              )
-            })()}
+            ) : (
+              <button
+                onClick={() => setApplying(true)}
+                className="btn-gold w-full sm:w-auto px-6"
+              >
+                Apply now
+              </button>
+            )}
           </div>
         )}
       </div>

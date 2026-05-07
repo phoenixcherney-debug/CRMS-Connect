@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Shield, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { friendlyError } from '../lib/errors'
 import Spinner from '../components/Spinner'
 import { ROLE_LABELS } from '../types'
 import type { Role } from '../types'
@@ -30,7 +31,7 @@ export default function AdminPanel() {
   async function load() {
     setLoading(true)
     const { data, error } = await supabase.rpc('admin_list_users')
-    if (error) { setError(error.message) }
+    if (error) { setError(friendlyError(error, 'Could not load the user list.')) }
     else if (data) setUsers(data as AdminUser[])
     setLoading(false)
   }

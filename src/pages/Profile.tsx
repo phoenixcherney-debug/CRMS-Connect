@@ -155,13 +155,33 @@ export default function Profile() {
     e.preventDefault()
     setSaveError(null)
     setSaveSuccess(false)
+
+    const trimmedName = fullName.trim()
+    if (!trimmedName) {
+      setSaveError('Please enter your name.')
+      return
+    }
+    if (trimmedName.length > 60) {
+      setSaveError('Name must be 60 characters or fewer.')
+      return
+    }
+
+    // Match the server-side CHECK constraints in migration 023:
+    //   year >= currentYear - 80 AND year <= currentYear + 8
+    const currentYear = new Date().getFullYear()
+    const yr = graduationYear ? parseInt(graduationYear, 10) : NaN
+    if (graduationYear && (isNaN(yr) || yr < currentYear - 80 || yr > currentYear + 8)) {
+      setSaveError(`Graduation year must be between ${currentYear - 80} and ${currentYear + 8}.`)
+      return
+    }
+
     setSaving(true)
 
     const updates: Record<string, unknown> = {
-      full_name: fullName.trim(),
+      full_name: trimmedName,
       bio: bio.trim() || null,
       avatar_url: avatarUrl.trim() || null,
-      graduation_year: (() => { const yr = parseInt(graduationYear); return isNaN(yr) ? null : yr })(),
+      graduation_year: isNaN(yr) ? null : yr,
     }
 
     if (isEmployerMentor) {
