@@ -65,7 +65,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
-const BOOTSTRAP_TIMEOUT_MS = 5000
+// Aggressive bootstrap timeout: getSession() reads from localStorage and is
+// supposed to be fast, but if the SDK decides to refresh an expired token or
+// the project is paused, it can hang indefinitely. 3s is well above any honest
+// localStorage-only path and well below user impatience.
+const BOOTSTRAP_TIMEOUT_MS = 3000
 const PROFILE_FETCH_TIMEOUT_MS = 5000
 
 function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {

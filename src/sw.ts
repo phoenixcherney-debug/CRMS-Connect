@@ -21,9 +21,12 @@ cleanupOutdatedCaches()
 
 // SPA routing: network-first for navigation requests so users always get the
 // latest index.html when online; fall back to the cached shell if offline.
+// We deliberately set a tight 2.5s network timeout: if the network is broken,
+// users get the cached shell quickly and React boots from there. The auth
+// bootstrap inside React has its own short timeout that drops to /login.
 const navigationStrategy = new NetworkFirst({
   cacheName: 'pages-cache',
-  networkTimeoutSeconds: 4,
+  networkTimeoutSeconds: 2.5,
 })
 
 registerRoute(
@@ -32,7 +35,13 @@ registerRoute(
       try {
         return await navigationStrategy.handle({
           ...params,
-          request: new Request('/index.html', { headers: params.request.headers }),
+          request: new Request('/index.html', {
+            headers: params.request.headers,
+            // Bypass the HTTP cache when we go to network so we never serve a
+            // stale `index.html` that references a JS chunk hash that no
+            // longer exists on the CDN.
+            cache: 'no-store',
+          }),
         })
       } catch {
         const cached = await caches.match('/index.html')
