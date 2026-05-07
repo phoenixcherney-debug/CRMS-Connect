@@ -229,7 +229,6 @@ export default function Login() {
                     type="email"
                     autoComplete="email"
                     required
-                    tabIndex={1}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
@@ -242,13 +241,14 @@ export default function Login() {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label htmlFor="password" className="block text-sm text-ink" style={{ fontWeight: 700 }}>Password</label>
-                    {/* tabIndex={0} after password input so keyboard tab order is
-                       email → password → forgot. Without this it visually appears
-                       above the password input and DOM order steals focus first. */}
+                    {/* Removed from the form's tab sequence. Visually still
+                        appears above the password input, but keyboard tab
+                        order is email → password → Sign in. Mouse / pointer
+                        users still click it normally. */}
                     <button
                       type="button"
                       onClick={enterForgotMode}
-                      tabIndex={3}
+                      tabIndex={-1}
                       className="text-xs hover:underline"
                       style={{ color: 'var(--color-primary)', fontWeight: 700 }}
                     >
@@ -261,7 +261,6 @@ export default function Login() {
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
                       required
-                      tabIndex={2}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
