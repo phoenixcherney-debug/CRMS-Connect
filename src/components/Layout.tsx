@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Bell, X } from 'lucide-react'
 import Nav from './Nav'
+import Footer from './Footer'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -59,15 +60,13 @@ function PushBanner() {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-background)' }}>
       <PushBanner />
       <Nav />
-      <main
-        className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8"
-        style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
-      >
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+      <Footer />
     </div>
   )
 }
