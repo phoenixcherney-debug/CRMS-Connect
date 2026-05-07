@@ -120,6 +120,11 @@ export default function JobDetail() {
 
   async function handleApply() {
     if (!profile || !job) return
+    const note = coverNote.trim()
+    if (!note) {
+      setApplyError('Please write a short cover note before submitting.')
+      return
+    }
     setApplyError(null)
     setApplyLoading(true)
 
@@ -128,7 +133,7 @@ export default function JobDetail() {
       .insert({
         job_id: job.id,
         applicant_id: profile.id,
-        cover_note: coverNote.trim(),
+        cover_note: note,
         resume_link: resumeLink.trim() || null,
         status: 'pending',
       })
