@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Search, Plus, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react'
+import { Search, Plus, SlidersHorizontal, X, ArrowUpDown, Briefcase } from 'lucide-react'
 import { isPast, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,6 +8,7 @@ import type { Job, JobType, LocationType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS } from '../types'
 import JobCard from '../components/JobCard'
 import Spinner from '../components/Spinner'
+import EmptyState from '../components/EmptyState'
 
 const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer']
 const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
@@ -220,25 +221,24 @@ export default function Jobs() {
           </button>
         </div>
       ) : activeJobs.length === 0 && isPoster ? (
-        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
-          <p className="text-ink-muted text-base mb-2">No active opportunities found.</p>
-          <p className="text-sm text-ink-muted">
-            Your opportunities are in{' '}
-            <Link to="/my-postings" className="text-primary hover:text-primary-light font-medium">My Opportunities →</Link>
-          </p>
-        </div>
+        <EmptyState
+          icon={Briefcase}
+          title="No active opportunities found."
+          description="Your opportunities live on My Opportunities."
+          ctaLabel="Go to My Opportunities →"
+          ctaTo="/my-postings"
+        />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
-          <p className="text-ink-muted text-base">No opportunities match your filters.</p>
-          {(search || filter || locFilter || indFilter) && (
-            <button
-              onClick={() => { setSearch(''); setFilter(''); setLocFilter(''); setIndFilter('') }}
-              className="mt-3 text-sm text-primary hover:text-primary-light font-medium"
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
+        <EmptyState
+          icon={Search}
+          title="No opportunities match your filters."
+          ctaLabel={search || filter || locFilter || indFilter ? 'Clear filters' : undefined}
+          ctaOnClick={
+            search || filter || locFilter || indFilter
+              ? () => { setSearch(''); setFilter(''); setLocFilter(''); setIndFilter('') }
+              : undefined
+          }
+        />
       ) : (
         <div className="space-y-8">
           {/* Active jobs */}

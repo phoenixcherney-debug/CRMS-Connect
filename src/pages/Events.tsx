@@ -3,6 +3,7 @@ import { Calendar, MapPin, Clock, Plus, X, Users, Trash2, Edit3 } from 'lucide-r
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import Spinner from '../components/Spinner'
+import EmptyState from '../components/EmptyState'
 
 interface DBEvent {
   id: string
@@ -433,26 +434,17 @@ export default function Events() {
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : events.length === 0 ? (
-        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
-          <Calendar size={40} className="mx-auto text-ink-muted mb-4" />
-          <h2 className="text-lg font-semibold text-ink mb-2">No events yet</h2>
-          <p className="text-ink-muted text-sm max-w-xs mx-auto leading-relaxed">
-            Career fairs, alumni networking nights, and workshops will appear here.
-          </p>
-          {isPoster ? (
-            <button
-              onClick={() => setShowForm(true)}
-              className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg
-                border border-primary text-primary hover:bg-primary-muted text-sm font-medium transition-colors"
-            >
-              <Plus size={14} /> Add the first event
-            </button>
-          ) : (
-            <p className="mt-4 text-xs text-ink-muted">
-              Alumni and parents can add events to this page.
-            </p>
-          )}
-        </div>
+        <EmptyState
+          icon={Calendar}
+          title="No events yet"
+          description={
+            isPoster
+              ? 'Career fairs, alumni networking nights, and workshops will appear here.'
+              : 'Career fairs, alumni networking nights, and workshops will appear here. Alumni and parents can add events.'
+          }
+          ctaLabel={isPoster ? 'Add the first event' : undefined}
+          ctaOnClick={isPoster ? () => setShowForm(true) : undefined}
+        />
       ) : (
         <>
           {/* Upcoming events */}
