@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  unit:
+    name: Lint, type-check, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm test
+      - run: npm run build
+        env:
+          # Vite checks env vars at build time. The keys can be empty in CI;
+          # they're only required at runtime. If you have a CI-only project
+          # for Supabase, populate these via repo secrets instead.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'http://localhost:54321' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'placeholder' }}
+
+  e2e:
+    name: Playwright smoke
+    runs-on: ubuntu-latest
+    # E2E_PREVIEW_URL is the Vercel preview URL. If it's not set we skip — the
+    # spec creates real users in the connected Supabase project, so we don't
+    # want it running on every push if a preview env isn't available.
+    if: ${{ vars.E2E_PREVIEW_URL != '' || secrets.E2E_PREVIEW_URL != '' }}
+    needs: unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+        env:
+          E2E_BASE_URL: ${{ vars.E2E_PREVIEW_URL || secrets.E2E_PREVIEW_URL }}
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
