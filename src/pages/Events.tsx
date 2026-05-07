@@ -439,8 +439,8 @@ export default function Events() {
           title="No events yet"
           description={
             isPoster
-              ? 'Career fairs, alumni networking nights, and workshops will appear here.'
-              : 'Career fairs, alumni networking nights, and workshops will appear here. Alumni and parents can add events.'
+              ? 'Career fairs, networking nights, and workshops will appear here.'
+              : 'Career fairs, networking nights, and workshops will appear here. Employers and mentors can add events.'
           }
           ctaLabel={isPoster ? 'Add the first event' : undefined}
           ctaOnClick={isPoster ? () => setShowForm(true) : undefined}

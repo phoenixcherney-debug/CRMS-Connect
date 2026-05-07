@@ -193,7 +193,7 @@ export default function Messages() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Messages</h1>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Inbox</h1>
           <p className="text-ink-secondary text-sm mt-0.5">Your direct conversations</p>
         </div>
         <button

@@ -168,7 +168,9 @@ export const STUDENT_SEEKING_LABELS: Record<StudentSeeking, string> = {
   job: 'A job / internship',
   mentor: 'A mentor',
   both: 'Both',
-  other: 'Other',
+  // Distinct label so it doesn't visually collide with the "Other" chip in
+  // the Areas-of-interest list on the same form (audit §18).
+  other: 'Something else',
 }
 
 export const STATUS_LABELS: Record<ApplicationStatus, string> = {

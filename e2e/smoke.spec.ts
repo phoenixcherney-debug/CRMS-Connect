@@ -82,7 +82,8 @@ test('student signup → apply → application visible to the employer', async (
   // pick at least one interest chip
   await student.getByRole('button', { name: /^Technology$/ }).first().click()
   await student.getByRole('button', { name: /complete setup/i }).click()
-  await expect(student).toHaveURL(/\/jobs/, { timeout: 15_000 })
+  // Audit §15 — both roles land on /explore after onboarding now.
+  await expect(student).toHaveURL(/\/explore/, { timeout: 15_000 })
 
   // Open the freshly-posted opportunity. Search by title since other tests
   // may have left other postings in the DB.

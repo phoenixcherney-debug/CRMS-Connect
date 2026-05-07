@@ -22,7 +22,7 @@ const BASE_NAV = [
 ] as const
 
 export default function Nav() {
-  const { profile, signOut } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const unreadCount = useUnreadCount()
@@ -30,6 +30,7 @@ export default function Nav() {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
+  const isAuthed = !!user && !!profile
   const isAdmin = profile?.role === 'admin'
   const isEmployerMentor = profile?.role === 'employer_mentor'
   const isStudent = profile?.role === 'student'
@@ -79,7 +80,7 @@ export default function Nav() {
   async function handleSignOut() {
     setOpen(false)
     await signOut()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
 
   useEffect(() => {
@@ -184,6 +185,24 @@ export default function Nav() {
           }}
         >
           <div className="max-w-7xl mx-auto">
+            {!isAuthed && (
+              <div className="py-2">
+                <Link
+                  to="/login"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
+                >
+                  Create an account
+                </Link>
+              </div>
+            )}
             {profile && (
               <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
                 <div
@@ -206,6 +225,7 @@ export default function Nav() {
               </div>
             )}
 
+            {isAuthed && (<>
             <div className="py-1">
               <p className="px-4 pt-2 pb-1 text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
                 Navigation
@@ -275,6 +295,7 @@ export default function Nav() {
                 Sign out
               </button>
             </div>
+            </>)}
           </div>
         </div>
       )}

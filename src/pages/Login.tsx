@@ -287,37 +287,6 @@ export default function Login() {
                 </Link>
               </p>
 
-              <p className="mt-3 text-center text-xs text-ink-muted">
-                Stuck on a loading screen?{' '}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    // Confirm because this clears every cache and the SW;
-                    // accidental clicks could cost a slow first reload on
-                    // the next visit.
-                    const ok = window.confirm(
-                      "This will clear cached data and reload the app. You'll stay signed in. Continue?"
-                    )
-                    if (!ok) return
-                    try {
-                      if ('caches' in window) {
-                        const keys = await caches.keys()
-                        await Promise.all(keys.map((k) => caches.delete(k)))
-                      }
-                      if ('serviceWorker' in navigator) {
-                        const regs = await navigator.serviceWorker.getRegistrations()
-                        await Promise.all(regs.map((r) => r.unregister()))
-                      }
-                    } finally {
-                      window.location.reload()
-                    }
-                  }}
-                  className="hover:underline"
-                  style={{ color: 'var(--color-primary)', fontWeight: 700 }}
-                >
-                  Reset the app
-                </button>
-              </p>
             </>
           )}
         </div>

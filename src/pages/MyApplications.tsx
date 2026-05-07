@@ -99,7 +99,7 @@ export default function MyApplications() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>My Applications</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Applications</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
           {loading ? 'Loading…' : `${applications.length} application${applications.length !== 1 ? 's' : ''}`}
         </p>

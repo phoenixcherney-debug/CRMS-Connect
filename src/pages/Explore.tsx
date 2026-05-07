@@ -211,7 +211,7 @@ export default function Explore() {
           <>
             <Link to="/feed" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <Rss size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
-              <p className="text-sm font-semibold text-ink">Browse Feed</p>
+              <p className="text-sm font-semibold text-ink">Activity</p>
               <p className="text-xs text-ink-muted mt-0.5">Latest activity</p>
             </Link>
             <Link to="/jobs" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>

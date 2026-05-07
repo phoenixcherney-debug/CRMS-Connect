@@ -58,6 +58,7 @@ export default function Applicants() {
   const [job, setJob] = useState<Job | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -66,22 +67,34 @@ export default function Applicants() {
   useEffect(() => {
     async function load() {
       setLoading(true)
+      setNotFound(false)
 
-      const [{ data: jobData }, { data: appData }] = await Promise.all([
-        supabase.from('jobs').select('*').eq('id', id!).single(),
-        supabase
-          .from('applications')
-          .select('*, profiles(id, full_name, graduation_year, bio, avatar_url, role, interests, weekly_availability, student_seeking, grade)')
-          .eq('job_id', id!)
-          .order('created_at', { ascending: true }),
-      ])
+      // Load the job first so we can authorize before fetching applicants.
+      // Non-owners (and non-admins) get a 404 — not 403, not an empty inbox —
+      // so this URL doesn't leak job metadata or imply zero applications.
+      const { data: jobData } = await supabase.from('jobs').select('*').eq('id', id!).maybeSingle()
+      const isOwner = !!profile && !!jobData && jobData.posted_by === profile.id
+      const isAdmin = profile?.role === 'admin'
+      if (!jobData || (!isOwner && !isAdmin)) {
+        setJob(null)
+        setApplications([])
+        setNotFound(true)
+        setLoading(false)
+        return
+      }
+
+      const { data: appData } = await supabase
+        .from('applications')
+        .select('*, profiles(id, full_name, graduation_year, bio, avatar_url, role, interests, weekly_availability, student_seeking, grade)')
+        .eq('job_id', id!)
+        .order('created_at', { ascending: true })
 
       setJob(jobData as Job)
       setApplications((appData as Application[]) ?? [])
       setLoading(false)
     }
     if (id) load()
-  }, [id])
+  }, [id, profile])
 
   async function updateStatus(appId: string, status: ApplicationStatus) {
     setUpdatingId(appId)
@@ -122,10 +135,11 @@ export default function Applicants() {
     return <div className="flex justify-center py-20"><Spinner size="lg" /></div>
   }
 
-  if (!job) {
+  if (notFound || !job) {
     return (
       <div className="text-center py-20">
-        <p className="text-ink-muted">Opportunity not found.</p>
+        <h1 className="text-2xl font-bold text-ink mb-2" style={{ fontFamily: 'var(--font-serif)' }}>Page not found</h1>
+        <p className="text-ink-muted">This opportunity doesn't exist or you don't have access to view its applicants.</p>
         <Link to="/my-postings" className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
           ← My Opportunities
         </Link>
@@ -283,10 +297,10 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
             {/* Screening fields */}
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-ink-secondary">
               {applicant?.weekly_availability && (
-                <span className="flex items-center gap-1"><Clock size={11} />{applicant.weekly_availability}</span>
+                <span className="flex items-center gap-1"><Clock size={11} />Profile availability: {applicant.weekly_availability}</span>
               )}
               {applicant?.role === 'student' && !applicant.weekly_availability && (
-                <span className="flex items-center gap-1 text-ink-muted/60"><Clock size={11} /> Availability not set</span>
+                <span className="flex items-center gap-1 text-ink-muted/60"><Clock size={11} /> Profile availability not set</span>
               )}
               <span className="flex items-center gap-1">
                 <Calendar size={11} />

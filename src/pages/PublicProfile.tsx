@@ -41,45 +41,51 @@ export default function PublicProfile() {
   useEffect(() => {
     async function load() {
       if (!id) return
-      const { data } = await supabase
-        .from('profiles')
-        .select(`
-          id, full_name, role, graduation_year, bio, avatar_url, company, industry,
-          open_to_mentorship, created_at, interests, weekly_availability,
-          grade, mentor_type, mentor_type_other, student_seeking, student_seeking_other
-        `)
-        .eq('id', id)
-        .single()
-      setPerson(data as Profile)
-
-      // Privacy: block same-role viewing (handled below via redirect)
-
-      if (data && data.role === 'employer_mentor') {
-        const { data: career } = await supabase
+      // Fire all three queries in parallel. Career history + availability are
+      // empty for non-EM profiles so we don't lose anything by querying them
+      // unconditionally — and we get a single round-trip instead of three.
+      const today = new Date().toISOString().split('T')[0]
+      const [{ data }, { data: career }, { data: slotData }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select(`
+            id, full_name, role, graduation_year, bio, avatar_url, company, industry,
+            open_to_mentorship, created_at, interests, weekly_availability,
+            grade, mentor_type, mentor_type_other, student_seeking, student_seeking_other
+          `)
+          .eq('id', id)
+          .single(),
+        supabase
           .from('career_history')
           .select('*')
           .eq('profile_id', id)
           .order('is_current', { ascending: false })
-          .order('start_year', { ascending: false })
-        setCareerHistory((career as CareerHistory[]) ?? [])
-
-        // Load upcoming availability slots for this EM
-        const today = new Date().toISOString().split('T')[0]
-        const { data: slotData } = await supabase
+          .order('start_year', { ascending: false }),
+        supabase
           .from('availability_slots')
           .select('id, date, start_time, end_time, title')
           .eq('user_id', id)
           .gte('date', today)
           .order('date', { ascending: true })
           .order('start_time', { ascending: true })
-          .limit(10)
+          .limit(10),
+      ])
+
+      setPerson(data as Profile)
+      if (data && data.role === 'employer_mentor') {
+        setCareerHistory((career as CareerHistory[]) ?? [])
         setSlots((slotData as AvailSlot[]) ?? [])
       }
-
       setLoading(false)
     }
     load()
   }, [id])
+
+  useEffect(() => {
+    if (person?.full_name) {
+      document.title = `${person.full_name} · CRMS Connect`
+    }
+  }, [person?.full_name])
 
   async function openConversation() {
     if (!myProfile || !person) return

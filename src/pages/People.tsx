@@ -135,7 +135,7 @@ export default function People() {
     )
   }
 
-  const pageTitle = isStudent ? 'Employers & Mentors' : 'Students'
+  const pageTitle = isStudent ? 'Mentors' : 'Students'
   const pageSubtitle = loading
     ? 'Loading…'
     : `${people.filter((p) => p.id !== profile?.id).length} ${pageTitle.toLowerCase()} in the CRMS community`
@@ -371,11 +371,15 @@ export default function People() {
                   </div>
                 </div>
 
-                {person.bio && (
-                  <p className="text-xs text-ink-secondary mt-3 line-clamp-2 leading-relaxed flex-1">
+                {person.bio ? (
+                  <p className="text-xs text-ink-secondary mt-3 line-clamp-2 leading-relaxed">
                     {person.bio}
                   </p>
-                )}
+                ) : null}
+                {/* Spacer pushes the Message button to the bottom when the
+                    bio is short or absent, keeping cards visually aligned in
+                    the same row (audit §20). */}
+                <div className="flex-1" />
 
                 {!isSelf && (
                   <button

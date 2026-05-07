@@ -61,9 +61,11 @@ export default function Onboarding() {
   const isStudent = profile.role === 'student'
   const isEmployerMentor = profile.role === 'employer_mentor'
 
-  // Sanity-check graduation year: between (current year − 80) and (current year + 8)
+  // Sanity-check expected graduation year: within reach. The label says
+  // "Expected graduation year" so only current/future students make sense
+  // (allow currentYear − 1 for late-enrollers / mid-year onboarders).
   const currentYear = new Date().getFullYear()
-  const minGradYear = currentYear - 80
+  const minGradYear = currentYear - 1
   const maxGradYear = currentYear + 8
   const parsedGradYear = graduationYear ? parseInt(graduationYear, 10) : NaN
   const gradYearValid =
@@ -145,7 +147,10 @@ export default function Onboarding() {
       return
     }
     await refreshProfile()
-    navigate(isStudent ? '/jobs' : '/explore', { replace: true })
+    // Both roles land on /explore so they see the welcome dashboard (stats,
+    // quick actions, curated previews) before being dropped into the full
+    // job board (audit §15).
+    navigate('/explore', { replace: true })
   }
 
   return (
@@ -245,6 +250,11 @@ export default function Onboarding() {
                         focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                     />
                   </div>
+                )}
+                {employerNeedsCompany && (
+                  <p className="mt-2 text-xs text-ink-muted">
+                    Employers must specify a company name.
+                  </p>
                 )}
               </div>
             )}

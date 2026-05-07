@@ -206,8 +206,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // ─── Sign Out ──────────────────────────────────────────────────────────────
+  // Clear local state synchronously so the React tree stops rendering the
+  // previous user immediately (ProtectedRoute will bounce to /login on the
+  // next render). Then fire Supabase signOut for token revocation. The
+  // onAuthStateChange listener will run too — that's fine, our state is
+  // already null.
   async function signOut() {
-    await supabase.auth.signOut()
+    setUser(null)
+    setProfile(null)
+    try {
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.warn('[AuthContext] signOut failed:', err)
+    }
   }
 
   return (

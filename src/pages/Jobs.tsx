@@ -10,7 +10,10 @@ import JobCard from '../components/JobCard'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 
-const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer']
+// Mirror the post form's category dropdown so every published opportunity
+// has a corresponding chip on /jobs (audit caught Mentorship / Job Shadow /
+// Other being un-filterable here).
+const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer', 'mentorship', 'shadow', 'other']
 const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
 type SortOption = 'newest' | 'deadline' | 'company'
 
@@ -129,39 +132,55 @@ export default function Jobs() {
         </div>
       </div>
 
-      {/* Filter & sort bar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal size={15} className="text-ink-muted shrink-0" />
-            <div className="flex gap-1.5 flex-wrap">
+      {/* Filter & sort bar — Type and Location chips live in distinct labeled
+          groups so users see them as separate filter dimensions (audit §13). */}
+      <div className="space-y-3 mb-6">
+        <div className="flex items-start gap-3 flex-wrap">
+          <SlidersHorizontal size={15} className="text-ink-muted shrink-0 mt-2" />
+
+          {/* Type group */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mr-1">Type</span>
+            <button
+              onClick={() => setFilter('')}
+              className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
+                ${filter === ''
+                  ? 'bg-primary-muted border-primary text-primary'
+                  : 'border-border text-ink-secondary hover:bg-primary-faint'
+                }`}
+            >
+              All
+            </button>
+            {JOB_TYPES.map((t) => (
               <button
-                onClick={() => setFilter('')}
+                key={t}
+                onClick={() => setFilter(filter === t ? '' : t)}
                 className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
-                  ${filter === ''
+                  ${filter === t
                     ? 'bg-primary-muted border-primary text-primary'
                     : 'border-border text-ink-secondary hover:bg-primary-faint'
                   }`}
               >
-                All
+                {JOB_TYPE_LABELS[t]}
               </button>
-              {JOB_TYPES.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setFilter(filter === t ? '' : t)}
-                  className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
-                    ${filter === t
-                      ? 'bg-primary-muted border-primary text-primary'
-                      : 'border-border text-ink-secondary hover:bg-primary-faint'
-                    }`}
-                >
-                  {JOB_TYPE_LABELS[t]}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
+        </div>
 
-          <div className="flex gap-1.5 flex-wrap">
+        <div className="flex items-start gap-3 flex-wrap pl-7">
+          {/* Location group */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mr-1">Location</span>
+            <button
+              onClick={() => setLocFilter('')}
+              className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
+                ${locFilter === ''
+                  ? 'bg-primary-muted border-primary text-primary'
+                  : 'border-border text-ink-secondary hover:bg-primary-faint'
+                }`}
+            >
+              All
+            </button>
             {LOCATION_TYPES.map((t) => (
               <button
                 key={t}
@@ -176,7 +195,9 @@ export default function Jobs() {
               </button>
             ))}
           </div>
+        </div>
 
+        <div className="flex items-center gap-3 flex-wrap pl-7">
           <select
             value={indFilter}
             onChange={(e) => setIndFilter(e.target.value)}

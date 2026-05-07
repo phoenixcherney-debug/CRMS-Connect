@@ -1,3 +1,6 @@
 {
+  "redirects": [
+    { "source": "/applications", "destination": "/my-applications", "permanent": true }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

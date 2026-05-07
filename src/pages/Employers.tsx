@@ -64,11 +64,11 @@ export default function Employers() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Employers & Mentors</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Companies</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
           {loading
             ? 'Loading…'
-            : `${employers.length} company${employers.length !== 1 ? 's' : ''} with posted opportunities — click a company to see who posted`}
+            : `${employers.length} ${employers.length === 1 ? 'company' : 'companies'} with posted opportunities — click a company to see who posted`}
         </p>
       </div>
 

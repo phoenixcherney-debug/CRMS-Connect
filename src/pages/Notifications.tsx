@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, MessageSquare, FileText, UserPlus, CheckCircle2, RefreshCw } from 'lucide-react'
+import { Bell, MessageSquare, FileText, UserPlus, CheckCircle2 } from 'lucide-react'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -31,13 +31,11 @@ export default function Notifications() {
   const { profile } = useAuth()
   const [items, setItems]     = useState<NotifItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [seenAt, setSeenAt] = useState<string | null>(null)
 
   async function load(quiet = false) {
     if (!profile) return
-    if (quiet) setRefreshing(true)
-    else setLoading(true)
+    if (!quiet) setLoading(true)
 
     // Fetch notifications_seen_at so we can dim items already seen
     const { data: profileData } = await supabase
@@ -143,7 +141,6 @@ export default function Notifications() {
     notifs.sort((a, b) => b.ts.localeCompare(a.ts))
     setItems(notifs.slice(0, 50))
     setLoading(false)
-    setRefreshing(false)
   }
 
   useEffect(() => {
@@ -190,28 +187,18 @@ export default function Notifications() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-ink flex items-center gap-2" style={{ fontFamily: 'var(--font-serif)' }}>
-            Notifications
-            {unreadCount > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-bold">
-                {unreadCount}
-              </span>
-            )}
-          </h1>
-          <p className="text-ink-secondary text-sm mt-0.5">
-            {loading ? 'Loading…' : `${items.length} recent notification${items.length !== 1 ? 's' : ''}`}
-          </p>
-        </div>
-        <button
-          onClick={() => load(true)}
-          disabled={refreshing}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-ink flex items-center gap-2" style={{ fontFamily: 'var(--font-serif)' }}>
+          Notifications
+          {unreadCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-bold">
+              {unreadCount}
+            </span>
+          )}
+        </h1>
+        <p className="text-ink-secondary text-sm mt-0.5">
+          {loading ? 'Loading…' : `${items.length} recent notification${items.length !== 1 ? 's' : ''}`}
+        </p>
       </div>
 
       {loading ? (

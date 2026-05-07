@@ -109,7 +109,7 @@ export default function StudentPosts() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Student Postings</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Student Posts</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
           {loading ? 'Loading…' : `${filtered.length} student${filtered.length !== 1 ? 's' : ''} looking for opportunities`}
         </p>

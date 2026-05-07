@@ -5,7 +5,7 @@ import { formatDistanceToNow, parseISO, isPast } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Application } from '../types'
-import { OPPORTUNITY_TYPE_LABELS, JOB_TYPE_LABELS } from '../types'
+import { JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 
@@ -164,9 +164,11 @@ export default function Feed() {
           {items.map((item) => {
             // ── Job opportunity card ─────────────────────────────────────────
             if (item.kind === 'job') {
-              const typeLabel = item.job.opportunity_type
-                ? OPPORTUNITY_TYPE_LABELS[item.job.opportunity_type]
-                : JOB_TYPE_LABELS[item.job.job_type]
+              // Always source the human-readable category from job_type so
+              // every row reads as "{name} posted a {category} opportunity".
+              // The legacy opportunity_type produced awkward copy like
+              // "posted a job / internship opportunity" (audit §14).
+              const typeLabel = JOB_TYPE_LABELS[item.job.job_type]
               const article = /^[aeiou]/i.test(typeLabel) ? 'an' : 'a'
               return (
                 <Link

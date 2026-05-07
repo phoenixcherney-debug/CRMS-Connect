@@ -36,7 +36,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/jobs/new': 'Post an opportunity',
   '/my-postings': 'My Opportunities',
   '/postings': 'Student Posts',
-  '/my-applications': 'My Applications',
+  '/my-applications': 'Applications',
   '/my-posts': 'My Posts',
   '/availability': 'My Calendar',
   '/my-bookings': 'My Bookings',
@@ -121,8 +121,8 @@ export default function App() {
             <Route path="/signup"         element={<Signup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email"   element={<VerifyEmail />} />
-            <Route path="/about"          element={<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><About /></div>} />
-            <Route path="/privacy"        element={<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><Privacy /></div>} />
+            <Route path="/about"          element={<Layout><About /></Layout>} />
+            <Route path="/privacy"        element={<Layout><Privacy /></Layout>} />
 
             {/* ── Onboarding (auth required, onboarding check skipped) ── */}
             <Route
@@ -246,6 +246,9 @@ export default function App() {
                 <Layout><AdminUserView /></Layout>
               </ProtectedRoute>
             } />
+
+            {/* ── Permanent redirects (legacy URLs) ────────────────────── */}
+            <Route path="/applications" element={<Navigate to="/my-applications" replace />} />
 
             {/* ── Defaults ─────────────────────────────────────────────── */}
             <Route path="/"  element={<Navigate to="/explore" replace />} />

@@ -168,10 +168,14 @@ export default function Profile() {
 
     // Match the server-side CHECK constraints in migration 023:
     //   year >= currentYear - 80 AND year <= currentYear + 8
+    // Students see a tighter range — "expected graduation" only makes sense
+    // for current/future cohorts, while alumni in EM accounts can be far back.
     const currentYear = new Date().getFullYear()
+    const minYr = profile?.role === 'student' ? currentYear - 1 : currentYear - 80
+    const maxYr = currentYear + 8
     const yr = graduationYear ? parseInt(graduationYear, 10) : NaN
-    if (graduationYear && (isNaN(yr) || yr < currentYear - 80 || yr > currentYear + 8)) {
-      setSaveError(`Graduation year must be between ${currentYear - 80} and ${currentYear + 8}.`)
+    if (graduationYear && (isNaN(yr) || yr < minYr || yr > maxYr)) {
+      setSaveError(`Graduation year must be between ${minYr} and ${maxYr}.`)
       return
     }
 
@@ -471,6 +475,9 @@ export default function Profile() {
                   <p className="text-sm text-success font-medium">Profile saved!</p>
                 </div>
               )}
+
+              {/* Danger zone — delete account */}
+              <DeleteAccountSection />
             </div>
           )}
 
@@ -536,11 +543,12 @@ export default function Profile() {
                   </label>
                   <input
                     type="number"
-                    /* Bounds mirror the DB CHECK from migration 023:
-                       graduation_year ∈ [currentYear − 80, currentYear + 8].
-                       Computing on each render keeps the UI in sync as the
-                       year ticks over without a manual edit. */
-                    min={new Date().getFullYear() - 80}
+                    /* Students: tight bounds (expected graduation is forward-
+                       leaning). Alumni in EM accounts: keep DB-wide range
+                       [currentYear − 80, currentYear + 8] from migration 023. */
+                    min={profile.role === 'student'
+                      ? new Date().getFullYear() - 1
+                      : new Date().getFullYear() - 80}
                     max={new Date().getFullYear() + 8}
                     value={graduationYear}
                     onChange={(e) => setGraduationYear(e.target.value)}
@@ -952,6 +960,132 @@ export default function Profile() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Delete account section ───────────────────────────────────────────────────
+// Soft-delete: anonymize personal fields and set banned_at so the user is
+// hidden from public listings (RLS migration 030) and redirected to /banned
+// on any future sign-in. We can't unconditionally remove the Supabase auth
+// user from the client (requires service role); the registrar handles full
+// auth-user purges via mailto on the privacy page.
+function DeleteAccountSection() {
+  const { profile, user, signOut } = useAuth()
+  const [open, setOpen]             = useState(false)
+  const [confirmEmail, setConfirmEmail] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMsg, setErrorMsg]     = useState<string | null>(null)
+
+  if (!profile || !user) return null
+
+  const expectedEmail = (user.email ?? '').trim().toLowerCase()
+  const matches = confirmEmail.trim().toLowerCase() === expectedEmail && expectedEmail.length > 0
+
+  async function handleDelete() {
+    if (!matches || !profile) return
+    setSubmitting(true)
+    setErrorMsg(null)
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: 'Deleted user',
+        avatar_url: null,
+        bio: null,
+        company: null,
+        industry: null,
+        interests: [],
+        weekly_availability: null,
+        mentor_type: null,
+        mentor_type_other: null,
+        student_seeking: null,
+        student_seeking_other: null,
+        grade: null,
+        graduation_year: null,
+        open_to_mentorship: false,
+        banned_at: new Date().toISOString(),
+      })
+      .eq('id', profile.id)
+
+    if (error) {
+      setSubmitting(false)
+      setErrorMsg('Could not delete the account. Please email registrar@crms.org for help.')
+      return
+    }
+
+    // Best-effort audit notice — not a real email send (that needs an edge
+    // function) but it opens the registrar's mail client so deletions are
+    // traceable until a server-side audit log is wired up.
+    try {
+      const subject = encodeURIComponent('CRMS Connect — account deletion')
+      const body    = encodeURIComponent(`User ${expectedEmail} requested account deletion at ${new Date().toISOString()}.`)
+      window.open(`mailto:registrar@crms.org?subject=${subject}&body=${body}`, '_blank', 'noopener')
+    } catch { /* ignore */ }
+
+    await signOut()
+    window.location.href = '/login'
+  }
+
+  return (
+    <div className="mt-6 pt-6 border-t border-border">
+      <p className="text-sm font-semibold text-ink mb-1">Delete account</p>
+      <p className="text-xs text-ink-muted mb-3">
+        Permanently removes your name, bio, and other personal details, and
+        hides you from the directory. Your applications and posts remain
+        attributed to "Deleted user" so employers' records aren't disrupted.
+      </p>
+      <button
+        type="button"
+        onClick={() => { setOpen(true); setConfirmEmail(''); setErrorMsg(null) }}
+        className="text-xs font-medium text-error hover:underline"
+      >
+        Delete my account…
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-surface rounded-2xl border border-border p-6 max-w-md w-full" style={{ boxShadow: 'var(--shadow-modal)' }}>
+            <h3 className="text-base font-semibold text-ink mb-2">Delete your account?</h3>
+            <ul className="text-sm text-ink-secondary list-disc pl-5 space-y-1 mb-4">
+              <li>Your profile will be anonymized and hidden from the directory.</li>
+              <li>You will be signed out and unable to sign back in.</li>
+              <li>Past applications and messages remain visible to recipients but attributed to "Deleted user".</li>
+              <li>For a full data export or auth-record purge, email registrar@crms.org.</li>
+            </ul>
+            <label className="block text-xs font-medium text-ink mb-1.5">
+              Type your email address ({expectedEmail}) to confirm
+            </label>
+            <input
+              type="email"
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              placeholder={expectedEmail}
+              autoComplete="off"
+              className="w-full mb-3 px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            />
+            {errorMsg && (
+              <p className="text-xs text-error mb-3">{errorMsg}</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={handleDelete}
+                disabled={!matches || submitting}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-error hover:bg-error/90 text-white font-medium text-sm transition-colors disabled:opacity-50"
+              >
+                {submitting ? 'Deleting…' : 'Permanently delete'}
+              </button>
+              <button
+                onClick={() => setOpen(false)}
+                disabled={submitting}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -8,7 +8,7 @@ export default function About() {
       </h1>
       <p className="text-ink-secondary mt-3 leading-relaxed">
         CRMS Connect is a private platform for Colorado Rocky Mountain School
-        students, alumni, parents, and partner employers. It exists to help
+        students and partner employers and mentors. It exists to help
         students find internships, mentors, and post-graduation opportunities
         through the school's network.
       </p>

@@ -440,9 +440,11 @@ function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
           <button
             onClick={() => onDelete(post.id)}
             title="Delete post"
-            className="p-1.5 rounded-lg border border-border text-ink-muted hover:text-error hover:border-error transition-colors"
+            aria-label="Delete post"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium text-ink-muted hover:text-error hover:border-error transition-colors"
           >
-            <Trash2 size={14} />
+            <Trash2 size={12} />
+            Delete
           </button>
         </div>
       </div>

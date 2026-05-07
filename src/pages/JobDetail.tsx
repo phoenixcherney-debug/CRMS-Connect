@@ -417,15 +417,20 @@ export default function JobDetail() {
                             <dd className="text-ink">{profile.weekly_availability}</dd>
                           </div>
                         )}
-                        <div className="flex gap-2">
-                          <dt className="text-ink-muted w-36 shrink-0">Resume / Portfolio</dt>
-                          <dd className="text-ink">
-                            {resumeLink.trim()
-                              ? <a href={resumeLink.trim()} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-light underline break-all">{resumeLink.trim()}</a>
-                              : <span className="text-ink-muted italic">Not provided</span>
-                            }
-                          </dd>
-                        </div>
+                        {coverNote.trim() && (
+                          <div className="flex gap-2">
+                            <dt className="text-ink-muted w-36 shrink-0">Cover note</dt>
+                            <dd className="text-ink whitespace-pre-wrap">{coverNote.trim()}</dd>
+                          </div>
+                        )}
+                        {resumeLink.trim() && (
+                          <div className="flex gap-2">
+                            <dt className="text-ink-muted w-36 shrink-0">Resume / Portfolio</dt>
+                            <dd className="text-ink">
+                              <a href={resumeLink.trim()} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-light underline break-all">{resumeLink.trim()}</a>
+                            </dd>
+                          </div>
+                        )}
                       </dl>
                     </div>
                   )}
