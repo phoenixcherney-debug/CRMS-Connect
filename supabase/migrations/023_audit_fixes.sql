@@ -72,6 +72,36 @@ LEFT JOIN public.profiles p ON p.id = u.id
 WHERE p.id IS NULL;
 
 -- ── 3. Sanity constraints on profile fields ─────────────────────────────────
+-- Step 3a: clean existing data so the new CHECK constraints don't reject it.
+-- The audit found rows with graduation_year=1961 and 2040 (outside the sane
+-- range) and the test data may also have over-long bios or full_names.
+
+-- Truncate names that are too long; coerce empty/NULL to the email prefix.
+UPDATE public.profiles p
+SET full_name = COALESCE(
+  NULLIF(TRIM(LEFT(p.full_name, 60)), ''),
+  split_part((SELECT email FROM auth.users u WHERE u.id = p.id), '@', 1),
+  'Member'
+)
+WHERE p.full_name IS NULL
+   OR char_length(p.full_name) > 60
+   OR TRIM(p.full_name) = '';
+
+-- Truncate over-long bios to 2000 chars.
+UPDATE public.profiles
+SET bio = LEFT(bio, 2000)
+WHERE bio IS NOT NULL AND char_length(bio) > 2000;
+
+-- NULL out implausible graduation_year values rather than guessing.
+UPDATE public.profiles
+SET graduation_year = NULL
+WHERE graduation_year IS NOT NULL
+  AND (
+    graduation_year < EXTRACT(YEAR FROM CURRENT_DATE)::INT - 80
+    OR graduation_year > EXTRACT(YEAR FROM CURRENT_DATE)::INT + 8
+  );
+
+-- Step 3b: now safely (re)apply the constraints.
 ALTER TABLE public.profiles
   DROP CONSTRAINT IF EXISTS profiles_full_name_length_check;
 ALTER TABLE public.profiles
