@@ -1,5 +1,15 @@
 export type Role = 'student' | 'employer_mentor' | 'admin'
-export type JobType = 'internship' | 'part-time' | 'full-time' | 'volunteer'
+// Single taxonomy that covers what was previously split between job_type and
+// opportunity_type. The latter is being phased out; existing rows still
+// surface their opportunity_type label on detail pages.
+export type JobType =
+  | 'internship'
+  | 'part-time'
+  | 'full-time'
+  | 'volunteer'
+  | 'mentorship'
+  | 'shadow'
+  | 'other'
 export type LocationType = 'remote' | 'in-person' | 'hybrid'
 export type ApplicationStatus = 'pending' | 'reviewed' | 'accepted' | 'rejected' | 'waitlisted'
 export type MentorType = 'employer' | 'mentor' | 'both' | 'other'
@@ -134,6 +144,9 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   'part-time': 'Part-Time',
   'full-time': 'Full-Time',
   volunteer: 'Volunteer',
+  mentorship: 'Mentorship',
+  shadow: 'Job Shadow',
+  other: 'Other',
 }
 
 export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {

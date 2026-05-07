@@ -5,15 +5,13 @@ import { ChevronLeft, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { JobType, LocationType, OpportunityType } from '../types'
-import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS, OPPORTUNITY_TYPE_LABELS } from '../types'
+import type { JobType, LocationType } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
 import { friendlyError } from '../lib/errors'
 
-const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer']
+const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer', 'mentorship', 'shadow', 'other']
 const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
-
-const OPPORTUNITY_TYPES: OpportunityType[] = ['job_internship', 'mentorship', 'volunteer', 'shadow', 'other']
 
 interface JobForm {
   title: string
@@ -22,8 +20,6 @@ interface JobForm {
   location_type: LocationType
   industry: string
   job_type: JobType
-  opportunity_type: OpportunityType | ''
-  opportunity_type_other: string
   description: string
   how_to_apply: string
   contact_email: string
@@ -40,8 +36,6 @@ const DEFAULT_FORM: JobForm = {
   location_type: 'in-person',
   industry: '',
   job_type: 'internship',
-  opportunity_type: '',
-  opportunity_type_other: '',
   description: '',
   how_to_apply: '',
   contact_email: '',
@@ -77,8 +71,6 @@ export default function PostJob() {
           location_type: data.location_type ?? 'in-person',
           industry: data.industry ?? '',
           job_type: data.job_type,
-          opportunity_type: data.opportunity_type ?? '',
-          opportunity_type_other: data.opportunity_type_other ?? '',
           description: data.description,
           how_to_apply: data.how_to_apply ?? '',
           contact_email: data.contact_email ?? '',
@@ -130,9 +122,10 @@ export default function PostJob() {
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       expected_weekly_hours: form.expected_weekly_hours || null,
-      opportunity_type: form.opportunity_type || null,
-      opportunity_type_other:
-        form.opportunity_type === 'other' ? trim(form.opportunity_type_other) || null : null,
+      // opportunity_type is no longer collected (consolidated with job_type),
+      // but kept nullable in the schema so legacy rows still display.
+      opportunity_type: null,
+      opportunity_type_other: null,
       posted_by: profile.id,
       is_active: true,
     }
@@ -238,40 +231,9 @@ export default function PostJob() {
             </div>
           </div>
 
-          {/* Opportunity type */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1.5">
-                Opportunity type{' '}
-                <span className="text-ink-muted font-normal">(optional)</span>
-              </label>
-              <select
-                value={form.opportunity_type}
-                onChange={(e) => set('opportunity_type', e.target.value as OpportunityType | '')}
-                className="field"
-              >
-                <option value="">Select type…</option>
-                {OPPORTUNITY_TYPES.map((t) => (
-                  <option key={t} value={t}>{OPPORTUNITY_TYPE_LABELS[t]}</option>
-                ))}
-              </select>
-            </div>
-            {form.opportunity_type === 'other' && (
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">
-                  Please describe <span className="text-error">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.opportunity_type_other}
-                  onChange={(e) => set('opportunity_type_other', e.target.value)}
-                  placeholder="Describe the opportunity type"
-                  className="field"
-                />
-              </div>
-            )}
-          </div>
+          {/* Opportunity type field removed: Category above is now the single
+              source of truth for what this opportunity is. The opportunity_type
+              column still exists in the schema for backward compatibility. */}
 
           {/* Row: Company + Location */}
           <div className="grid sm:grid-cols-2 gap-4">

@@ -545,23 +545,21 @@ export default function JobDetail() {
                   )}
                 </div>
               </div>
-            ) : (
-              {(() => {
-                const requiresAvailability = job.job_type !== 'full-time'
-                const blocked = !profile?.interests?.length ||
-                  (requiresAvailability && !profile?.weekly_availability)
-                return (
-                  <button
-                    onClick={() => setApplying(true)}
-                    disabled={blocked}
-                    className="btn-gold w-full sm:w-auto px-6 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={blocked ? 'Complete your profile to apply' : undefined}
-                  >
-                    Apply now
-                  </button>
-                )
-              })()}
-            )}
+            ) : (() => {
+              const requiresAvailability = job.job_type !== 'full-time'
+              const blocked = !profile?.interests?.length ||
+                (requiresAvailability && !profile?.weekly_availability)
+              return (
+                <button
+                  onClick={() => setApplying(true)}
+                  disabled={blocked}
+                  className="btn-gold w-full sm:w-auto px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={blocked ? 'Complete your profile to apply' : undefined}
+                >
+                  Apply now
+                </button>
+              )
+            })()}
           </div>
         )}
       </div>
