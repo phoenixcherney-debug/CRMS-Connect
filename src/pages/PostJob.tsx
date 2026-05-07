@@ -5,14 +5,13 @@ import { ChevronLeft, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { JobType, LocationType, OpportunityType } from '../types'
-import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS, OPPORTUNITY_TYPE_LABELS } from '../types'
+import type { JobType, LocationType } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
+import { friendlyError } from '../lib/errors'
 
-const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer']
+const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer', 'mentorship', 'shadow', 'other']
 const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
-
-const OPPORTUNITY_TYPES: OpportunityType[] = ['job_internship', 'mentorship', 'volunteer', 'shadow', 'other']
 
 interface JobForm {
   title: string
@@ -21,8 +20,6 @@ interface JobForm {
   location_type: LocationType
   industry: string
   job_type: JobType
-  opportunity_type: OpportunityType | ''
-  opportunity_type_other: string
   description: string
   how_to_apply: string
   contact_email: string
@@ -39,8 +36,6 @@ const DEFAULT_FORM: JobForm = {
   location_type: 'in-person',
   industry: '',
   job_type: 'internship',
-  opportunity_type: '',
-  opportunity_type_other: '',
   description: '',
   how_to_apply: '',
   contact_email: '',
@@ -50,32 +45,7 @@ const DEFAULT_FORM: JobForm = {
   expected_weekly_hours: '',
 }
 
-// Map Postgres / Supabase errors to user-readable copy. Never show raw column or
-// constraint names to the user; log them to console for debugging instead.
-function friendlyJobError(err: { code?: string; message?: string } | null): string {
-  if (!err) return 'Could not save the opportunity. Please try again.'
-  console.error('[PostJob] supabase error:', err)
-  const msg = (err.message ?? '').toLowerCase()
-  if (err.code === '23502' || msg.includes('not-null') || msg.includes('null value')) {
-    return 'Please fill in all required fields and try again.'
-  }
-  if (err.code === '23505' || msg.includes('duplicate') || msg.includes('unique')) {
-    return 'An opportunity with these details already exists.'
-  }
-  if (err.code === '23503' || msg.includes('foreign key')) {
-    return "We couldn't link this opportunity to your account. Please refresh and try again."
-  }
-  if (err.code === '23514' || msg.includes('check constraint')) {
-    return 'One of the fields has an invalid value. Please review the form and try again.'
-  }
-  if (msg.includes('row-level security') || msg.includes('rls') || msg.includes('permission denied')) {
-    return "You don't have permission to do that."
-  }
-  if (msg.includes('timed out') || msg.includes('timeout')) {
-    return 'The request timed out. Please check your connection and try again.'
-  }
-  return 'Could not save the opportunity. Please try again.'
-}
+const SAVE_FAIL_MSG = 'Could not save the opportunity. Please try again.'
 
 export default function PostJob() {
   const { id } = useParams<{ id?: string }>()
@@ -101,8 +71,6 @@ export default function PostJob() {
           location_type: data.location_type ?? 'in-person',
           industry: data.industry ?? '',
           job_type: data.job_type,
-          opportunity_type: data.opportunity_type ?? '',
-          opportunity_type_other: data.opportunity_type_other ?? '',
           description: data.description,
           how_to_apply: data.how_to_apply ?? '',
           contact_email: data.contact_email ?? '',
@@ -154,9 +122,10 @@ export default function PostJob() {
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       expected_weekly_hours: form.expected_weekly_hours || null,
-      opportunity_type: form.opportunity_type || null,
-      opportunity_type_other:
-        form.opportunity_type === 'other' ? trim(form.opportunity_type_other) || null : null,
+      // opportunity_type is no longer collected (consolidated with job_type),
+      // but kept nullable in the schema so legacy rows still display.
+      opportunity_type: null,
+      opportunity_type_other: null,
       posted_by: profile.id,
       is_active: true,
     }
@@ -184,13 +153,13 @@ export default function PostJob() {
       }
 
       if (result.error) {
-        setError(friendlyJobError(result.error as { code?: string; message?: string }))
+        setError(friendlyError(result.error, SAVE_FAIL_MSG))
         return
       }
 
       navigate(isEdit ? `/jobs/${id}` : '/my-postings')
     } catch (err) {
-      setError(friendlyJobError(err as { code?: string; message?: string }))
+      setError(friendlyError(err, SAVE_FAIL_MSG))
     } finally {
       setSubmitting(false)
     }
@@ -262,40 +231,9 @@ export default function PostJob() {
             </div>
           </div>
 
-          {/* Opportunity type */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1.5">
-                Opportunity type{' '}
-                <span className="text-ink-muted font-normal">(optional)</span>
-              </label>
-              <select
-                value={form.opportunity_type}
-                onChange={(e) => set('opportunity_type', e.target.value as OpportunityType | '')}
-                className="field"
-              >
-                <option value="">Select type…</option>
-                {OPPORTUNITY_TYPES.map((t) => (
-                  <option key={t} value={t}>{OPPORTUNITY_TYPE_LABELS[t]}</option>
-                ))}
-              </select>
-            </div>
-            {form.opportunity_type === 'other' && (
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">
-                  Please describe <span className="text-error">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.opportunity_type_other}
-                  onChange={(e) => set('opportunity_type_other', e.target.value)}
-                  placeholder="Describe the opportunity type"
-                  className="field"
-                />
-              </div>
-            )}
-          </div>
+          {/* Opportunity type field removed: Category above is now the single
+              source of truth for what this opportunity is. The opportunity_type
+              column still exists in the schema for backward compatibility. */}
 
           {/* Row: Company + Location */}
           <div className="grid sm:grid-cols-2 gap-4">

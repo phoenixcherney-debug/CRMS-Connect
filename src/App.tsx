@@ -45,6 +45,8 @@ const ROUTE_TITLES: Record<string, string> = {
   '/profile': 'Profile',
   '/banned': 'Account suspended',
   '/admin': 'Admin Panel',
+  '/about': 'About',
+  '/privacy': 'Privacy',
 }
 
 function DocumentTitle() {
@@ -97,6 +99,8 @@ const MeetingRequests   = lazy(() => import('./pages/MeetingRequests'))
 const AdminPanel        = lazy(() => import('./pages/AdminPanel'))
 const AdminUserView     = lazy(() => import('./pages/AdminUserView'))
 const BannedPage        = lazy(() => import('./pages/BannedPage'))
+const About             = lazy(() => import('./pages/About'))
+const Privacy           = lazy(() => import('./pages/Privacy'))
 
 export default function App() {
   return (
@@ -117,6 +121,8 @@ export default function App() {
             <Route path="/signup"         element={<Signup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email"   element={<VerifyEmail />} />
+            <Route path="/about"          element={<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><About /></div>} />
+            <Route path="/privacy"        element={<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><Privacy /></div>} />
 
             {/* ── Onboarding (auth required, onboarding check skipped) ── */}
             <Route

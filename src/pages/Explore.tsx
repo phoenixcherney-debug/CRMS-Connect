@@ -32,6 +32,7 @@ export default function Explore() {
         { data: people, error: peopleError },
         { count: totalJobs },
         { count: totalPeople },
+        { data: allCompanyRows },
       ] = await Promise.all([
         supabase
           .from('jobs')
@@ -52,6 +53,12 @@ export default function Explore() {
         supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true }),
+        // Pull every active job's `company` so we can count distinct companies
+        // across the whole community, not just the 4-row sample we render.
+        supabase
+          .from('jobs')
+          .select('company')
+          .eq('is_active', true),
       ])
 
       if (peopleError) console.error('Explore: profiles query failed', peopleError)
@@ -64,10 +71,14 @@ export default function Explore() {
       setRecentJobs(jobList)
       setRecentPeople(peopleList)
       setMentors(peopleList.filter((p) => p.open_to_mentorship && p.role === 'employer_mentor' && p.id !== profile?.id))
+
+      const companyNames = ((allCompanyRows ?? []) as { company: string }[])
+        .map((r) => (r.company ?? '').trim())
+        .filter((c) => c.length > 0)
       setStats({
         jobs: totalJobs ?? jobList.length,
         people: totalPeople ?? peopleList.length,
-        companies: new Set(jobList.map((j) => j.company)).size,
+        companies: new Set(companyNames).size,
       })
       setLoading(false)
     }

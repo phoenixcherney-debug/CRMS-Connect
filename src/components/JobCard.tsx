@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow, isPast, parseISO, format } from 'date-fns'
 import type { Job, JobType, LocationType } from '../types'
-import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS } from '../types'
 
 // Pair each job type with both a color and a glyph so the difference doesn't
 // rely on color alone — important for color-blind users (audit finding).
@@ -14,6 +14,9 @@ const JOB_TYPE_COLORS: Record<JobType, string> = {
   'part-time': 'bg-badge-parttime-bg text-badge-parttime-text border-badge-parttime-border',
   'full-time': 'bg-primary-muted text-primary border-primary-muted',
   volunteer: 'bg-badge-volunteer-bg text-badge-volunteer-text border-badge-volunteer-border',
+  mentorship: 'bg-surface border-border text-ink-secondary',
+  shadow:     'bg-surface border-border text-ink-secondary',
+  other:      'bg-surface border-border text-ink-secondary',
 }
 
 const JOB_TYPE_ICONS: Record<JobType, typeof Briefcase> = {
@@ -21,6 +24,9 @@ const JOB_TYPE_ICONS: Record<JobType, typeof Briefcase> = {
   'part-time': Star,
   'full-time': Briefcase,
   volunteer: Heart,
+  mentorship: Users,
+  shadow:     Briefcase,
+  other:      Briefcase,
 }
 
 const LOCATION_TYPE_COLORS: Record<LocationType, string> = {
@@ -74,13 +80,8 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
 
           <div className="flex flex-col items-end gap-1.5 shrink-0">
             <div className="flex items-center gap-1 flex-wrap justify-end">
-              {job.opportunity_type && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border bg-surface border-border text-ink-secondary">
-                  {job.opportunity_type === 'other'
-                    ? (job.opportunity_type_other || 'Other')
-                    : OPPORTUNITY_TYPE_LABELS[job.opportunity_type]}
-                </span>
-              )}
+              {/* Single Type pill (job_type) — opportunity_type was removed
+                  from the form; old rows still display via JobDetail's header. */}
               {(() => {
                 const JobIcon = JOB_TYPE_ICONS[job.job_type]
                 return (

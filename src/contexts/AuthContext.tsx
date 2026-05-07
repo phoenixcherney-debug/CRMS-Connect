@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { friendlyError } from '../lib/errors'
 import type { Profile, Role } from '../types'
 
 // ─── Email validation (client-side) ───────────────────────────────────────────
@@ -15,34 +16,6 @@ export function validateEmailForRole(email: string, role: Role): string | null {
     return 'Please use a personal email address, not your school email.'
   }
   return null
-}
-
-// ─── Friendly error mapper ────────────────────────────────────────────────────
-// "Failed to fetch" can mean three completely different things (offline, paused
-// project, real 5xx). Map known shapes to copy a user can act on.
-function friendlyAuthError(err: unknown): string {
-  if (!err) return 'Something went wrong. Please try again.'
-  const msg = (err as { message?: string }).message ?? String(err)
-  const lower = msg.toLowerCase()
-
-  if (lower.includes('already registered') || lower.includes('already been registered')) {
-    return 'An account with this email already exists. Please log in.'
-  }
-  if (lower.includes('rate limit') || lower.includes('too many')) {
-    return 'Too many attempts. Please wait a minute and try again.'
-  }
-  if (lower.includes('database error') || lower.includes('null value') || lower.includes('23502')) {
-    return "We couldn't finish setting up your account. Please contact CRMS support."
-  }
-  if (lower.includes('weak password') || lower.includes('password')) {
-    return 'Please use a stronger password (at least 8 characters).'
-  }
-  if (lower === 'failed to fetch' || lower.includes('networkerror') || lower.includes('network error')) {
-    return "We're having trouble reaching the server. Check your internet connection and try again."
-  }
-  // Surface server-provided message verbatim if it looks like a sentence.
-  if (msg && msg.length < 200) return msg
-  return 'Something went wrong. Please try again.'
 }
 
 // ─── Context types ─────────────────────────────────────────────────────────────
@@ -65,7 +38,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
-const BOOTSTRAP_TIMEOUT_MS = 5000
+// Aggressive bootstrap timeout: getSession() reads from localStorage and is
+// supposed to be fast, but if the SDK decides to refresh an expired token or
+// the project is paused, it can hang indefinitely. 3s is well above any honest
+// localStorage-only path and well below user impatience.
+const BOOTSTRAP_TIMEOUT_MS = 3000
 const PROFILE_FETCH_TIMEOUT_MS = 5000
 
 function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
@@ -194,12 +171,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       })
 
-      if (error) return { error: friendlyAuthError(error) }
+      if (error) return { error: friendlyError(error) }
 
       const needsVerification = !data.session
       return { error: null, needsVerification }
     } catch (err) {
-      return { error: friendlyAuthError(err) }
+      return { error: friendlyError(err) }
     }
   }
 
@@ -220,11 +197,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error.message.includes('Invalid login credentials')) {
           return { error: 'Incorrect email or password.' }
         }
-        return { error: friendlyAuthError(error) }
+        return { error: friendlyError(error) }
       }
       return { error: null }
     } catch (err) {
-      return { error: friendlyAuthError(err) }
+      return { error: friendlyError(err) }
     }
   }
 
