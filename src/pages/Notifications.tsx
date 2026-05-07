@@ -149,6 +149,23 @@ export default function Notifications() {
     load()
   }, [profile?.id])
 
+  // ── Realtime: re-fetch the feed when a new message lands or an application
+  //    status changes. Without this the page is a snapshot at mount time —
+  //    audit found Eve never saw Sam's "you have a new message" entry.
+  useEffect(() => {
+    if (!profile) return
+    const ch = supabase
+      .channel(`notifications:${profile.id}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'messages' },
+        () => load(true))
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'applications' },
+        () => load(true))
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [profile?.id])
+
   // Mark all as seen when the page is visited
   useEffect(() => {
     if (!profile) return
