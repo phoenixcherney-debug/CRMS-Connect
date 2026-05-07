@@ -30,3 +30,8 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Playwright
+playwright-report/
+test-results/
+.playwright-cache/
