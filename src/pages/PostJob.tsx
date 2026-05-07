@@ -24,6 +24,8 @@ interface JobForm {
   opportunity_type: OpportunityType | ''
   opportunity_type_other: string
   description: string
+  how_to_apply: string
+  contact_email: string
   deadline: string
   start_date: string
   end_date: string
@@ -40,10 +42,39 @@ const DEFAULT_FORM: JobForm = {
   opportunity_type: '',
   opportunity_type_other: '',
   description: '',
+  how_to_apply: '',
+  contact_email: '',
   deadline: '',
   start_date: '',
   end_date: '',
   expected_weekly_hours: '',
+}
+
+// Map Postgres / Supabase errors to user-readable copy. Never show raw column or
+// constraint names to the user; log them to console for debugging instead.
+function friendlyJobError(err: { code?: string; message?: string } | null): string {
+  if (!err) return 'Could not save the opportunity. Please try again.'
+  console.error('[PostJob] supabase error:', err)
+  const msg = (err.message ?? '').toLowerCase()
+  if (err.code === '23502' || msg.includes('not-null') || msg.includes('null value')) {
+    return 'Please fill in all required fields and try again.'
+  }
+  if (err.code === '23505' || msg.includes('duplicate') || msg.includes('unique')) {
+    return 'An opportunity with these details already exists.'
+  }
+  if (err.code === '23503' || msg.includes('foreign key')) {
+    return "We couldn't link this opportunity to your account. Please refresh and try again."
+  }
+  if (err.code === '23514' || msg.includes('check constraint')) {
+    return 'One of the fields has an invalid value. Please review the form and try again.'
+  }
+  if (msg.includes('row-level security') || msg.includes('rls') || msg.includes('permission denied')) {
+    return "You don't have permission to do that."
+  }
+  if (msg.includes('timed out') || msg.includes('timeout')) {
+    return 'The request timed out. Please check your connection and try again.'
+  }
+  return 'Could not save the opportunity. Please try again.'
 }
 
 export default function PostJob() {
@@ -73,6 +104,8 @@ export default function PostJob() {
           opportunity_type: data.opportunity_type ?? '',
           opportunity_type_other: data.opportunity_type_other ?? '',
           description: data.description,
+          how_to_apply: data.how_to_apply ?? '',
+          contact_email: data.contact_email ?? '',
           deadline: data.deadline ?? '',
           start_date: data.start_date ?? '',
           end_date: data.end_date ?? '',
@@ -103,6 +136,10 @@ export default function PostJob() {
     // Trim every text field on save so we don't keep trailing whitespace
     // (caught in audit: "this is a test " with a trailing space).
     const trim = (s: string) => s.trim()
+    // Always send `how_to_apply` and `contact_email` as strings — the live DB
+    // currently has these as NOT NULL until migration 023 is applied. Empty
+    // string is accepted by the existing schema and is what the previous code
+    // wrote, so this works whether or not the migration has been run yet.
     const payload = {
       title: trim(form.title),
       company: trim(form.company),
@@ -111,6 +148,8 @@ export default function PostJob() {
       industry: form.industry || null,
       job_type: form.job_type,
       description: trim(form.description),
+      how_to_apply: trim(form.how_to_apply),
+      contact_email: trim(form.contact_email),
       deadline: form.deadline || null,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
@@ -145,14 +184,13 @@ export default function PostJob() {
       }
 
       if (result.error) {
-        setError(result.error.message || 'Could not save the opportunity. Please try again.')
+        setError(friendlyJobError(result.error as { code?: string; message?: string }))
         return
       }
 
       navigate(isEdit ? `/jobs/${id}` : '/my-postings')
     } catch (err) {
-      const msg = (err as { message?: string })?.message
-      setError(msg || 'Could not save the opportunity. Please try again.')
+      setError(friendlyJobError(err as { code?: string; message?: string }))
     } finally {
       setSubmitting(false)
     }
@@ -356,6 +394,44 @@ export default function PostJob() {
               placeholder="Describe the role, responsibilities, and what students will learn…"
               className="field resize-none"
             />
+          </div>
+
+          {/* How to apply */}
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">
+              How to apply{' '}
+              <span className="text-ink-muted font-normal">(optional)</span>
+            </label>
+            <textarea
+              rows={3}
+              maxLength={2000}
+              value={form.how_to_apply}
+              onChange={(e) => set('how_to_apply', e.target.value)}
+              placeholder="Tell applicants how to apply — e.g. send a resume to careers@example.com, or apply through the form below."
+              className="field resize-none"
+            />
+            <p className="mt-1 text-xs text-ink-muted">
+              Leave blank to use the in-app application form.
+            </p>
+          </div>
+
+          {/* Contact email — optional, only shown to accepted applicants */}
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">
+              Contact email{' '}
+              <span className="text-ink-muted font-normal">(optional)</span>
+            </label>
+            <input
+              type="email"
+              maxLength={200}
+              value={form.contact_email}
+              onChange={(e) => set('contact_email', e.target.value)}
+              placeholder="hiring@example.com"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-ink-muted">
+              Shared with applicants only after you accept their application.
+            </p>
           </div>
 
           {/* Timeframe: start + end */}

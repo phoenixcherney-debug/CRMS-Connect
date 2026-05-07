@@ -97,9 +97,11 @@ export default function Jobs() {
         )}
       </div>
 
-      {/* Search & filter bar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
+      {/* Search bar — own row so the input can never collapse to zero width
+          when filter chips wrap (audit regression: search rendered as a bare
+          icon because flex-1 children with no min-width were getting squeezed). */}
+      <div className="mb-3">
+        <div className="relative w-full">
           <Search
             size={16}
             className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none"
@@ -109,7 +111,7 @@ export default function Jobs() {
             placeholder="Search by title, company, or keyword…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+            className="block w-full pl-10 pr-9 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
               placeholder:text-ink-placeholder
               focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
               transition-colors"
@@ -118,12 +120,16 @@ export default function Jobs() {
             <button
               onClick={() => setSearch('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink"
+              aria-label="Clear search"
             >
               <X size={14} />
             </button>
           )}
         </div>
+      </div>
 
+      {/* Filter & sort bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <SlidersHorizontal size={15} className="text-ink-muted shrink-0" />

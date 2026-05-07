@@ -213,7 +213,7 @@ export default function Onboarding() {
             {isEmployerMentor && (
               <div>
                 <label className="block text-sm font-semibold text-ink mb-2">
-                  I am joining as a(n): <span className="text-error">*</span>
+                  Your role <span className="text-error">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {MENTOR_TYPES.map((t) => (

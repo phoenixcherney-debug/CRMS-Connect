@@ -9,7 +9,7 @@ import Spinner from '../components/Spinner'
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
 
 export default function Login() {
-  const { user, signIn, loading } = useAuth()
+  const { user, signIn, loading, bootstrapTimedOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: Location })?.from?.pathname || '/jobs'
@@ -184,6 +184,13 @@ export default function Login() {
             <>
               <h1 className="text-2xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>Welcome back</h1>
               <p className="text-ink-muted text-sm mb-7">Sign in to your CRMS Connect account.</p>
+
+              {bootstrapTimedOut && (
+                <div className="mb-5 rounded-lg px-4 py-3 text-sm border" style={{ backgroundColor: 'var(--color-primary-muted)', borderColor: 'var(--color-primary)' }}>
+                  <p className="font-semibold text-ink mb-0.5">Your session has timed out</p>
+                  <p className="text-ink-secondary text-xs">Please sign in again to continue.</p>
+                </div>
+              )}
 
               {/* Unverified email notice */}
               {unverifiedEmail && (

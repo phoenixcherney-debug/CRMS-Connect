@@ -60,7 +60,10 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-ink text-base leading-snug line-clamp-1">
+            <h3
+              className="font-semibold text-ink text-base leading-snug line-clamp-1"
+              title={job.title}
+            >
               {job.title}
             </h3>
             <div className="flex items-center gap-1.5 mt-1 text-sm text-ink-secondary">

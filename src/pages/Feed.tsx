@@ -36,8 +36,10 @@ export default function Feed() {
 
     const feed: FeedItem[] = []
 
-    // ── Students: matching opportunities ────────────────────────────────────
-    if (isStudent) {
+    // ── Community opportunities (visible to BOTH roles) ────────────────────
+    // Audit feedback: an employer logging in to a fresh account expects to
+    // see what's happening in the community too, not a "Nothing here yet" panel.
+    {
       const { data: jobs } = await supabase
         .from('jobs')
         .select('*, profiles(id, full_name, role)')
@@ -45,11 +47,10 @@ export default function Feed() {
         .order('created_at', { ascending: false })
         .limit(40)
 
-      // Don't drop jobs whose industry doesn't match the student's interests —
-      // the audit found the feed silently omitted active jobs. Show them all
-      // and let the dedicated /jobs filters do the narrowing.
       for (const j of (jobs as Job[]) ?? []) {
         if (j.deadline && isPast(parseISO(j.deadline))) continue
+        // Don't show employer/mentors their own posts in their feed.
+        if (isEmployerMentor && j.posted_by === profile.id) continue
         feed.push({ kind: 'job', ts: j.created_at, job: j, key: `job-${j.id}` })
       }
     }

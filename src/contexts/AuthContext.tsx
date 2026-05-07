@@ -65,22 +65,38 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
-const BOOTSTRAP_TIMEOUT_MS = 8000
+const BOOTSTRAP_TIMEOUT_MS = 5000
+const PROFILE_FETCH_TIMEOUT_MS = 5000
+
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = window.setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    promise.then(
+      (v) => { window.clearTimeout(t); resolve(v) },
+      (e) => { window.clearTimeout(t); reject(e) },
+    )
+  })
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  // Kept on the context so consumers can detect a degraded bootstrap if they
+  // want to show a banner. We do NOT block the UI on it any more — the timeout
+  // resolves to "logged-out" and the user lands on /login automatically.
   const [bootstrapTimedOut, setBootstrapTimedOut] = useState(false)
 
   const fetchProfile = useCallback(async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    if (!error && data) {
-      setProfile(data as Profile)
+    try {
+      // PostgrestBuilder is then-able (PromiseLike) but not a real Promise.
+      const query = supabase.from('profiles').select('*').eq('id', userId).single()
+      const { data, error } = await withTimeout(query, PROFILE_FETCH_TIMEOUT_MS, 'Profile fetch')
+      if (!error && data) setProfile(data as Profile)
+    } catch (err) {
+      console.warn('[AuthContext] fetchProfile failed:', err)
+      // Don't block the UI — the user can still navigate; the profile will be
+      // re-fetched on next auth event or refresh.
     }
   }, [])
 
@@ -92,14 +108,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let resolved = false
 
     // Hard timeout: if getSession() never resolves (stale SW, broken network,
-    // paused Supabase project), fall back to logged-out UI instead of spinning
-    // forever.
+    // paused Supabase project), treat the bootstrap as "no session" so the
+    // user lands on /login instead of an indefinite spinner. A real session
+    // event later will still upgrade them via onAuthStateChange.
     const timeoutId = window.setTimeout(() => {
-      if (!resolved) {
-        resolved = true
-        setBootstrapTimedOut(true)
-        setLoading(false)
-      }
+      if (resolved) return
+      resolved = true
+      console.warn('[AuthContext] auth bootstrap timed out — treating as logged-out')
+      setBootstrapTimedOut(true)
+      setUser(null)
+      setProfile(null)
+      setLoading(false)
     }, BOOTSTRAP_TIMEOUT_MS)
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -109,15 +128,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const u = session?.user ?? null
       setUser(u)
       if (u) {
-        fetchProfile(u.id).finally(() => setLoading(false))
+        // Don't block the loading flag on the profile fetch — the route can
+        // render while we hydrate the profile in the background.
+        setLoading(false)
+        void fetchProfile(u.id)
       } else {
         setLoading(false)
       }
-    }).catch(() => {
+    }).catch((err) => {
       if (resolved) return
       resolved = true
       window.clearTimeout(timeoutId)
-      setBootstrapTimedOut(true)
+      console.warn('[AuthContext] getSession failed:', err)
+      setUser(null)
+      setProfile(null)
       setLoading(false)
     })
 
@@ -126,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const u = session?.user ?? null
         setUser(u)
         if (u) {
-          await fetchProfile(u.id)
+          void fetchProfile(u.id)
         } else {
           setProfile(null)
         }
