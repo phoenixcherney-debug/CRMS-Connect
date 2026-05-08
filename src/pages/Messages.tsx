@@ -306,7 +306,14 @@ export default function Messages() {
                   type="text"
                   placeholder="Search by name…"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    // Audit task 11 — set loading synchronously so the empty
+                    // state can't render between this keystroke and the
+                    // debounced fetch effect kicking in.
+                    if (e.target.value.trim()) setSearchLoading(true)
+                    else setSearchLoading(false)
+                  }}
                   className="w-full pl-9 pr-3.5 py-2 rounded-lg border border-border bg-surface text-ink text-sm
                     placeholder:text-ink-placeholder
                     focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
