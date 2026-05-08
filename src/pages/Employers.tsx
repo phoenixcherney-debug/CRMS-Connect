@@ -183,6 +183,39 @@ export default function Employers() {
                 {/* Expanded jobs list */}
                 {isExpanded && (
                   <div className="border-t border-border divide-y divide-border">
+                    {/* Audit task 24 — show the people behind the company.
+                        Dedupe by poster id; link each to /people/<id>. */}
+                    {(() => {
+                      const seen = new Set<string>()
+                      const people: { id: string; name: string }[] = []
+                      for (const j of employer.jobs) {
+                        const p = j.profiles as { id?: string; full_name?: string } | null | undefined
+                        if (!p?.id || seen.has(p.id)) continue
+                        seen.add(p.id)
+                        people.push({ id: p.id, name: p.full_name ?? 'Unknown' })
+                      }
+                      if (people.length === 0) return null
+                      return (
+                        <>
+                          <div className="px-5 py-2 bg-primary-faint">
+                            <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                              People at {employer.company}
+                            </p>
+                          </div>
+                          <div className="px-5 py-3 flex flex-wrap gap-2">
+                            {people.map((p) => (
+                              <Link
+                                key={p.id}
+                                to={`/people/${p.id}`}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-border bg-surface hover:bg-primary-faint text-ink-secondary transition-colors"
+                              >
+                                {p.name}
+                              </Link>
+                            ))}
+                          </div>
+                        </>
+                      )
+                    })()}
                     {activeJobs.length > 0 && (
                       <>
                         <div className="px-5 py-2 bg-primary-faint">
