@@ -80,24 +80,25 @@ export default function Notifications() {
 
     // ── Applications ─────────────────────────────────────────────────────────
     if (profile.role === 'student') {
-      // Student: their submitted applications
+      // Student: only show applications where the employer has done
+      // something (accepted / rejected). The student's own submission isn't
+      // notification-worthy — they did it themselves (audit task 15).
       const { data: apps } = await supabase
         .from('applications')
         .select('id, created_at, status, job_id, jobs(title, company)')
         .eq('applicant_id', profile.id)
+        .in('status', ['accepted', 'rejected'])
         .order('created_at', { ascending: false })
         .limit(30)
 
       for (const a of apps ?? []) {
         const jobTitle   = (a.jobs as any)?.title   ?? 'a position'
         const jobCompany = (a.jobs as any)?.company ?? ''
-        // Mark as unread only for statuses that changed recently (not pending - that's the student's own action)
-        const isActionable = a.status === 'accepted' || a.status === 'rejected'
         notifs.push({
           id:       `app-${a.id}`,
           type:     'app_out',
           ts:       a.created_at,
-          unread:   isActionable,
+          unread:   true,
           link:     `/jobs/${a.job_id}`,
           title:    `Application: ${jobTitle}${jobCompany ? ` at ${jobCompany}` : ''}`,
           subtitle: STATUS_TEXT[a.status] ?? a.status,
