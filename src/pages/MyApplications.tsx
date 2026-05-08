@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ExternalLink, MapPin, Calendar, Trash2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ExternalLink, MapPin, Calendar, Trash2, MessageSquare } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { safeExternalHref } from '../lib/url'
@@ -44,10 +44,15 @@ const STATUS_CONFIG: Record<
 export default function MyApplications() {
   const { profile } = useAuth()
   const toast = useToast()
+  const navigate = useNavigate()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null)
+  // Audit task 14 — map of posterId → conversationId so each application
+  // card can either deep-link to an existing thread or start a new one.
+  const [convMap, setConvMap] = useState<Record<string, string>>({})
+  const [openingConvFor, setOpeningConvFor] = useState<string | null>(null)
 
   async function load() {
     if (!profile) return
@@ -65,8 +70,43 @@ export default function MyApplications() {
       setFetchError(true)
     } else {
       setApplications((data as Application[]) ?? [])
+
+      // Audit task 14 — build a posterId → conversationId map so the row
+      // can render "Open conversation" without a per-row query.
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('id, participant_one, participant_two')
+        .or(`participant_one.eq.${profile.id},participant_two.eq.${profile.id}`)
+      const map: Record<string, string> = {}
+      for (const c of (convs ?? []) as { id: string; participant_one: string; participant_two: string }[]) {
+        const other = c.participant_one === profile.id ? c.participant_two : c.participant_one
+        map[other] = c.id
+      }
+      setConvMap(map)
     }
     setLoading(false)
+  }
+
+  async function openOrCreateConversation(otherId: string, firstName: string) {
+    if (!profile || openingConvFor) return
+    if (convMap[otherId]) {
+      navigate(`/messages/${convMap[otherId]}`)
+      return
+    }
+    setOpeningConvFor(otherId)
+    const [p1, p2] = [profile.id, otherId].sort()
+    const { data, error } = await supabase
+      .from('conversations')
+      .insert({ participant_one: p1, participant_two: p2 })
+      .select('id')
+      .single()
+    setOpeningConvFor(null)
+    if (error || !data) {
+      toast(`Could not start a conversation with ${firstName}.`, { kind: 'error' })
+      return
+    }
+    setConvMap((prev) => ({ ...prev, [otherId]: data.id }))
+    navigate(`/messages/${data.id}`)
   }
 
   async function handleWithdraw(appId: string) {
@@ -203,6 +243,34 @@ export default function MyApplications() {
                         >
                           <ExternalLink size={11} /> Resume/Portfolio
                         </a>
+                      )
+                    })()}
+                    {(() => {
+                      // Audit task 14 — Open conversation / Message <name>.
+                      const poster = job.profiles as { id?: string; full_name?: string } | null
+                      if (!poster?.id) return null
+                      const firstName = poster.full_name?.trim().split(/\s+/)[0] || 'poster'
+                      const conversationId = convMap[poster.id]
+                      if (conversationId) {
+                        return (
+                          <Link
+                            to={`/messages/${conversationId}`}
+                            className="flex items-center gap-1 text-primary hover:text-primary-light font-medium"
+                          >
+                            <MessageSquare size={11} /> Open conversation
+                          </Link>
+                        )
+                      }
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => openOrCreateConversation(poster.id!, firstName)}
+                          disabled={openingConvFor === poster.id}
+                          className="flex items-center gap-1 text-primary hover:text-primary-light font-medium disabled:opacity-50"
+                        >
+                          <MessageSquare size={11} />
+                          {openingConvFor === poster.id ? 'Opening…' : `Message ${firstName}`}
+                        </button>
                       )
                     })()}
                     {app.status === 'pending' && (
