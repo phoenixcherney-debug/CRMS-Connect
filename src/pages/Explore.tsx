@@ -47,10 +47,13 @@ export default function Explore() {
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(4),
+        // Audit task 28 — Recently Joined panel now mixes students and EMs,
+        // so the heading reflects the actual content. Admin rows are still
+        // excluded (RLS migration 030).
         supabase
           .from('profiles')
-          .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, created_at')
-          .eq('role', isEmployerMentor ? 'student' : 'employer_mentor')
+          .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, share_grade_with_employers, grade, created_at')
+          .neq('role', 'admin')
           .order('created_at', { ascending: false })
           .limit(12),
         supabase
