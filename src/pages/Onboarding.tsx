@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type React from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { ArrowRight, GraduationCap, Sparkles, Building2, Layers, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -56,6 +56,15 @@ export default function Onboarding() {
   }, [profile, navigate])
 
   if (!profile) return null
+
+  // Already-onboarded users land on /explore — typing /onboarding directly
+  // (or hitting browser history) shouldn't show the empty Welcome form,
+  // and re-submission would null-out fields. Server-side, the save handler
+  // also rejects re-submission since it sets onboarding_complete=true again
+  // which is idempotent for ProtectedRoute's purposes.
+  if (profile.onboarding_complete) {
+    return <Navigate to="/explore" replace />
+  }
 
   const welcome = ROLE_WELCOME[profile.role] ?? ROLE_WELCOME.student
   const isStudent = profile.role === 'student'
