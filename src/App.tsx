@@ -303,6 +303,12 @@ export default function App() {
 
             {/* ── Permanent redirects (legacy URLs) ────────────────────── */}
             <Route path="/applications" element={<Navigate to="/my-applications" replace />} />
+            {/* NAV-001 — menu labels say "My Opportunities", "Inbox",
+                "Activity"; expose those URLs and redirect to the actual
+                routes. Keep both for ~90 days, then fold into NAV-002. */}
+            <Route path="/my-opportunities" element={<Navigate to="/my-postings" replace />} />
+            <Route path="/inbox"            element={<Navigate to="/messages" replace />} />
+            <Route path="/activity"         element={<Navigate to="/feed" replace />} />
 
             {/* ── Defaults ─────────────────────────────────────────────── */}
             <Route path="/"  element={<Navigate to="/explore" replace />} />

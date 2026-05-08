@@ -1,6 +1,9 @@
 {
   "redirects": [
-    { "source": "/applications", "destination": "/my-applications", "permanent": true }
+    { "source": "/applications",      "destination": "/my-applications", "permanent": true },
+    { "source": "/my-opportunities",  "destination": "/my-postings",     "permanent": true },
+    { "source": "/inbox",             "destination": "/messages",        "permanent": true },
+    { "source": "/activity",          "destination": "/feed",            "permanent": true }
   ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
