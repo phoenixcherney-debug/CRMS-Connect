@@ -38,7 +38,9 @@ export default function Signup() {
   }, [role])
 
   if (!loading && user?.email_confirmed_at) {
-    return <Navigate to="/jobs" replace />
+    // Audit F-051 — already-signed-in users hitting /signup land on the
+    // welcome dashboard, not the job board.
+    return <Navigate to="/explore" replace />
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -271,6 +273,8 @@ export default function Signup() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-secondary"
                   tabIndex={-1}
                 >

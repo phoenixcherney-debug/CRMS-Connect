@@ -338,7 +338,7 @@ export default function JobDetail() {
                     hover:text-ink transition-colors"
                 >
                   <MessageSquare size={14} />
-                  Message {job.profiles.full_name.split(' ')[0]}
+                  Message {job.profiles.full_name.trim().split(/\s+/)[0] || 'poster'}
                 </button>
               )}
             </div>

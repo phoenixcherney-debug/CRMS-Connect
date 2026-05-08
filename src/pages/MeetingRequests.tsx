@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, CheckCircle2, XCircle, Clock, User, RefreshCw } from 'lucide-react'
+import { Calendar, CheckCircle2, XCircle, Clock, User } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -41,13 +41,11 @@ export default function MeetingRequests() {
   const { profile } = useAuth()
   const [requests, setRequests] = useState<MeetingRequest[]>([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [actioning, setActioning] = useState<string | null>(null)
 
   async function load(quiet = false) {
     if (!profile) return
-    if (quiet) setRefreshing(true)
-    else setLoading(true)
+    if (!quiet) setLoading(true)
 
     const { data } = await supabase
       .from('meeting_requests')
@@ -61,10 +59,17 @@ export default function MeetingRequests() {
 
     setRequests((data as MeetingRequest[]) ?? [])
     setLoading(false)
-    setRefreshing(false)
   }
 
   useEffect(() => { load() }, [profile?.id])
+
+  // Audit F-040 — auto-poll every 30s instead of asking the user to click
+  // Refresh. Quiet mode means we don't flicker the page-level spinner.
+  useEffect(() => {
+    if (!profile) return
+    const id = window.setInterval(() => { load(true) }, 30_000)
+    return () => window.clearInterval(id)
+  }, [profile?.id])
 
   async function handleAction(id: string, status: 'accepted' | 'declined') {
     setActioning(id)
@@ -93,26 +98,16 @@ export default function MeetingRequests() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-ink flex items-center gap-2" style={{ fontFamily: 'var(--font-serif)' }}>
-            Meetings
-            {pendingCount > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-bold">
-                {pendingCount}
-              </span>
-            )}
-          </h1>
-          <p className="text-ink-secondary text-sm mt-0.5">Meeting requests sent and received</p>
-        </div>
-        <button
-          onClick={() => load(true)}
-          disabled={refreshing}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-50"
-        >
-          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-ink flex items-center gap-2" style={{ fontFamily: 'var(--font-serif)' }}>
+          Meetings
+          {pendingCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-bold">
+              {pendingCount}
+            </span>
+          )}
+        </h1>
+        <p className="text-ink-secondary text-sm mt-0.5">Meeting requests sent and received</p>
       </div>
 
       {loading ? (

@@ -447,7 +447,7 @@ export default function PublicProfile() {
                   hover:bg-primary-faint hover:text-ink transition-colors"
               >
                 <MessageSquare size={15} />
-                Message {person.full_name.split(' ')[0]}
+                Message {person.full_name.trim().split(/\s+/)[0] || 'this person'}
               </button>
             )}
 

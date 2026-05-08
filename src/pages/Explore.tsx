@@ -12,6 +12,16 @@ import JobCard from '../components/JobCard'
 import Spinner from '../components/Spinner'
 import { isPast, parseISO } from 'date-fns'
 
+/** Audit F-001 / F-007 — render-only normalization for greetings. Trims and
+ *  title-cases the first whitespace-delimited token of a stored full name so
+ *  "  alice " or "ALICE" render as "Alice's Dashboard" without mutating
+ *  the persisted value. */
+function greetingFirstName(fullName: string): string {
+  const first = fullName.trim().split(/\s+/)[0] ?? ''
+  if (!first) return ''
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase()
+}
+
 export default function Explore() {
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -129,7 +139,7 @@ export default function Explore() {
           </p>
           <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
             {profile?.full_name
-              ? `${profile.full_name.split(' ')[0]}'s Dashboard`
+              ? `${greetingFirstName(profile.full_name)}'s Dashboard`
               : 'CRMS Connect'}
           </h1>
           <p className="text-white/65 mb-7 text-base max-w-lg">

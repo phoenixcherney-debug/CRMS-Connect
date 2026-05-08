@@ -173,7 +173,8 @@ export default function MyPostings() {
                         ? 'border-status-pending-border text-status-pending-text hover:bg-status-pending-bg'
                         : 'border-status-accepted-border text-success hover:bg-success-bg'
                       }`}
-                    title={job.is_active ? 'Close this opportunity' : 'Reopen this opportunity'}
+                    title={job.is_active ? 'Stop accepting applications (you can reopen later)' : 'Reopen this opportunity to accept applications'}
+                    aria-label={job.is_active ? 'Close opportunity (stop accepting applications)' : 'Reopen opportunity'}
                   >
                     {job.is_active ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
                     {job.is_active ? 'Close' : 'Reopen'}
@@ -187,6 +188,8 @@ export default function MyPostings() {
                   </Link>
                   <button
                     onClick={() => { setConfirmDeleteId(job.id); setDeleteError(null) }}
+                    aria-label="Delete opportunity (permanently remove)"
+                    title="Permanently delete this opportunity"
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-status-rejected-border
                       text-sm text-error hover:bg-error-bg transition-colors"
                   >

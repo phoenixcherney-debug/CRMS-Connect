@@ -13,7 +13,9 @@ export default function Login() {
   const { user, signIn, loading, bootstrapTimedOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: Location })?.from?.pathname || '/jobs'
+  // Audit F-051 — default landing is /explore (the welcome dashboard) not
+  // /jobs. Preserves any explicit redirect target via state.from.
+  const from = (location.state as { from?: Location })?.from?.pathname || '/explore'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -268,7 +270,7 @@ export default function Login() {
                         placeholder:text-ink-placeholder
                         focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                     />
-                    <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-secondary" tabIndex={-1}>
+                    <button type="button" onClick={() => setShowPassword((s) => !s)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-secondary" tabIndex={-1}>
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>

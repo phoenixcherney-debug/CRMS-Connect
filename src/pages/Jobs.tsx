@@ -15,7 +15,7 @@ import EmptyState from '../components/EmptyState'
 // Other being un-filterable here).
 const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer', 'mentorship', 'shadow', 'other']
 const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
-type SortOption = 'newest' | 'deadline' | 'company'
+type SortOption = 'newest' | 'oldest' | 'deadline' | 'company' | 'title'
 
 export default function Jobs() {
   const { profile } = useAuth()
@@ -73,6 +73,8 @@ export default function Jobs() {
       return a.deadline.localeCompare(b.deadline)
     }
     if (sort === 'company') return a.company.localeCompare(b.company)
+    if (sort === 'title')   return a.title.localeCompare(b.title)
+    if (sort === 'oldest')  return a.created_at.localeCompare(b.created_at)
     return b.created_at.localeCompare(a.created_at)
   })
   // Closed jobs: for employers the filter above already scopes to their own; for students still restrict to poster's own
@@ -143,6 +145,8 @@ export default function Jobs() {
             <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mr-1">Type</span>
             <button
               onClick={() => setFilter('')}
+              aria-label="All types"
+              aria-pressed={filter === ''}
               className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
                 ${filter === ''
                   ? 'bg-primary-muted border-primary text-primary'
@@ -155,6 +159,7 @@ export default function Jobs() {
               <button
                 key={t}
                 onClick={() => setFilter(filter === t ? '' : t)}
+                aria-pressed={filter === t}
                 className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
                   ${filter === t
                     ? 'bg-primary-muted border-primary text-primary'
@@ -173,6 +178,8 @@ export default function Jobs() {
             <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mr-1">Location</span>
             <button
               onClick={() => setLocFilter('')}
+              aria-label="All locations"
+              aria-pressed={locFilter === ''}
               className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
                 ${locFilter === ''
                   ? 'bg-primary-muted border-primary text-primary'
@@ -185,6 +192,7 @@ export default function Jobs() {
               <button
                 key={t}
                 onClick={() => setLocFilter(locFilter === t ? '' : t)}
+                aria-pressed={locFilter === t}
                 className={`px-3 py-2 min-h-[36px] sm:min-h-[44px] rounded-lg text-xs font-medium border transition-colors
                   ${locFilter === t
                     ? 'bg-primary-muted border-primary text-primary'
@@ -219,7 +227,9 @@ export default function Jobs() {
                 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
             >
               <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
               <option value="deadline">Deadline (soonest)</option>
+              <option value="title">Title A–Z</option>
               <option value="company">Company A–Z</option>
             </select>
           </div>
