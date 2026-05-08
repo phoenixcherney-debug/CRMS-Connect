@@ -60,6 +60,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/banned': 'Account suspended',
   '/admin': 'Admin Panel',
   '/admin/pending-accounts': 'Pending Accounts',
+  '/admin/reports': 'Reports',
   '/awaiting-approval': 'Awaiting Approval',
   '/about': 'About',
   '/privacy': 'Privacy',
@@ -123,6 +124,7 @@ const Privacy           = lazy(() => import('./pages/Privacy'))
 const NotFound          = lazy(() => import('./pages/NotFound'))
 const AwaitingApproval  = lazy(() => import('./pages/AwaitingApproval'))
 const PendingAccounts   = lazy(() => import('./pages/PendingAccounts'))
+const AdminReports      = lazy(() => import('./pages/AdminReports'))
 
 export default function App() {
   return (
@@ -290,6 +292,12 @@ export default function App() {
             <Route path="/admin/pending-accounts" element={
               <ProtectedRoute roles={['admin']}>
                 <Layout><PendingAccounts /></Layout>
+              </ProtectedRoute>
+            } />
+            {/* SEC-003 — staff triage queue for user reports. */}
+            <Route path="/admin/reports" element={
+              <ProtectedRoute roles={['admin']}>
+                <Layout><AdminReports /></Layout>
               </ProtectedRoute>
             } />
 

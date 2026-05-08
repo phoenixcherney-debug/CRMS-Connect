@@ -13,6 +13,7 @@ import {
 import type { CareerHistory, MentorType, StudentSeeking } from '../types'
 import Spinner from '../components/Spinner'
 import { useToast } from '../components/ToastProvider'
+import { validateDisplayName } from '../lib/nameFilter'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 
 export default function Profile() {
@@ -178,8 +179,14 @@ export default function Profile() {
       setSaveError('Please enter your name.')
       return
     }
-    if (trimmedName.length > 60) {
-      setSaveError('Name must be 60 characters or fewer.')
+    if (trimmedName.length > 80) {
+      setSaveError('Name must be 80 characters or fewer.')
+      return
+    }
+    // SEC-003 — moderation runs on every save, not just on signup.
+    const nameCheck = validateDisplayName(trimmedName)
+    if (!nameCheck.ok) {
+      setSaveError(nameCheck.reason ?? 'That display name isn\'t allowed.')
       return
     }
 

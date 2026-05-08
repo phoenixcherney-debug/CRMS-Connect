@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { friendlyError } from '../lib/errors'
+import { validateDisplayName } from '../lib/nameFilter'
 import type { Profile, Role } from '../types'
 
 // ─── Email validation (client-side) ───────────────────────────────────────────
@@ -158,9 +159,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (clientError) return { error: clientError }
 
     const trimmedName = fullName.trim().replace(/\s+/g, ' ')
-    if (trimmedName.length < 2 || trimmedName.length > 60) {
-      return { error: 'Please enter your full name (2–60 characters).' }
+    if (trimmedName.length < 2 || trimmedName.length > 80) {
+      return { error: 'Please enter your full name (2–80 characters).' }
     }
+    // SEC-003 — display-name moderation. The DB also runs this in the
+    // sanitize trigger; doing it here gives a friendly error before submit.
+    const nameCheck = validateDisplayName(trimmedName)
+    if (!nameCheck.ok) return { error: nameCheck.reason ?? 'That display name isn\'t allowed.' }
 
     try {
       const { data, error } = await supabase.auth.signUp({

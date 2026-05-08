@@ -67,6 +67,7 @@ export default function Nav() {
     ...(isAdmin ? [
       { to: '/admin', label: 'Admin Panel', icon: Shield },
       { to: '/admin/pending-accounts', label: 'Pending Accounts', icon: Shield },
+      { to: '/admin/reports', label: 'Reports', icon: Shield },
     ] : []),
     ...(isEmployerMentor ? [
       { to: '/jobs/new',  label: 'Post an Opportunity', icon: PlusSquare  },
