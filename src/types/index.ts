@@ -164,9 +164,11 @@ export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {
 export const MENTOR_TYPE_LABELS: Record<MentorType, string> = {
   employer: 'Employer',
   mentor: 'Mentor',
-  // Audit task 21 — disambiguated from the student-side "Both" (which means
-  // "looking for both job and mentor"). Same DB value, clearer label.
-  both: 'Employer & Mentor',
+  // NAV-011 — match the signup-page button label and ROLE_LABELS, which
+  // both use the slash. (Earlier audit pass had this as ampersand to
+  // disambiguate from the student "Both", but the slash matches the rest
+  // of the platform.)
+  both: 'Employer / Mentor',
   other: 'Other',
 }
 
