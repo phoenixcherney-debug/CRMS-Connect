@@ -12,7 +12,7 @@ import { friendlyError } from '../lib/errors'
 import { validateExternalUrl, safeExternalHref } from '../lib/url'
 import { sanitizeUserText } from '../lib/sanitize'
 import type { Job, Application, ApplicationStatus } from '../types'
-import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS, ROLE_LABELS } from '../types'
+import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, ROLE_LABELS } from '../types'
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string; dot: string }> = {
   pending:    { label: 'Submitted',    classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
@@ -249,16 +249,16 @@ export default function JobDetail() {
                   }`}>
                   {!job.is_active || expired ? 'Closed' : 'Active'}
                 </span>
+                {/* Audit task 27 — render exactly one type chip. When the
+                    poster picked "Other" and typed a free-text value, that
+                    free-text becomes the chip. Otherwise the canonical
+                    job_type label is the chip. The legacy opportunity_type
+                    chip rendered alongside is gone. */}
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
-                  {JOB_TYPE_LABELS[job.job_type]}
+                  {job.job_type === 'other' && job.opportunity_type_other
+                    ? job.opportunity_type_other
+                    : JOB_TYPE_LABELS[job.job_type]}
                 </span>
-                {job.opportunity_type && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
-                    {job.opportunity_type === 'other' && job.opportunity_type_other
-                      ? job.opportunity_type_other
-                      : OPPORTUNITY_TYPE_LABELS[job.opportunity_type]}
-                  </span>
-                )}
                 {job.location_type && (
                   <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
                     {LOCATION_TYPE_LABELS[job.location_type]}
