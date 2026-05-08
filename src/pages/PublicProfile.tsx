@@ -354,20 +354,22 @@ export default function PublicProfile() {
               </div>
             )}
 
-            {/* Available slots + meeting request (EM only, viewed by student) */}
-            {isEM && !isSelf && myProfile?.role === 'student' && person.open_to_mentorship && (
+            {/* Available slots + meeting request (EM only, viewed by student).
+                Audit task 9 — hide the section entirely when the mentor has
+                no published slots so the student isn't dead-ended at "No
+                upcoming availability posted." (Message <name> stays as the
+                fallback path.) */}
+            {isEM && !isSelf && myProfile?.role === 'student' && person.open_to_mentorship && (slots.length > 0 || meetingSuccess) && (
               <div>
                 <p className="text-sm font-medium text-ink mb-2 flex items-center gap-1.5">
                   <Calendar size={14} className="text-ink-muted" />
-                  Available times
+                  Request a meeting
                 </p>
                 {meetingSuccess ? (
                   <div className="flex items-center gap-2 rounded-lg bg-success-bg border border-status-accepted-border px-4 py-3">
                     <Send size={14} className="text-success shrink-0" />
                     <p className="text-sm text-success font-medium">Meeting request sent!</p>
                   </div>
-                ) : slots.length === 0 ? (
-                  <p className="text-sm text-ink-muted italic">No upcoming availability posted.</p>
                 ) : (
                   <div className="space-y-2">
                     <div className="grid gap-2">
