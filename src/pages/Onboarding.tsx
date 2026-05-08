@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import {
   INDUSTRY_OPTIONS, INTEREST_OPTIONS,
   MENTOR_TYPE_LABELS, STUDENT_SEEKING_LABELS, STUDENT_GRADES,
+  WEEKLY_AVAILABILITY_OPTIONS,
 } from '../types'
 import type { MentorType, StudentSeeking, StudentGrade } from '../types'
 import Spinner from '../components/Spinner'
@@ -44,6 +45,10 @@ export default function Onboarding() {
   const [studentSeeking, setStudentSeeking] = useState<StudentSeeking | ''>('')
   const [studentSeekingOther, setStudentSeekingOther] = useState('')
   const [interests, setInterests] = useState<string[]>([])
+  // Weekly availability for students: collecting it here closes the loop
+  // where the only place students could ever set it was /profile, and
+  // that meant the Applicants view was always empty (audit HIGH-8).
+  const [weeklyAvailability, setWeeklyAvailability] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [logoError, setLogoError] = useState(false)
@@ -140,6 +145,7 @@ export default function Onboarding() {
       updates.student_seeking = studentSeeking || null
       updates.student_seeking_other = studentSeeking === 'other' ? studentSeekingOther.trim() || null : null
       updates.interests = interests
+      updates.weekly_availability = weeklyAvailability || null
     }
 
     if (isEmployerMentor) {
@@ -327,6 +333,29 @@ export default function Onboarding() {
                   <option value="">Select grade…</option>
                   {STUDENT_GRADES.map((g) => (
                     <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* ── Weekly availability (students) ── */}
+            {isStudent && (
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    Weekly availability
+                    <span className="text-ink-muted font-normal">(optional)</span>
+                  </span>
+                </label>
+                <select
+                  value={weeklyAvailability}
+                  onChange={(e) => setWeeklyAvailability(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                    focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                >
+                  <option value="">Select your weekly hours…</option>
+                  {WEEKLY_AVAILABILITY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
               </div>
