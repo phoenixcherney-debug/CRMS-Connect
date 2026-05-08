@@ -201,7 +201,7 @@ export default function Explore() {
               <p className="text-sm font-semibold text-ink">Availability</p>
               <p className="text-xs text-ink-muted mt-0.5">Set mentorship hours</p>
             </Link>
-            <Link to="/people" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <Link to="/students" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <Users size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
               <p className="text-sm font-semibold text-ink">Browse Students</p>
               <p className="text-xs text-ink-muted mt-0.5">Connect & mentor</p>
@@ -219,10 +219,10 @@ export default function Explore() {
               <p className="text-sm font-semibold text-ink">Opportunities</p>
               <p className="text-xs text-ink-muted mt-0.5">Jobs & internships</p>
             </Link>
-            <Link to="/people" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <Link to="/mentors" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <Users size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
-              <p className="text-sm font-semibold text-ink">Community</p>
-              <p className="text-xs text-ink-muted mt-0.5">Meet members</p>
+              <p className="text-sm font-semibold text-ink">Mentors</p>
+              <p className="text-xs text-ink-muted mt-0.5">Connect with CRMS mentors</p>
             </Link>
             <Link to="/employers" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <Building2 size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
@@ -242,7 +242,7 @@ export default function Explore() {
               <h2 className="text-lg font-semibold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Available Mentors</h2>
             </div>
             <Link
-              to="/people"
+              to="/mentors"
               className="text-sm text-primary hover:text-primary-light font-medium flex items-center gap-1"
             >
               View all <ArrowRight size={14} />
@@ -321,7 +321,7 @@ export default function Explore() {
             <h2 className="text-lg font-semibold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Recently Joined</h2>
           </div>
           <Link
-            to="/people"
+            to={isEmployerMentor ? '/students' : '/mentors'}
             className="text-sm text-primary hover:text-primary-light font-medium flex items-center gap-1"
           >
             View all <ArrowRight size={14} />

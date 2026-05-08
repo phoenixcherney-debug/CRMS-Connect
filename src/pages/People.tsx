@@ -11,7 +11,16 @@ import {
 import type { StudentGrade } from '../types'
 import Spinner from '../components/Spinner'
 
-export default function People() {
+interface PeopleProps {
+  /**
+   * Audit M1: which directory to render. When omitted, falls back to the
+   * legacy "opposite role" behavior so /people keeps working as a redirect
+   * source while the new /students and /mentors routes stabilize.
+   */
+  directory?: 'students' | 'mentors'
+}
+
+export default function People({ directory }: PeopleProps = {}) {
   const { profile } = useAuth()
   const navigate = useNavigate()
 
@@ -30,10 +39,14 @@ export default function People() {
   const [showFilters, setShowFilters] = useState(false)
 
   const isStudent = profile?.role === 'student'
-  const isEmployerMentor = profile?.role === 'employer_mentor'
 
-  // Each role sees only the opposite type
-  const targetRole = isStudent ? 'employer_mentor' : 'student'
+  // Pick the directory's role. Explicit prop wins; otherwise fall back to
+  // the role opposite the viewer's (legacy /people behavior).
+  const targetRole = directory === 'students'
+    ? 'student'
+    : directory === 'mentors'
+      ? 'employer_mentor'
+      : (isStudent ? 'employer_mentor' : 'student')
 
   useEffect(() => {
     async function load() {
@@ -90,13 +103,13 @@ export default function People() {
     if (p.id === profile?.id) return false
     if (search && !p.full_name.toLowerCase().includes(search.toLowerCase())) return false
 
-    // Interest/Industry filter
+    // Interest/Industry filter — driven by which directory we're rendering,
+    // so /students filtering works the same whether the viewer is an EM
+    // (legacy) or a student (M11 lift).
     if (filterInterests.length > 0) {
-      if (isStudent) {
-        // Students browsing EMs: filter by industry
+      if (targetRole === 'employer_mentor') {
         if (!p.industry || !filterInterests.includes(p.industry)) return false
       } else {
-        // EMs browsing students: filter by interests
         const personInterests = p.interests ?? []
         if (!filterInterests.some((fi) => personInterests.includes(fi))) return false
       }
@@ -105,20 +118,18 @@ export default function People() {
     // Availability filter
     if (filterAvailability && p.weekly_availability !== filterAvailability) return false
 
-    // Grade filter (only when employer/mentor views students). Respect the
-    // M9 opt-out: a student who hasn't opted in to share their grade
-    // should never appear in a grade-filtered list.
-    if (filterGrade && isEmployerMentor) {
+    // Grade filter (students directory only). M9: opted-out students are
+    // treated as having no grade and never surface in grade-filtered lists.
+    if (filterGrade && targetRole === 'student') {
       if (!p.share_grade_with_employers || p.grade !== filterGrade) return false
     }
 
-    // Looking for filter
+    // Looking-for filter — student_seeking when listing students, mentor_type
+    // when listing EMs.
     if (filterLooking) {
-      if (isEmployerMentor) {
-        // Filter students by student_seeking
+      if (targetRole === 'student') {
         if (p.student_seeking !== filterLooking) return false
       } else {
-        // Students filtering employer/mentors by mentor_type
         if (p.mentor_type !== filterLooking) return false
       }
     }
@@ -139,7 +150,7 @@ export default function People() {
     )
   }
 
-  const pageTitle = isStudent ? 'Mentors' : 'Students'
+  const pageTitle = targetRole === 'employer_mentor' ? 'Mentors' : 'Students'
   const pageSubtitle = loading
     ? 'Loading…'
     : `${people.filter((p) => p.id !== profile?.id).length} ${pageTitle.toLowerCase()} in the CRMS community`
@@ -220,8 +231,8 @@ export default function People() {
             </div>
           </div>
 
-          {/* Grade (only when employer/mentor views students) */}
-          {isEmployerMentor && (
+          {/* Grade (only when listing students) */}
+          {targetRole === 'student' && (
             <div>
               <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Grade</p>
               <div className="flex flex-wrap gap-1.5">
@@ -245,10 +256,10 @@ export default function People() {
           {/* Looking for */}
           <div>
             <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
-              {isEmployerMentor ? 'Student is looking for' : 'Mentor type'}
+              {targetRole === 'student' ? 'Student is looking for' : 'Mentor type'}
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {isEmployerMentor
+              {targetRole === 'student'
                 ? Object.entries(STUDENT_SEEKING_LABELS).map(([val, label]) => (
                     <button
                       key={val}
@@ -282,7 +293,7 @@ export default function People() {
           {/* Interests / Industry */}
           <div>
             <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
-              {isStudent ? 'Industry' : 'Interests'}
+              {targetRole === 'employer_mentor' ? 'Industry' : 'Interests'}
             </p>
             <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
               {INTEREST_OPTIONS.map((opt) => (

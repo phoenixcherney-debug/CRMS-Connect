@@ -154,7 +154,14 @@ export default function MeetingRequests() {
                 <User size={28} className="mx-auto text-ink-muted mb-2" />
                 <p className="text-sm text-ink-muted">
                   You haven't sent any meeting requests.{' '}
-                  <Link to="/people" className="text-primary hover:text-primary-light">Browse people</Link>{' '}
+                  {/* Audit M7 — link to the role-specific directory now that
+                      /people is split into /students and /mentors. */}
+                  <Link
+                    to={profile?.role === 'student' ? '/mentors' : '/students'}
+                    className="text-primary hover:text-primary-light"
+                  >
+                    {profile?.role === 'student' ? 'Browse mentors' : 'Browse students'}
+                  </Link>{' '}
                   to find someone to connect with.
                 </p>
               </div>

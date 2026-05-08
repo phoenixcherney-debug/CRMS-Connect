@@ -13,10 +13,12 @@ import { usePendingMeetings } from '../hooks/usePendingMeetings'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
 
-const BASE_NAV = [
+const BASE_NAV_HEAD = [
   { to: '/explore',       label: 'Explore',       icon: Compass  },
   { to: '/jobs',          label: 'Jobs',           icon: Briefcase },
-  { to: '/people',        label: 'People',         icon: Users    },
+] as const
+
+const BASE_NAV_TAIL = [
   { to: '/notifications', label: 'Notifications',  icon: Bell     },
   { to: '/messages',      label: 'Inbox',          icon: Mail     },
 ] as const
@@ -38,15 +40,26 @@ export default function Nav() {
   // One canonical destination for an employer's own listings: "My Opportunities"
   // (route /my-postings). The /postings route is the student-posts feed and is
   // labeled accordingly so the two are not confused.
+  //
+  // Audit M1 — split /people into role-specific lists. Students see "Mentors"
+  // (→ /mentors); employers see "Students" (→ /students). Admin keeps the
+  // legacy /people view because they want both at once.
+  const directoryItem = isStudent
+    ? { to: '/mentors' as const, label: 'Mentors' as const, icon: Users }
+    : isEmployerMentor
+      ? { to: '/students' as const, label: 'Students' as const, icon: Users }
+      : { to: '/people' as const, label: 'People' as const, icon: Users }
+
   const NAV_ITEMS = [
-    ...BASE_NAV.slice(0, 2), // Explore, Jobs
+    ...BASE_NAV_HEAD, // Explore, Jobs
     ...(isStudent ? [
       { to: '/my-applications' as const, label: 'Applications' as const, icon: FileText },
     ] : []),
     ...(isEmployerMentor ? [
       { to: '/my-postings' as const, label: 'My Opportunities' as const, icon: ClipboardList },
     ] : []),
-    ...BASE_NAV.slice(2), // People, Notifications, Inbox
+    directoryItem,
+    ...BASE_NAV_TAIL, // Notifications, Inbox
   ]
 
   const SECONDARY_ITEMS = [
@@ -67,6 +80,8 @@ export default function Nav() {
     { to: '/events',  label: 'Events', icon: Calendar  },
     ...(isStudent ? [
       { to: '/employers', label: 'Employers & Mentors', icon: Building2 },
+      // Audit M11 — students can also browse other students.
+      { to: '/students', label: 'Students', icon: Users },
     ] : []),
   ]
 

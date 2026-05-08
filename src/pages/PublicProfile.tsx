@@ -143,21 +143,43 @@ export default function PublicProfile() {
     return <div className="flex justify-center py-20"><Spinner size="lg" /></div>
   }
 
-  // Redirect if viewer and subject share the same role (privacy guard)
-  if (!loading && person && person.id !== myProfile?.id && person.role === myProfile?.role) {
+  // Same-role privacy guard. Audit M11 lifts this for students-students so
+  // a student can view another student's profile (name, grade [opt-in],
+  // bio); employer/mentor accounts still can't view each other to keep
+  // the directory's role separation intact.
+  if (
+    !loading
+    && person
+    && person.id !== myProfile?.id
+    && person.role === myProfile?.role
+    && person.role !== 'student'
+  ) {
     return <Navigate to="/people" replace />
   }
 
   if (!person) {
+    const backHref = myProfile?.role === 'student' ? '/mentors' : '/students'
+    const backLabel = myProfile?.role === 'student' ? 'Mentors' : 'Students'
     return (
       <div className="text-center py-20">
         <p className="text-ink-muted">This profile could not be found.</p>
-        <Link to="/people" className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
-          &larr; Back to People
+        <Link to={backHref} className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
+          &larr; Back to {backLabel}
         </Link>
       </div>
     )
   }
+
+  // Audit M1 — back link reflects the directory the viewer most likely came
+  // from (their role-specific list). Students viewing students keep /students.
+  const directoryHref =
+    person.role === 'student'
+      ? '/students'
+      : person.role === 'employer_mentor'
+        ? '/mentors'
+        : '/people'
+  const directoryLabel =
+    person.role === 'student' ? 'Students' : person.role === 'employer_mentor' ? 'Mentors' : 'People'
 
   const initials = person.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
   const isSelf = person.id === myProfile?.id
@@ -172,9 +194,9 @@ export default function PublicProfile() {
 
   return (
     <div className="max-w-xl mx-auto">
-      <Link to="/people" className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6">
+      <Link to={directoryHref} className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6">
         <ChevronLeft size={16} />
-        People
+        {directoryLabel}
       </Link>
 
       <div className="bg-surface rounded-2xl border border-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>

@@ -1,9 +1,19 @@
 import { lazy, Suspense, useEffect, useLayoutEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
+
+/** Audit M1: /people now redirects to the role-specific directory. */
+function PeopleRedirect() {
+  const { profile, loading } = useAuth()
+  if (loading) return null
+  if (profile?.role === 'student') return <Navigate to="/mentors" replace />
+  if (profile?.role === 'employer_mentor') return <Navigate to="/students" replace />
+  // Admin or no-role: fall back to /students so the route still resolves.
+  return <Navigate to="/students" replace />
+}
 
 // Disable browser scroll restoration so we control it ourselves
 if ('scrollRestoration' in history) {
@@ -30,6 +40,8 @@ const ROUTE_TITLES: Record<string, string> = {
   '/feed': 'Activity',
   '/events': 'Events',
   '/people': 'People',
+  '/students': 'Students',
+  '/mentors': 'Mentors',
   '/notifications': 'Notifications',
   '/employers': 'Employers & Mentors',
   '/jobs': 'Opportunities',
@@ -149,7 +161,13 @@ export default function App() {
               <ProtectedRoute><Layout><Events /></Layout></ProtectedRoute>
             } />
             <Route path="/people" element={
-              <ProtectedRoute><Layout><People /></Layout></ProtectedRoute>
+              <ProtectedRoute><PeopleRedirect /></ProtectedRoute>
+            } />
+            <Route path="/students" element={
+              <ProtectedRoute><Layout><People directory="students" /></Layout></ProtectedRoute>
+            } />
+            <Route path="/mentors" element={
+              <ProtectedRoute><Layout><People directory="mentors" /></Layout></ProtectedRoute>
             } />
             <Route path="/notifications" element={
               <ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>
