@@ -791,14 +791,20 @@ export default function Availability() {
             <button type="button"
               key={key}
               onClick={() => setView(key)}
+              aria-label={label}
+              aria-pressed={view === key}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
                 ${view === key
                   ? 'text-white'
                   : 'text-ink-secondary hover:text-ink hover:bg-primary-faint'}`}
               style={view === key ? { backgroundColor: 'var(--color-primary)' } : {}}
             >
-              <Icon size={14} />
+              <Icon size={14} aria-hidden="true" />
+              {/* Audit task 20 — keep the label always rendered for screen
+                  readers (sr-only on small viewports), and aria-label gives
+                  a hard fallback when the visual label is hidden. */}
               <span className="hidden sm:inline">{label}</span>
+              <span className="sr-only sm:hidden">{label}</span>
             </button>
           ))}
         </div>
