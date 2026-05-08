@@ -51,6 +51,15 @@ export default function Profile() {
   const isEmployerMentor = profile?.role === 'employer_mentor'
   const { permission, isSubscribed, subscribe, unsubscribe } = usePushNotifications()
   const [pushLoading, setPushLoading] = useState(false)
+  // avatarBroken used to live below the early returns, which violated the
+  // rules of hooks (rendered more hooks than the previous render → React
+  // error #310). Pulled it up here so every hook runs unconditionally.
+  const [avatarBroken, setAvatarBroken] = useState(false)
+  // Reset when the preview source changes — derived from `editing`,
+  // `avatarUrl`, and the persisted profile avatar.
+  useEffect(() => {
+    setAvatarBroken(false)
+  }, [editing, avatarUrl, profile?.avatar_url])
 
   useEffect(() => {
     if (profile) {
@@ -250,8 +259,6 @@ export default function Profile() {
   }
 
   const previewAvatarUrl = editing ? avatarUrl : (profile.avatar_url ?? '')
-  const [avatarBroken, setAvatarBroken] = useState(false)
-  useEffect(() => { setAvatarBroken(false) }, [previewAvatarUrl])
 
   // Sub-role display labels
   const mentorTypeLabel = profile.mentor_type === 'other'

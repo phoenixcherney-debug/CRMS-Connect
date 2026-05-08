@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Bell, X } from 'lucide-react'
 import Nav from './Nav'
 import Footer from './Footer'
+import RootErrorBoundary from './RootErrorBoundary'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -64,7 +65,11 @@ export default function Layout({ children }: LayoutProps) {
       <PushBanner />
       <Nav />
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
+        {/* Boundary lives INSIDE the layout so a page-level render error
+            shows a recoverable fallback while the chrome (header / footer)
+            stays visible — that's the exact failure mode that caught us in
+            the React #310 incident. */}
+        <RootErrorBoundary>{children}</RootErrorBoundary>
       </main>
       <Footer />
     </div>
