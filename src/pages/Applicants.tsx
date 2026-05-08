@@ -268,6 +268,10 @@ interface CardProps {
 
 function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, updateStatus, profile, navigate }: CardProps) {
   const applicant = app.profiles as ApplicantProfile | null
+  // Audit M4 — two-step confirmation. Holds the action the user is about to
+  // confirm. null = idle. 'accepted' | 'rejected' = waiting for the second
+  // click. 'reverse' = on the Decided tab, waiting to flip back to pending.
+  const [confirming, setConfirming] = useState<'accepted' | 'rejected' | 'reverse' | null>(null)
   const isExpanded = expandedId === app.id
   const isUpdating = updatingId === app.id
   const initials = applicant?.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
@@ -358,11 +362,11 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-start gap-2 shrink-0">
-          {activeTab === 'inbox' && (
-            <>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          {activeTab === 'inbox' && confirming === null && (
+            <div className="flex items-start gap-2">
               <button
-                onClick={() => updateStatus(app.id, 'accepted')}
+                onClick={() => setConfirming('accepted')}
                 disabled={isUpdating}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-accepted-bg text-status-accepted-text border border-status-accepted-border hover:opacity-80 transition-opacity disabled:opacity-40"
               >
@@ -370,21 +374,75 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                 Accept
               </button>
               <button
-                onClick={() => updateStatus(app.id, 'rejected')}
+                onClick={() => setConfirming('rejected')}
                 disabled={isUpdating}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-rejected-bg text-status-rejected-text border border-status-rejected-border hover:opacity-80 transition-opacity disabled:opacity-40"
               >
                 <X size={13} />
                 Decline
               </button>
-            </>
+            </div>
+          )}
+
+          {activeTab === 'inbox' && confirming !== null && confirming !== 'reverse' && (
+            <div className="flex items-start gap-2">
+              <button
+                onClick={() => { updateStatus(app.id, confirming); setConfirming(null) }}
+                disabled={isUpdating}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-opacity disabled:opacity-40 ${
+                  confirming === 'accepted'
+                    ? 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border'
+                    : 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border'
+                }`}
+              >
+                {isUpdating ? <Spinner size="sm" /> : confirming === 'accepted' ? <CheckCircle2 size={13} /> : <X size={13} />}
+                {confirming === 'accepted' ? 'Yes, accept' : 'Yes, decline'}
+              </button>
+              <button
+                onClick={() => setConfirming(null)}
+                disabled={isUpdating}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-40"
+              >
+                Cancel
+              </button>
+            </div>
           )}
 
           {activeTab === 'decided' && (app.status === 'accepted' || app.status === 'rejected') && (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${DECIDED_CONFIG[app.status].classes}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${DECIDED_CONFIG[app.status].dot}`} />
-              {DECIDED_CONFIG[app.status].label}
-            </span>
+            <>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${DECIDED_CONFIG[app.status].classes}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${DECIDED_CONFIG[app.status].dot}`} />
+                {DECIDED_CONFIG[app.status].label}
+              </span>
+              {/* Audit M4 — reverse-decision affordance so a mistaken click on
+                  the inbox tab can be undone without contacting support. */}
+              {confirming === 'reverse' ? (
+                <div className="flex items-start gap-2">
+                  <button
+                    onClick={() => { updateStatus(app.id, 'pending'); setConfirming(null) }}
+                    disabled={isUpdating}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-ink hover:bg-primary-faint transition-colors disabled:opacity-40"
+                  >
+                    {isUpdating ? <Spinner size="sm" /> : null}
+                    Yes, reverse
+                  </button>
+                  <button
+                    onClick={() => setConfirming(null)}
+                    disabled={isUpdating}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirming('reverse')}
+                  className="text-[11px] text-ink-muted hover:text-ink underline transition-colors"
+                >
+                  Reverse decision
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
