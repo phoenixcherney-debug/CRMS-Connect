@@ -381,6 +381,7 @@ export default function Conversation() {
           onKeyDown={handleKeyDown}
           placeholder="Message… (Enter to send, Shift+Enter for new line)"
           rows={1}
+          maxLength={4000}
           className="flex-1 px-4 py-3 rounded-xl border border-border bg-surface text-ink text-sm
             placeholder:text-ink-placeholder resize-none overflow-y-auto
             focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary

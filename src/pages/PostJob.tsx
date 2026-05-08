@@ -369,7 +369,7 @@ export default function PostJob() {
             <textarea
               required
               rows={5}
-              maxLength={5000}
+              maxLength={4000}
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
               placeholder="Describe the role, responsibilities, and what students will learn…"

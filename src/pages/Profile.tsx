@@ -537,6 +537,7 @@ export default function Profile() {
                   <input
                     type="text"
                     required
+                    maxLength={80}
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
@@ -718,6 +719,7 @@ export default function Profile() {
                       <input
                         type="text"
                         required
+                        maxLength={120}
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
                         placeholder="Where do you work?"
@@ -797,6 +799,7 @@ export default function Profile() {
                   </label>
                   <textarea
                     rows={4}
+                    maxLength={2000}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     placeholder="Tell others a bit about yourself, your background, or what you do…"

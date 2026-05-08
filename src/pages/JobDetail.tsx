@@ -491,6 +491,7 @@ export default function JobDetail() {
                     id="cover-note"
                     rows={4}
                     required
+                    maxLength={2000}
                     value={coverNote}
                     onChange={(e) => { setCoverNote(e.target.value); if (coverNoteError) setCoverNoteError(null) }}
                     placeholder="Introduce yourself and explain why you're a great fit…"

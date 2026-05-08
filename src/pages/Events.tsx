@@ -262,6 +262,7 @@ export default function Events() {
                 <label className="block text-sm font-medium text-ink mb-1.5">Description</label>
                 <textarea
                   rows={3}
+                  maxLength={4000}
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="What's this event about?"
@@ -378,6 +379,7 @@ export default function Events() {
                 <label className="block text-sm font-medium text-ink mb-1.5">Description</label>
                 <textarea
                   rows={3}
+                  maxLength={4000}
                   value={editForm.description}
                   onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
                   className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm

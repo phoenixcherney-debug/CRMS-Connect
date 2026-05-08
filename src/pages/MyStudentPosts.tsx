@@ -218,6 +218,7 @@ export default function MyStudentPosts() {
               </label>
               <textarea
                 rows={3}
+                maxLength={1000}
                 value={pitch}
                 onChange={(e) => setPitch(e.target.value)}
                 placeholder="Introduce yourself — what are your interests, goals, or experience?"
