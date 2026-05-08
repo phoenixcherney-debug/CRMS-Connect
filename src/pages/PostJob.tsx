@@ -57,6 +57,9 @@ export default function PostJob() {
   const [loading, setLoading] = useState(isEdit)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Per-field errors so the user sees feedback at the field, not only in the
+  // banner at the top of a long form (audit HIGH-5: silent submit on bad dates).
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   // Load existing job for editing
   useEffect(() => {
@@ -93,6 +96,7 @@ export default function PostJob() {
     e.preventDefault()
     if (!profile || submitting) return
     setError(null)
+    setFieldErrors({})
 
     // Trim and validate required fields up front. The browser's `required`
     // attribute catches empty strings but not whitespace-only — strip first
@@ -107,8 +111,27 @@ export default function PostJob() {
       return
     }
 
+    // Date validation. Past-deadline guard only applies on create — editing
+    // an already-past posting shouldn't refuse to save unrelated edits.
+    const todayIso = new Date().toISOString().split('T')[0]
+    const fe: Record<string, string> = {}
     if (form.end_date && form.start_date && form.end_date < form.start_date) {
-      setError('End date must be after start date.')
+      fe.end_date = 'End date must be on or after the start date.'
+    }
+    if (!isEdit && form.deadline && form.deadline < todayIso) {
+      fe.deadline = 'Application deadline must be today or later.'
+    }
+    if (!isEdit && form.start_date && form.start_date < todayIso) {
+      fe.start_date = 'Start date must be today or later.'
+    }
+    if (Object.keys(fe).length > 0) {
+      setFieldErrors(fe)
+      setError('Please fix the highlighted fields and try again.')
+      // Scroll the form's error banner into view so the user sees feedback
+      // even if their viewport was at the bottom of a long form.
+      requestAnimationFrame(() => {
+        document.getElementById('post-job-error-banner')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
       return
     }
 
@@ -202,7 +225,7 @@ export default function PostJob() {
         </p>
 
         {error && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-lg bg-error-bg border border-status-rejected-border px-4 py-3">
+          <div id="post-job-error-banner" className="mb-5 flex items-start gap-2.5 rounded-lg bg-error-bg border border-status-rejected-border px-4 py-3">
             <AlertCircle size={15} className="text-error shrink-0 mt-0.5" />
             <p className="text-sm text-error">{error}</p>
           </div>
@@ -392,9 +415,15 @@ export default function PostJob() {
               <input
                 type="date"
                 value={form.start_date}
-                onChange={(e) => set('start_date', e.target.value)}
+                onChange={(e) => { set('start_date', e.target.value); if (fieldErrors.start_date || fieldErrors.end_date) setFieldErrors({}) }}
+                min={isEdit ? undefined : new Date().toISOString().split('T')[0]}
+                aria-invalid={!!fieldErrors.start_date}
+                aria-describedby={fieldErrors.start_date ? 'start-date-error' : undefined}
                 className="field"
               />
+              {fieldErrors.start_date && (
+                <p id="start-date-error" role="alert" className="mt-1 text-xs text-error">{fieldErrors.start_date}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-ink mb-1.5">
@@ -404,10 +433,15 @@ export default function PostJob() {
               <input
                 type="date"
                 value={form.end_date}
-                onChange={(e) => set('end_date', e.target.value)}
+                onChange={(e) => { set('end_date', e.target.value); if (fieldErrors.end_date) setFieldErrors((prev) => ({ ...prev, end_date: '' })) }}
                 min={form.start_date || undefined}
+                aria-invalid={!!fieldErrors.end_date}
+                aria-describedby={fieldErrors.end_date ? 'end-date-error' : undefined}
                 className="field"
               />
+              {fieldErrors.end_date && (
+                <p id="end-date-error" role="alert" className="mt-1 text-xs text-error">{fieldErrors.end_date}</p>
+              )}
             </div>
           </div>
 
@@ -420,10 +454,15 @@ export default function PostJob() {
             <input
               type="date"
               value={form.deadline}
-              onChange={(e) => set('deadline', e.target.value)}
+              onChange={(e) => { set('deadline', e.target.value); if (fieldErrors.deadline) setFieldErrors((prev) => ({ ...prev, deadline: '' })) }}
               min={isEdit ? undefined : new Date().toISOString().split('T')[0]}
+              aria-invalid={!!fieldErrors.deadline}
+              aria-describedby={fieldErrors.deadline ? 'deadline-error' : undefined}
               className="field"
             />
+            {fieldErrors.deadline && (
+              <p id="deadline-error" role="alert" className="mt-1 text-xs text-error">{fieldErrors.deadline}</p>
+            )}
           </div>
 
           {/* Submit */}
