@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ExternalLink, MapPin, Calendar, Trash2, MessageSquare } from 'lucide-react'
+import { ExternalLink, MapPin, Calendar, Trash2, MessageSquare, RotateCcw } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { safeExternalHref } from '../lib/url'
@@ -9,6 +9,7 @@ import { useToast } from '../components/ToastProvider'
 import type { Application, ApplicationStatus } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const STATUS_CONFIG: Record<
   ApplicationStatus,
@@ -53,6 +54,9 @@ export default function MyApplications() {
   // card can either deep-link to an existing thread or start a new one.
   const [convMap, setConvMap] = useState<Record<string, string>>({})
   const [openingConvFor, setOpeningConvFor] = useState<string | null>(null)
+  // NAV-007 — decline-offer confirm.
+  const [declineId, setDeclineId] = useState<string | null>(null)
+  const [decliningId, setDecliningId] = useState<string | null>(null)
 
   async function load() {
     if (!profile) return
@@ -107,6 +111,24 @@ export default function MyApplications() {
     }
     setConvMap((prev) => ({ ...prev, [otherId]: data.id }))
     navigate(`/messages/${data.id}`)
+  }
+
+  async function handleDecline(appId: string) {
+    if (!profile) return
+    setDecliningId(appId)
+    const { error } = await supabase
+      .from('applications')
+      .update({ status: 'rejected' })
+      .eq('id', appId)
+      .eq('applicant_id', profile.id)
+    setDecliningId(null)
+    setDeclineId(null)
+    if (error) {
+      toast('Could not decline the offer.', { kind: 'error' })
+      return
+    }
+    setApplications((prev) => prev.map((a) => a.id === appId ? { ...a, status: 'rejected' } : a))
+    toast('Offer declined.')
   }
 
   async function handleWithdraw(appId: string) {
@@ -273,6 +295,7 @@ export default function MyApplications() {
                         </button>
                       )
                     })()}
+                    {/* NAV-007 — destructive action varies per status. */}
                     {app.status === 'pending' && (
                       <button type="button"
                         onClick={() => handleWithdraw(app.id)}
@@ -280,7 +303,42 @@ export default function MyApplications() {
                         className="flex items-center gap-1 text-error hover:text-error/80 font-medium disabled:opacity-50"
                       >
                         <Trash2 size={11} />
-                        {withdrawingId === app.id ? 'Withdrawing…' : 'Withdraw'}
+                        {withdrawingId === app.id ? 'Withdrawing…' : 'Withdraw application'}
+                      </button>
+                    )}
+                    {app.status === 'accepted' && (
+                      <button type="button"
+                        onClick={() => setDeclineId(app.id)}
+                        className="flex items-center gap-1 text-error hover:text-error/80 font-medium"
+                      >
+                        <Trash2 size={11} />
+                        Decline offer
+                      </button>
+                    )}
+                    {app.status === 'rejected' && job.is_active && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          // NAV-007 — re-apply: drop the rejected row so
+                          // the unique (job, applicant) constraint doesn't
+                          // block a fresh submission, then send the user
+                          // back to the opportunity to apply again.
+                          if (!profile) return
+                          const { error } = await supabase
+                            .from('applications')
+                            .delete()
+                            .eq('id', app.id)
+                            .eq('applicant_id', profile.id)
+                          if (error) {
+                            toast('Could not start re-application.', { kind: 'error' })
+                            return
+                          }
+                          setApplications((prev) => prev.filter((a) => a.id !== app.id))
+                          navigate(`/opportunities/${job.id}`)
+                        }}
+                        className="flex items-center gap-1 text-primary hover:text-primary-light font-medium"
+                      >
+                        <RotateCcw size={11} /> Re-apply
                       </button>
                     )}
                   </div>
@@ -290,6 +348,17 @@ export default function MyApplications() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={declineId !== null}
+        title="Decline this offer?"
+        description="This will notify the employer that you're no longer accepting. You cannot undo this."
+        confirmLabel={declineId && decliningId === declineId ? 'Declining…' : 'Yes, decline'}
+        confirmDisabled={declineId !== null && decliningId === declineId}
+        destructive
+        onConfirm={() => declineId && handleDecline(declineId)}
+        onCancel={() => { if (!decliningId) setDeclineId(null) }}
+      />
     </div>
   )
 }
