@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, Plus, X, RefreshCw, Archive, Trash2 } from 'lucide-react'
 import { sanitizeUserText } from '../lib/sanitize'
+import { useToast } from '../components/ToastProvider'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { StudentPost, StudentSeeking } from '../types'
@@ -12,6 +13,7 @@ import EmptyState from '../components/EmptyState'
 
 export default function MyStudentPosts() {
   const { profile } = useAuth()
+  const toast = useToast()
 
   const [posts, setPosts] = useState<StudentPost[]>([])
   const [loading, setLoading] = useState(true)
@@ -96,6 +98,9 @@ export default function MyStudentPosts() {
       setInterests([])
       setAvailability('')
       setShowForm(false)
+      toast('Post updated.')
+    } else if (error) {
+      toast('Could not save your post.', { kind: 'error' })
     }
   }
 

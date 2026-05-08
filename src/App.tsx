@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
+import ToastProvider from './components/ToastProvider'
 
 /** Audit M1: /people now redirects to the role-specific directory. */
 function PeopleRedirect() {
@@ -123,6 +124,7 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
       <AuthProvider>
+      <ToastProvider>
         <ScrollToTop />
         <DocumentTitle />
         <Suspense fallback={
@@ -278,6 +280,7 @@ export default function App() {
 
           </Routes>
         </Suspense>
+      </ToastProvider>
       </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

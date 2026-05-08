@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { safeExternalHref } from '../lib/url'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../components/ToastProvider'
 import type { Application, ApplicationStatus } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
@@ -42,6 +43,7 @@ const STATUS_CONFIG: Record<
 
 export default function MyApplications() {
   const { profile } = useAuth()
+  const toast = useToast()
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
@@ -71,7 +73,12 @@ export default function MyApplications() {
     if (!profile) return
     setWithdrawingId(appId)
     const { error } = await supabase.from('applications').delete().eq('id', appId).eq('applicant_id', profile.id)
-    if (!error) setApplications((prev) => prev.filter((a) => a.id !== appId))
+    if (!error) {
+      setApplications((prev) => prev.filter((a) => a.id !== appId))
+      toast('Application withdrawn.')
+    } else {
+      toast('Could not withdraw the application.', { kind: 'error' })
+    }
     setWithdrawingId(null)
   }
 

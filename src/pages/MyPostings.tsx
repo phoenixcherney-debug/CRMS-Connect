@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext'
 import type { Job, Application } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useToast } from '../components/ToastProvider'
 import { format, isPast, parseISO } from 'date-fns'
 
 interface PostingWithApplicants extends Job {
@@ -14,6 +16,7 @@ interface PostingWithApplicants extends Job {
 
 export default function MyPostings() {
   const { profile } = useAuth()
+  const toast = useToast()
   const [postings, setPostings] = useState<PostingWithApplicants[]>([])
   const [loading, setLoading] = useState(true)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -43,6 +46,9 @@ export default function MyPostings() {
       setPostings((prev) =>
         prev.map((p) => (p.id === jobId ? { ...p, is_active: !currentActive } : p))
       )
+      toast(currentActive ? 'Opportunity closed.' : 'Opportunity reopened.')
+    } else {
+      toast('Could not update the opportunity. Please try again.', { kind: 'error' })
     }
   }
 
@@ -53,10 +59,12 @@ export default function MyPostings() {
     setDeletingId(null)
     if (error) {
       setDeleteError('Failed to delete. Please try again.')
+      toast('Could not delete the opportunity.', { kind: 'error' })
       return
     }
     setConfirmDeleteId(null)
     setPostings((prev) => prev.filter((p) => p.id !== jobId))
+    toast('Opportunity deleted.')
   }
 
   const jobToDelete = postings.find((p) => p.id === confirmDeleteId)
@@ -203,49 +211,19 @@ export default function MyPostings() {
         </div>
       )}
 
-      {/* Delete confirmation modal */}
-      {confirmDeleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div
-            className="bg-surface rounded-2xl border border-border p-6 max-w-sm w-full"
-            style={{ boxShadow: 'var(--shadow-modal)' }}
-          >
-            <h3 className="font-semibold text-ink mb-2">Delete this posting?</h3>
-            <p className="text-sm text-ink-secondary mb-1 leading-relaxed">
-              <span className="font-medium text-ink">{jobToDelete?.title}</span> at {jobToDelete?.company}
-            </p>
-            <p className="text-sm text-ink-secondary mb-5 leading-relaxed">
-              This action is permanent. The opportunity and all applications will be removed.
-            </p>
-            {deleteError && (
-              <p className="mb-3 text-sm text-error">{deleteError}</p>
-            )}
-            <div className="flex gap-3">
-              <button type="button"
-                onClick={() => handleDelete(confirmDeleteId)}
-                disabled={deletingId === confirmDeleteId}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-                  bg-error hover:bg-error/90 text-white font-medium text-sm
-                  disabled:opacity-50 transition-colors"
-              >
-                {deletingId === confirmDeleteId
-                  ? <Spinner size="sm" className="border-white/30 border-t-white" />
-                  : null
-                }
-                {deletingId === confirmDeleteId ? 'Deleting…' : 'Yes, delete'}
-              </button>
-              <button type="button"
-                onClick={() => setConfirmDeleteId(null)}
-                disabled={!!deletingId}
-                className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
-                  hover:bg-primary-faint transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete confirmation — uses the shared ConfirmDialog (audit task 6). */}
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete this opportunity?"
+        description={`This permanently removes ${jobToDelete?.title ?? 'the posting'}${jobToDelete?.company ? ` at ${jobToDelete.company}` : ''} and all its applications.`}
+        confirmLabel={deletingId === confirmDeleteId ? 'Deleting…' : 'Yes, delete'}
+        confirmDisabled={deletingId === confirmDeleteId}
+        destructive
+        onConfirm={() => { if (confirmDeleteId) void handleDelete(confirmDeleteId) }}
+        onCancel={() => { if (!deletingId) { setConfirmDeleteId(null); setDeleteError(null) } }}
+      >
+        {deleteError && <p className="mb-3 text-sm text-error">{deleteError}</p>}
+      </ConfirmDialog>
     </div>
   )
 }

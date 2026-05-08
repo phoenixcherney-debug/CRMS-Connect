@@ -5,6 +5,7 @@ import { ChevronLeft, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../components/ToastProvider'
 import type { JobType, LocationType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
@@ -52,6 +53,7 @@ export default function PostJob() {
   const isEdit = !!id
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
 
   const [form, setForm] = useState<JobForm>(DEFAULT_FORM)
   const [loading, setLoading] = useState(isEdit)
@@ -197,6 +199,7 @@ export default function PostJob() {
         return
       }
 
+      toast(isEdit ? 'Saved.' : 'Opportunity published.')
       navigate(isEdit ? `/jobs/${id}` : '/my-postings')
     } catch (err) {
       setError(friendlyError(err, SAVE_FAIL_MSG))

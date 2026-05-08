@@ -11,10 +11,12 @@ import {
 } from '../types'
 import type { CareerHistory, MentorType, StudentSeeking } from '../types'
 import Spinner from '../components/Spinner'
+import { useToast } from '../components/ToastProvider'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 
 export default function Profile() {
   const { profile, user, refreshProfile, loading } = useAuth()
+  const toast = useToast()
   const [editing, setEditing] = useState(false)
 
   const [fullName, setFullName]                     = useState('')
@@ -231,11 +233,13 @@ export default function Profile() {
     setSaving(false)
     if (error) {
       setSaveError(error.message)
+      toast('Could not save your profile.', { kind: 'error' })
     } else {
       await refreshProfile()
       setEditing(false)
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
+      toast('Saved.')
     }
   }
 

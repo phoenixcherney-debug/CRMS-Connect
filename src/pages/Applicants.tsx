@@ -6,9 +6,11 @@ import { supabase } from '../lib/supabase'
 import { safeExternalHref } from '../lib/url'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
+import { useToast } from '../components/ToastProvider'
 import type { Application, ApplicationStatus, Job, StudentSeeking, OpportunityType } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 type Tab = 'inbox' | 'decided'
 
@@ -57,6 +59,7 @@ export default function Applicants() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { profile } = useAuth()
+  const toast = useToast()
 
   const [job, setJob] = useState<Job | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
@@ -108,10 +111,15 @@ export default function Applicants() {
       .eq('id', appId)
     if (error) {
       setUpdateError('Failed to update status. Please try again.')
+      toast('Could not update the application.', { kind: 'error' })
     } else {
       setApplications((prev) =>
         prev.map((a) => (a.id === appId ? { ...a, status } : a))
       )
+      // Audit task 6 — success toasts.
+      if      (status === 'accepted') toast('Application accepted.')
+      else if (status === 'rejected') toast('Application declined.')
+      else if (status === 'pending')  toast('Decision reversed.')
       // Notify applicant of status update (best-effort)
       const app = applications.find((a) => a.id === appId)
       const applicantId = (app?.profiles as { id?: string } | null)?.id
@@ -414,38 +422,29 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                 <span className={`w-1.5 h-1.5 rounded-full ${DECIDED_CONFIG[app.status].dot}`} />
                 {DECIDED_CONFIG[app.status].label}
               </span>
-              {/* Audit M4 — reverse-decision affordance so a mistaken click on
-                  the inbox tab can be undone without contacting support. */}
-              {confirming === 'reverse' ? (
-                <div className="flex items-start gap-2">
-                  <button type="button"
-                    onClick={() => { updateStatus(app.id, 'pending'); setConfirming(null) }}
-                    disabled={isUpdating}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-ink hover:bg-primary-faint transition-colors disabled:opacity-40"
-                  >
-                    {isUpdating ? <Spinner size="sm" /> : null}
-                    Yes, reverse
-                  </button>
-                  <button type="button"
-                    onClick={() => setConfirming(null)}
-                    disabled={isUpdating}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-40"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button type="button"
-                  onClick={() => setConfirming('reverse')}
-                  className="text-[11px] text-ink-muted hover:text-ink underline transition-colors"
-                >
-                  Reverse decision
-                </button>
-              )}
+              {/* Audit task 6 — Reverse decision now goes through the shared
+                  ConfirmDialog so the affordance reads consistently with
+                  Delete and other destructive flows. */}
+              <button type="button"
+                onClick={() => setConfirming('reverse')}
+                className="text-[11px] text-ink-muted hover:text-ink underline transition-colors"
+              >
+                Reverse decision
+              </button>
             </>
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirming === 'reverse'}
+        title="Reverse this decision?"
+        description={`This sends ${applicant?.full_name ?? 'the applicant'} back to your inbox as pending. They'll be notified about the change.`}
+        confirmLabel={isUpdating ? 'Reversing…' : 'Yes, reverse'}
+        confirmDisabled={isUpdating}
+        onConfirm={() => { updateStatus(app.id, 'pending'); setConfirming(null) }}
+        onCancel={() => setConfirming(null)}
+      />
 
       {/* Cover note */}
       {app.cover_note && (
