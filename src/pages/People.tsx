@@ -256,7 +256,7 @@ export default function People({ directory }: PeopleProps = {}) {
           {/* Looking for */}
           <div>
             <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">
-              {targetRole === 'student' ? 'Student is looking for' : 'Mentor type'}
+              {targetRole === 'student' ? 'Looking for' : 'Mentor type'}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {targetRole === 'student'
