@@ -44,7 +44,15 @@ export default function Privacy() {
       <p>
         You can edit or remove most profile fields at any time on your{' '}
         <a className="text-primary hover:text-primary-light underline" href="/profile">profile</a>.
-        To delete your account, email{' '}
+      </p>
+      <p>
+        To delete your account, open your{' '}
+        <a className="text-primary hover:text-primary-light underline" href="/profile">profile</a>{' '}
+        and use the <strong>Delete my account…</strong> button. This
+        permanently removes your name, bio, and other personal details, and
+        hides you from the directory. Your applications and posts remain
+        attributed to "Deleted user" so employers' records aren't disrupted.
+        If you can't sign in, email{' '}
         <a className="text-primary hover:text-primary-light underline" href="mailto:registrar@crms.org?subject=CRMS%20Connect%20account%20deletion">
           registrar@crms.org
         </a>.
