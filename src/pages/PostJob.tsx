@@ -124,6 +124,13 @@ export default function PostJob() {
     if (!isEdit && form.start_date && form.start_date < todayIso) {
       fe.start_date = 'Start date must be today or later.'
     }
+    // Audit task 5 — contact email is optional, but when present it must
+    // be a valid address. Browser-native validity check is enough; the
+    // form has noValidate so we re-implement the check here.
+    const emailValue = form.contact_email.trim()
+    if (emailValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+      fe.contact_email = 'Enter a valid email address (e.g. hiring@example.com).'
+    }
     if (Object.keys(fe).length > 0) {
       setFieldErrors(fe)
       setError('Please fix the highlighted fields and try again.')
@@ -388,18 +395,26 @@ export default function PostJob() {
 
           {/* Contact email — optional, only shown to accepted applicants */}
           <div>
-            <label className="block text-sm font-medium text-ink mb-1.5">
+            <label htmlFor="contact-email" className="block text-sm font-medium text-ink mb-1.5">
               Contact email{' '}
               <span className="text-ink-muted font-normal">(optional)</span>
             </label>
             <input
+              id="contact-email"
               type="email"
               maxLength={200}
               value={form.contact_email}
-              onChange={(e) => set('contact_email', e.target.value)}
+              onChange={(e) => { set('contact_email', e.target.value); if (fieldErrors.contact_email) setFieldErrors((prev) => ({ ...prev, contact_email: '' })) }}
               placeholder="hiring@example.com"
+              aria-invalid={!!fieldErrors.contact_email}
+              aria-describedby={fieldErrors.contact_email ? 'contact-email-error' : undefined}
               className="field"
             />
+            {fieldErrors.contact_email && (
+              <p id="contact-email-error" role="alert" className="mt-1 text-xs text-error">
+                {fieldErrors.contact_email}
+              </p>
+            )}
             <p className="mt-1 text-xs text-ink-muted">
               Shared with applicants only after you accept their application.
             </p>
