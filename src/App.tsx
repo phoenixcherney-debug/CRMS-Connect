@@ -59,6 +59,8 @@ const ROUTE_TITLES: Record<string, string> = {
   '/profile/edit': 'Edit profile',
   '/banned': 'Account suspended',
   '/admin': 'Admin Panel',
+  '/admin/pending-accounts': 'Pending Accounts',
+  '/awaiting-approval': 'Awaiting Approval',
   '/about': 'About',
   '/privacy': 'Privacy',
 }
@@ -119,6 +121,8 @@ const BannedPage        = lazy(() => import('./pages/BannedPage'))
 const About             = lazy(() => import('./pages/About'))
 const Privacy           = lazy(() => import('./pages/Privacy'))
 const NotFound          = lazy(() => import('./pages/NotFound'))
+const AwaitingApproval  = lazy(() => import('./pages/AwaitingApproval'))
+const PendingAccounts   = lazy(() => import('./pages/PendingAccounts'))
 
 export default function App() {
   return (
@@ -251,7 +255,12 @@ export default function App() {
 
             {/* ── Profile ──────────────────────────────────────────────── */}
             <Route path="/profile" element={
-              <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>
+              <ProtectedRoute skipApprovalGate><Layout><Profile /></Layout></ProtectedRoute>
+            } />
+
+            {/* SEC-001 — holding page for pending EM accounts. */}
+            <Route path="/awaiting-approval" element={
+              <ProtectedRoute skipApprovalGate><AwaitingApproval /></ProtectedRoute>
             } />
             {/* Audit task 23 — bookmarkable edit URL. Profile reads
                 useLocation().pathname and opens the edit form when it
@@ -275,6 +284,12 @@ export default function App() {
             <Route path="/admin/users/:id" element={
               <ProtectedRoute roles={['admin']}>
                 <Layout><AdminUserView /></Layout>
+              </ProtectedRoute>
+            } />
+            {/* SEC-001 — staff approval queue for new employer/mentor signups. */}
+            <Route path="/admin/pending-accounts" element={
+              <ProtectedRoute roles={['admin']}>
+                <Layout><PendingAccounts /></Layout>
               </ProtectedRoute>
             } />
 

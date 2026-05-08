@@ -40,6 +40,8 @@ export interface Profile {
   grade?: StudentGrade | null
   /** Audit M9: students opt in before their grade is exposed to other roles. */
   share_grade_with_employers?: boolean
+  /** SEC-001 — staff-approval gate for employer/mentor signups. */
+  account_status?: 'pending' | 'active' | 'disabled'
   created_at: string
   banned_at?: string | null
 }
