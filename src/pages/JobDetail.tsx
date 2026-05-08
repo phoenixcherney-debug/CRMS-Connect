@@ -35,6 +35,7 @@ export default function JobDetail() {
   // Apply modal state
   const [applying, setApplying] = useState(false)
   const [coverNote, setCoverNote] = useState('')
+  const [coverNoteError, setCoverNoteError] = useState<string | null>(null)
   const [resumeLink, setResumeLink] = useState('')
   const [applyLoading, setApplyLoading] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
@@ -124,14 +125,19 @@ export default function JobDetail() {
     if (!profile || !job) return
     const note = coverNote.trim()
     if (!note) {
-      setApplyError('Please write a short cover note before submitting.')
+      // Audit task 3 — inline field-level error + focus the textarea so
+      // the user can see why submit didn't work, not just a banner above
+      // the form.
+      setCoverNoteError('Cover note is required.')
+      document.getElementById('cover-note')?.focus()
       return
     }
+    setCoverNoteError(null)
 
     // Audit task 2 — friendly error before the DB trigger raises.
     const cleanedNote = sanitizeUserText(note)
     if (cleanedNote.rejected) {
-      setApplyError(cleanedNote.reason ?? 'Cover note contains characters we don\'t allow.')
+      setCoverNoteError(cleanedNote.reason ?? 'Cover note contains characters we don\'t allow.')
       return
     }
 
@@ -473,19 +479,28 @@ export default function JobDetail() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-ink mb-1.5">
+                  <label htmlFor="cover-note" className="block text-sm font-medium text-ink mb-1.5">
                     Cover note <span className="text-error">*</span>
                   </label>
                   <textarea
+                    id="cover-note"
                     rows={4}
+                    required
                     value={coverNote}
-                    onChange={(e) => setCoverNote(e.target.value)}
+                    onChange={(e) => { setCoverNote(e.target.value); if (coverNoteError) setCoverNoteError(null) }}
                     placeholder="Introduce yourself and explain why you're a great fit…"
+                    aria-invalid={!!coverNoteError}
+                    aria-describedby={coverNoteError ? 'cover-note-error' : undefined}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
                       placeholder:text-ink-placeholder resize-none
                       focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
                       transition-colors"
                   />
+                  {coverNoteError && (
+                    <p id="cover-note-error" role="alert" className="mt-1 text-xs text-error">
+                      {coverNoteError}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">
@@ -531,17 +546,22 @@ export default function JobDetail() {
                   ) : (
                     <>
                       <button
-                        onClick={() => setConfirmApply(true)}
-                        disabled={!coverNote.trim()}
-                        aria-disabled={!coverNote.trim()}
-                        title={!coverNote.trim() ? 'Cover note is required to submit.' : undefined}
+                        type="button"
+                        onClick={() => {
+                          // Audit task 3 — clickable even when empty so the
+                          // inline validation can surface the reason.
+                          if (!coverNote.trim()) {
+                            setCoverNoteError('Cover note is required.')
+                            document.getElementById('cover-note')?.focus()
+                            return
+                          }
+                          setCoverNoteError(null)
+                          setConfirmApply(true)
+                        }}
                         className="btn-gold flex-1"
                       >
                         Submit application
                       </button>
-                      {!coverNote.trim() && (
-                        <p role="status" className="sr-only">Cover note is required to submit.</p>
-                      )}
                       <button
                         onClick={() => { setApplying(false); setApplyError(null) }}
                         className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
