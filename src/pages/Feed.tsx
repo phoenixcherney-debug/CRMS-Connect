@@ -96,6 +96,21 @@ export default function Feed() {
       }
     }
 
+    // ── Students: their own applications + status changes (NAV-006) ──────────
+    // Surface "you applied" / "you were accepted" / "you were declined" so
+    // the student's feed isn't an empty community-only stream.
+    if (isStudent) {
+      const { data: myApps } = await supabase
+        .from('applications')
+        .select('*, jobs(id, title, company)')
+        .eq('applicant_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      for (const app of (myApps as Application[]) ?? []) {
+        feed.push({ kind: 'application', ts: app.created_at, app: app, key: `myapp-${app.id}` })
+      }
+    }
+
     // ── Both roles: recent messages from others ──────────────────────────────
     const { data: convos } = await supabase
       .from('conversations')
@@ -214,14 +229,21 @@ export default function Feed() {
               )
             }
 
-            // ── Application card (employer/mentor view) ──────────────────────
+            // ── Application card (NAV-006 — student sees self-actions too) ─────
             if (item.kind === 'application') {
               const applicant = item.app.profiles as { full_name?: string } | null
               const job = item.app.jobs as { id?: string; title?: string; company?: string } | null
+              const isOwnApp = isStudent && item.app.applicant_id === profile?.id
+              const link = isOwnApp ? '/applications' : `/opportunities/${job?.id}/applicants`
+              const verb =
+                isOwnApp && item.app.status === 'accepted'  ? 'was accepted for'  :
+                isOwnApp && item.app.status === 'rejected'  ? 'was not selected for' :
+                isOwnApp                                    ? 'applied to'        :
+                /* employer view */                           'applied to your opportunity'
               return (
                 <Link
                   key={item.key}
-                  to={`/opportunities/${job?.id}/applicants`}
+                  to={link}
                   className="flex items-start gap-4 p-4 bg-surface rounded-xl border border-border hover:bg-primary-faint transition-colors"
                   style={{ boxShadow: 'var(--shadow-card)' }}
                 >
@@ -230,8 +252,9 @@ export default function Feed() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-ink">
-                      <span className="font-semibold">{applicant?.full_name ?? 'Someone'}</span>
-                      {' '}applied to your opportunity
+                      <span className="font-semibold">{isOwnApp ? 'You' : (applicant?.full_name ?? 'Someone')}</span>
+                      {' '}{isOwnApp ? verb + ' ' : verb}
+                      {isOwnApp && job?.title && <span className="font-medium">{job.title}</span>}
                     </p>
                     <p className="text-sm font-semibold text-ink mt-0.5 truncate">
                       {job?.title} · {job?.company}
