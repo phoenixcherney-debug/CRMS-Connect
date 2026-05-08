@@ -314,12 +314,15 @@ export default function JobDetail() {
                 <Clock size={14} /> {job.expected_weekly_hours}
               </span>
             )}
-            {!job.expected_weekly_hours && (
-              <span className="flex items-center gap-1.5">
-                <Clock size={14} />
-                Posted {format(parseISO(job.created_at), 'MMM d, yyyy')}
-              </span>
-            )}
+            {/* Audit task 12 — always show "Posted …". The previous gate on
+                !expected_weekly_hours hid this line on any posting that had
+                hours set, leading to inconsistent metadata rows. */}
+            <span className="flex items-center gap-1.5">
+              <Clock size={14} />
+              {job.created_at
+                ? `Posted ${format(parseISO(job.created_at), 'MMMM d, yyyy')}`
+                : 'Posted recently'}
+            </span>
             {(job.start_date || job.end_date) && (
               <span className="flex items-center gap-1.5">
                 <Calendar size={14} />
