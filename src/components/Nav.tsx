@@ -61,7 +61,7 @@ export default function Nav() {
     ...(isStudent ? [
       { to: '/my-posts', label: 'My Posts', icon: BookOpen },
     ] : []),
-    { to: '/availability', label: 'My Calendar', icon: CalendarClock },
+    { to: '/availability', label: 'Availability', icon: CalendarClock },
     { to: '/meetings', label: 'Meetings', icon: CalendarCheck },
     { to: '/feed',    label: 'Activity', icon: Rss      },
     { to: '/events',  label: 'Events', icon: Calendar  },

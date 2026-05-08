@@ -38,7 +38,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/postings': 'Student Posts',
   '/my-applications': 'Applications',
   '/my-posts': 'My Posts',
-  '/availability': 'My Calendar',
+  '/availability': 'Availability',
   '/my-bookings': 'My Bookings',
   '/meetings': 'Meetings',
   '/messages': 'Inbox',

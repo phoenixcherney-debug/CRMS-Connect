@@ -759,7 +759,7 @@ export default function Availability() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
         <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>
-          My Calendar
+          Availability
         </h1>
         <button onClick={() => openNew()} className="btn-gold shrink-0">
           <Plus size={15} /> Add Slot
