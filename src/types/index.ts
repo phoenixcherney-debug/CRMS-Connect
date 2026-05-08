@@ -38,6 +38,8 @@ export interface Profile {
   student_seeking?: StudentSeeking | null
   student_seeking_other?: string | null
   grade?: StudentGrade | null
+  /** Audit M9: students opt in before their grade is exposed to other roles. */
+  share_grade_with_employers?: boolean
   created_at: string
   banned_at?: string | null
 }

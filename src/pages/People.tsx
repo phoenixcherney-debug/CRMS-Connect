@@ -41,7 +41,7 @@ export default function People() {
       setFetchError(false)
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, interests, weekly_availability, mentor_type, student_seeking, grade, created_at')
+        .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, interests, weekly_availability, mentor_type, student_seeking, grade, share_grade_with_employers, created_at')
         .eq('role', targetRole)
         .order('full_name', { ascending: true })
       if (error) {
@@ -105,8 +105,12 @@ export default function People() {
     // Availability filter
     if (filterAvailability && p.weekly_availability !== filterAvailability) return false
 
-    // Grade filter (only when employer/mentor views students)
-    if (filterGrade && isEmployerMentor && p.grade !== filterGrade) return false
+    // Grade filter (only when employer/mentor views students). Respect the
+    // M9 opt-out: a student who hasn't opted in to share their grade
+    // should never appear in a grade-filtered list.
+    if (filterGrade && isEmployerMentor) {
+      if (!p.share_grade_with_employers || p.grade !== filterGrade) return false
+    }
 
     // Looking for filter
     if (filterLooking) {
@@ -348,13 +352,14 @@ export default function People() {
                       <span className="text-xs px-1.5 py-0.5 rounded-md bg-primary-faint text-primary font-medium">
                         {ROLE_LABELS[person.role]}
                       </span>
-                      {/* Grade badge for students */}
-                      {person.grade && (
+                      {/* Grade badge for students. Audit M9: only show if
+                          the student opted in to share their grade. */}
+                      {person.grade && person.share_grade_with_employers && (
                         <span className="text-xs px-1.5 py-0.5 rounded-md bg-border text-ink-secondary font-medium">
                           {person.grade}
                         </span>
                       )}
-                      {person.graduation_year && !person.grade && (
+                      {person.graduation_year && (!person.grade || !person.share_grade_with_employers) && (
                         <span className="text-xs text-ink-muted">Class of {person.graduation_year}</span>
                       )}
                       {isEM && person.open_to_mentorship && (

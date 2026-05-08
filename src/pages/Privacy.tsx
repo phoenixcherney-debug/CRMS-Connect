@@ -27,10 +27,17 @@ export default function Privacy() {
       </ul>
 
       <h2 className="text-lg font-semibold text-ink">Who can see what</h2>
+      <p>
+        Different fields have different audiences. The table below lists the
+        fields a student can fill in and who else sees them by default.
+      </p>
       <ul className="list-disc pl-6 space-y-1.5">
-        <li>Your name, role, and bio are visible to other authenticated members.</li>
-        <li>Your email is visible only to you, school administrators, and an employer whose offer you accept.</li>
-        <li>Direct messages are visible only to the two participants and school administrators.</li>
+        <li><strong>Name, role, bio, photo, weekly availability, areas of interest:</strong> visible to other authenticated members.</li>
+        <li><strong>Grade (9th–12th, Gap Year):</strong> visible only to you by default. Toggle "Share grade with employers and mentors" on your <a className="text-primary hover:text-primary-light underline" href="/profile">profile</a> to opt in.</li>
+        <li><strong>Expected graduation year:</strong> visible to other authenticated members.</li>
+        <li><strong>Email address:</strong> visible only to you, school administrators, and an employer whose offer you accept.</li>
+        <li><strong>Resume / portfolio link on an application:</strong> visible only to the employer whose opportunity you applied to and to school administrators.</li>
+        <li><strong>Direct messages:</strong> visible only to the two participants and school administrators.</li>
       </ul>
 
       <h2 className="text-lg font-semibold text-ink">Your choices</h2>

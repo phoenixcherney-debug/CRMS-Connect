@@ -34,6 +34,7 @@ export default function Profile() {
   const [studentSeeking, setStudentSeeking]       = useState<StudentSeeking | ''>('')
   const [studentSeekingOther, setStudentSeekingOther] = useState('')
   const [grade, setGrade]                         = useState('')
+  const [shareGradeWithEmployers, setShareGradeWithEmployers] = useState(false)
 
   // Career history
   const [careerHistory, setCareerHistory] = useState<CareerHistory[]>([])
@@ -80,6 +81,7 @@ export default function Profile() {
       setStudentSeeking(profile.student_seeking ?? '')
       setStudentSeekingOther(profile.student_seeking_other ?? '')
       setGrade(profile.grade ?? '')
+      setShareGradeWithEmployers(profile.share_grade_with_employers ?? false)
     }
   }, [profile?.id])
 
@@ -136,6 +138,7 @@ export default function Profile() {
     setStudentSeeking(profile!.student_seeking ?? '')
     setStudentSeekingOther(profile!.student_seeking_other ?? '')
     setGrade(profile!.grade ?? '')
+    setShareGradeWithEmployers(profile!.share_grade_with_employers ?? false)
     setSaveError(null)
     setEditing(false)
   }
@@ -220,6 +223,7 @@ export default function Profile() {
       updates.student_seeking     = studentSeeking || null
       updates.student_seeking_other = studentSeeking === 'other' ? studentSeekingOther.trim() || null : null
       updates.grade               = grade || null
+      updates.share_grade_with_employers = shareGradeWithEmployers
     }
 
     const { error } = await supabase.from('profiles').update(updates).eq('id', profile!.id)
@@ -548,6 +552,17 @@ export default function Profile() {
                       <option value="">Select grade…</option>
                       {STUDENT_GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
                     </select>
+                    {grade && (
+                      <label className="flex items-center gap-2 mt-2 text-xs text-ink-secondary cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={shareGradeWithEmployers}
+                          onChange={(e) => setShareGradeWithEmployers(e.target.checked)}
+                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30"
+                        />
+                        Share my grade with employers and mentors
+                      </label>
+                    )}
                   </div>
                 )}
 

@@ -34,7 +34,7 @@ export default function StudentPosts() {
       setFetchError(false)
       const { data, error } = await supabase
         .from('student_posts')
-        .select('*, profiles(id, full_name, role, avatar_url, graduation_year, grade, interests, weekly_availability, student_seeking)')
+        .select('*, profiles(id, full_name, role, avatar_url, graduation_year, grade, share_grade_with_employers, interests, weekly_availability, student_seeking)')
         .eq('is_closed', false)
         .order('created_at', { ascending: false })
       if (error) {
@@ -80,7 +80,7 @@ export default function StudentPosts() {
   const hasActiveFilters = filterInterests.length > 0 || filterAvailability || filterGrade || filterSeeking
 
   const filtered = posts.filter((p) => {
-    const student = p.profiles as { full_name?: string; grade?: string | null; interests?: string[]; weekly_availability?: string | null; student_seeking?: string | null } | null
+    const student = p.profiles as { full_name?: string; grade?: string | null; share_grade_with_employers?: boolean; interests?: string[]; weekly_availability?: string | null; student_seeking?: string | null } | null
     if (search && student?.full_name && !student.full_name.toLowerCase().includes(search.toLowerCase())) return false
 
     if (filterInterests.length > 0) {
@@ -89,7 +89,8 @@ export default function StudentPosts() {
     }
 
     if (filterAvailability && p.availability !== filterAvailability) return false
-    if (filterGrade && student?.grade !== filterGrade) return false
+    // Audit M9 — opted-out students shouldn't surface in grade-filtered lists.
+    if (filterGrade && (!student?.share_grade_with_employers || student.grade !== filterGrade)) return false
     if (filterSeeking && p.seeking !== filterSeeking) return false
 
     return true
@@ -223,7 +224,7 @@ export default function StudentPosts() {
       ) : (
         <div className="space-y-4">
           {filtered.map((post) => {
-            const student = post.profiles as { id?: string; full_name?: string; avatar_url?: string | null; grade?: string | null; graduation_year?: number | null } | null
+            const student = post.profiles as { id?: string; full_name?: string; avatar_url?: string | null; grade?: string | null; share_grade_with_employers?: boolean; graduation_year?: number | null } | null
             const studentId = student?.id ?? post.student_id
             const initials = student?.full_name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
             const seekingLabel = STUDENT_SEEKING_LABELS[post.seeking] ?? post.seeking
@@ -243,10 +244,11 @@ export default function StudentPosts() {
                       <Link to={`/people/${studentId}`} className="font-semibold text-ink hover:text-primary transition-colors">
                         {student?.full_name ?? 'Student'}
                       </Link>
-                      {student?.grade && (
+                      {/* Audit M9 — only show grade if the student opted in. */}
+                      {student?.grade && student.share_grade_with_employers && (
                         <span className="text-xs px-1.5 py-0.5 rounded-md bg-border text-ink-secondary font-medium">{student.grade}</span>
                       )}
-                      {student?.graduation_year && !student.grade && (
+                      {student?.graduation_year && (!student.grade || !student.share_grade_with_employers) && (
                         <span className="text-xs text-ink-muted">Class of {student.graduation_year}</span>
                       )}
                       <span className="text-xs px-1.5 py-0.5 rounded-md bg-primary-faint text-primary font-medium">

@@ -23,6 +23,8 @@ interface ApplicantProfile {
   weekly_availability: string | null
   student_seeking?: StudentSeeking | null
   grade?: string | null
+  /** Audit M9 — student opt-in. False/missing means hide grade in EM views. */
+  share_grade_with_employers?: boolean
 }
 
 /** Returns true if student's seeking aligns with the opportunity type */
@@ -86,7 +88,7 @@ export default function Applicants() {
 
       const { data: appData } = await supabase
         .from('applications')
-        .select('*, profiles(id, full_name, graduation_year, bio, avatar_url, role, interests, weekly_availability, student_seeking, grade)')
+        .select('*, profiles(id, full_name, graduation_year, bio, avatar_url, role, interests, weekly_availability, student_seeking, grade, share_grade_with_employers)')
         .eq('job_id', id!)
         .order('created_at', { ascending: true })
 
@@ -287,10 +289,12 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-0.5">
               <p className="font-semibold text-ink">{applicant?.full_name ?? 'Unknown'}</p>
-              {applicant?.grade && (
+              {/* Audit M9 — only render grade if the student has opted in to
+                  share it with employers/mentors. */}
+              {applicant?.grade && applicant.share_grade_with_employers && (
                 <span className="text-xs px-1.5 py-0.5 rounded-md bg-border text-ink-secondary font-medium">{applicant.grade}</span>
               )}
-              {applicant?.graduation_year && !applicant.grade && (
+              {applicant?.graduation_year && (!applicant.grade || !applicant.share_grade_with_employers) && (
                 <span className="text-xs text-ink-muted">Class of {applicant.graduation_year}</span>
               )}
             </div>

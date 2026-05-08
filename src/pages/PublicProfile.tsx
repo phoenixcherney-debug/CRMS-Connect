@@ -51,7 +51,8 @@ export default function PublicProfile() {
           .select(`
             id, full_name, role, graduation_year, bio, avatar_url, company, industry,
             open_to_mentorship, created_at, interests, weekly_availability,
-            grade, mentor_type, mentor_type_other, student_seeking, student_seeking_other
+            grade, share_grade_with_employers, mentor_type, mentor_type_other,
+            student_seeking, student_seeking_other
           `)
           .eq('id', id)
           .single(),
@@ -218,7 +219,10 @@ export default function PublicProfile() {
                   <User size={11} />
                   {ROLE_LABELS[person.role]}
                 </span>
-                {person.grade && (
+                {/* Audit M9 — viewer-side: hide grade unless the student
+                    opted in. A student viewing their own profile sees their
+                    grade either way (handled by the `isSelf` checks below). */}
+                {person.grade && person.share_grade_with_employers && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-border text-ink-secondary text-xs font-medium">
                     {person.grade}
                   </span>
