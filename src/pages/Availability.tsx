@@ -82,13 +82,15 @@ function getOccs(slots: AvailSlot[], from: Date, to: Date): Occ[] {
   return out.sort((a, b) => a.date.localeCompare(b.date) || a.slot.start_time.localeCompare(b.slot.start_time))
 }
 
-/** Generate time select options at 15-minute intervals. */
+/** Generate time select options at 15-minute intervals, constrained to the
+ *  visible week-view grid (HR_S … HR_E) so a user can't pick a time that
+ *  the same view would later hide (audit task 18). */
 const TIME_OPTS = Array.from({ length: 96 }, (_, i) => {
   const h = Math.floor(i / 4), m = (i % 4) * 15
   const v = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
   const ampm = h >= 12 ? 'PM' : 'AM'
-  return { v, l: `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}` }
-})
+  return { v, l: `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`, h }
+}).filter((o) => o.h >= HR_S && o.h <= HR_E)
 
 const INPUT_CLS = 'w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors'
 
@@ -185,10 +187,14 @@ function SlotModal({
             <input type="date" value={date} onChange={e => setDate(e.target.value)} className={INPUT_CLS} />
           </div>
 
-          {/* Start / End time */}
+          {/* Start / End time — pickers are constrained to the visible
+              week-view grid range so a user can't add a slot that the
+              same view would hide (audit task 18). */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-medium text-ink mb-1">Start time</label>
+              <label className="block text-xs font-medium text-ink mb-1">
+                Start time <span className="text-ink-muted font-normal">({HR_S}am–{HR_E - 12}pm)</span>
+              </label>
               <select value={st} onChange={e => setSt(e.target.value)} className={INPUT_CLS}>
                 {TIME_OPTS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
               </select>
