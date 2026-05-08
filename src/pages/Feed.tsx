@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Briefcase, Bell, RefreshCw, MessageSquare, UserCheck, BookOpen } from 'lucide-react'
-import { formatDistanceToNow, parseISO, isPast } from 'date-fns'
+import { format, formatDistanceToNow, parseISO, isPast } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Application, StudentPost } from '../types'
@@ -207,9 +207,7 @@ export default function Feed() {
                     <p className="text-sm font-semibold text-ink mt-0.5 truncate">
                       {item.job.title} · {item.job.company}
                     </p>
-                    <p className="text-xs text-ink-muted mt-1">
-                      {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
-                    </p>
+                    <p className="text-xs text-ink-muted mt-1"><time dateTime={item.ts} title={format(parseISO(item.ts), "MMM d, yyyy at h:mm a")}>{formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}</time></p>
                   </div>
                   <span className="text-xs text-primary font-medium shrink-0 self-center">View →</span>
                 </Link>
@@ -238,9 +236,7 @@ export default function Feed() {
                     <p className="text-sm font-semibold text-ink mt-0.5 truncate">
                       {job?.title} · {job?.company}
                     </p>
-                    <p className="text-xs text-ink-muted mt-1">
-                      {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
-                    </p>
+                    <p className="text-xs text-ink-muted mt-1"><time dateTime={item.ts} title={format(parseISO(item.ts), "MMM d, yyyy at h:mm a")}>{formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}</time></p>
                   </div>
                   <span className="text-xs text-primary font-medium shrink-0 self-center">View →</span>
                 </Link>
@@ -273,9 +269,7 @@ export default function Feed() {
                     <p className="text-sm text-ink-secondary mt-0.5 line-clamp-2 italic">
                       "{item.post.pitch}"
                     </p>
-                    <p className="text-xs text-ink-muted mt-1">
-                      {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
-                    </p>
+                    <p className="text-xs text-ink-muted mt-1"><time dateTime={item.ts} title={format(parseISO(item.ts), "MMM d, yyyy at h:mm a")}>{formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}</time></p>
                   </div>
                   <span className="text-xs text-primary font-medium shrink-0 self-center">View →</span>
                 </Link>
@@ -302,9 +296,7 @@ export default function Feed() {
                     <p className="text-sm text-ink-secondary mt-0.5 truncate italic">
                       "{item.msg.content}"
                     </p>
-                    <p className="text-xs text-ink-muted mt-1">
-                      {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
-                    </p>
+                    <p className="text-xs text-ink-muted mt-1"><time dateTime={item.ts} title={format(parseISO(item.ts), "MMM d, yyyy at h:mm a")}>{formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}</time></p>
                   </div>
                   <span className="text-xs text-primary font-medium shrink-0 self-center">Reply →</span>
                 </Link>
