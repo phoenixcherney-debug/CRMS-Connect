@@ -39,6 +39,13 @@ export default function Conversation() {
 
   const [messages, setMessages] = useState<Message[]>([])
   const [otherProfile, setOtherProfile] = useState<Profile | null>(null)
+  // Audit task 26 — set the tab title to the other person's name so
+  // multi-tab users can tell threads apart.
+  useEffect(() => {
+    if (otherProfile?.full_name) {
+      document.title = `${otherProfile.full_name} · CRMS Connect`
+    }
+  }, [otherProfile?.full_name])
   const [loading, setLoading] = useState(true)
   const [content, setContent] = useState('')
   const [sending, setSending] = useState(false)
