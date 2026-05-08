@@ -83,14 +83,16 @@ function getOccs(slots: AvailSlot[], from: Date, to: Date): Occ[] {
 }
 
 /** Generate time select options at 15-minute intervals, constrained to the
- *  visible week-view grid (HR_S … HR_E) so a user can't pick a time that
- *  the same view would later hide (audit task 18). */
+ *  visible week-view grid (HR_S inclusive, HR_E exclusive) so a user can't
+ *  pick a time that the same view would later hide (audit task 18). The
+ *  help text and the picker now agree exactly — last start is HR_E:00.
+ *  NAV-009 trims 9:15–9:45 PM from the previous version. */
 const TIME_OPTS = Array.from({ length: 96 }, (_, i) => {
   const h = Math.floor(i / 4), m = (i % 4) * 15
   const v = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
   const ampm = h >= 12 ? 'PM' : 'AM'
-  return { v, l: `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`, h }
-}).filter((o) => o.h >= HR_S && o.h <= HR_E)
+  return { v, l: `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`, h, m }
+}).filter((o) => o.h >= HR_S && (o.h < HR_E || (o.h === HR_E && o.m === 0)))
 
 const INPUT_CLS = 'w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors'
 
