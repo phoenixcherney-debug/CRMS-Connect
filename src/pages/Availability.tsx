@@ -119,6 +119,15 @@ function SlotModal({
 
   const endOpts = TIME_OPTS.filter(o => o.v > st)
 
+  // Audit task 19 — Escape closes the Add Slot modal.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   async function save() {
     if (!profile) return
     if (et <= st) { setErr('End time must be after start time.'); return }
@@ -161,7 +170,7 @@ function SlotModal({
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-ink">{slot ? 'Edit Slot' : 'Add Slot'}</h2>
-          <button type="button" onClick={onClose} className="text-ink-muted hover:text-ink transition-colors">
+          <button type="button" onClick={onClose} aria-label="Close" className="text-ink-muted hover:text-ink transition-colors">
             <X size={18} />
           </button>
         </div>
