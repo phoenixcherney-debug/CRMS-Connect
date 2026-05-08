@@ -68,7 +68,10 @@ export default function Applicants() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // NAV-008 — default to whichever tab has rows. We'll re-pin once
+  // applications load below.
   const [activeTab, setActiveTab] = useState<Tab>('inbox')
+  const [tabPinned, setTabPinned] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -168,8 +171,17 @@ export default function Applicants() {
   const inbox = allPending
   const tabApps = activeTab === 'inbox' ? inbox : decided
 
+  // NAV-008 — first time we have data, switch to whichever tab has rows
+  // so the page doesn't open on an empty Inbox while a decision sits
+  // unread on Decided. Only fires once; the user can navigate freely
+  // afterward.
+  if (!tabPinned && !loading && applications.length > 0) {
+    if (inbox.length === 0 && decided.length > 0) setActiveTab('decided')
+    setTabPinned(true)
+  }
+
   const TABS: { key: Tab; label: string; count: number }[] = [
-    { key: 'inbox',   label: 'Inbox',   count: inbox.length   },
+    { key: 'inbox',   label: 'New',     count: inbox.length   },
     { key: 'decided', label: 'Decided', count: decided.length },
   ]
 
