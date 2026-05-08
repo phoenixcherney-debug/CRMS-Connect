@@ -128,7 +128,27 @@ export default function Onboarding() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!canSubmit) return
+    if (!canSubmit) {
+      // Surface a specific, focusable message instead of silently no-opping
+      // when a required field is empty (audit M3 / F-006).
+      if (isStudent && studentSeeking === '') {
+        setSaveError('Pick what you\'re looking for to continue.')
+        document.getElementById('onboarding-student-seeking')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else if (isStudent && interests.length === 0) {
+        setSaveError('Select at least one area of interest to continue.')
+        document.getElementById('onboarding-interests')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else if (isEmployerMentor && !mentorType) {
+        setSaveError('Pick whether you\'re an employer, mentor, or both.')
+        document.getElementById('onboarding-mentor-type')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else if (isEmployerMentor && !industry) {
+        setSaveError('Select your industry / area of expertise.')
+      } else if (isEmployerMentor && !company.trim()) {
+        setSaveError('Enter your company / organization name.')
+      } else {
+        setSaveError('Please fill in the required fields above.')
+      }
+      return
+    }
     setSaving(true)
     setSaveError(null)
 
@@ -231,7 +251,7 @@ export default function Onboarding() {
 
             {/* ── Employer/Mentor sub-role (REQUIRED) ── */}
             {isEmployerMentor && (
-              <div>
+              <div id="onboarding-mentor-type">
                 <label className="block text-sm font-semibold text-ink mb-2">
                   Your role <span className="text-error">*</span>
                 </label>
@@ -276,7 +296,7 @@ export default function Onboarding() {
 
             {/* ── Student seeking (REQUIRED) ── */}
             {isStudent && (
-              <div>
+              <div id="onboarding-student-seeking">
                 <label className="block text-sm font-semibold text-ink mb-2">
                   I am looking for: <span className="text-error">*</span>
                 </label>
@@ -455,7 +475,7 @@ export default function Onboarding() {
 
             {/* ── Student interests (REQUIRED) ── */}
             {isStudent && (
-              <div>
+              <div id="onboarding-interests">
                 <label className="block text-sm font-semibold text-ink mb-2">
                   Areas of interest <span className="text-error">*</span>
                 </label>

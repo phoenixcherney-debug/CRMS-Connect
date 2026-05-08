@@ -525,10 +525,15 @@ export default function JobDetail() {
                       <button
                         onClick={() => setConfirmApply(true)}
                         disabled={!coverNote.trim()}
+                        aria-disabled={!coverNote.trim()}
+                        title={!coverNote.trim() ? 'Cover note is required to submit.' : undefined}
                         className="btn-gold flex-1"
                       >
                         Submit application
                       </button>
+                      {!coverNote.trim() && (
+                        <p role="status" className="sr-only">Cover note is required to submit.</p>
+                      )}
                       <button
                         onClick={() => { setApplying(false); setApplyError(null) }}
                         className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
