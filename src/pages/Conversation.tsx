@@ -124,6 +124,16 @@ export default function Conversation() {
       if (unreadIds.length > 0) {
         await supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
       }
+
+      // NAV-005 — also mark the corresponding DM notifications as read so
+      // they stop showing as unread on /notifications.
+      await supabase
+        .from('notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('user_id', profile!.id)
+        .eq('kind', 'dm_received')
+        .eq('link', `/messages/${id}`)
+        .is('read_at', null)
     }
 
     load()

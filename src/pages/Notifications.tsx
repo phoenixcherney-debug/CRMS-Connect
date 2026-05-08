@@ -48,34 +48,28 @@ export default function Notifications() {
 
     const notifs: NotifItem[] = []
 
-    // ── Unread messages ───────────────────────────────────────────────────────
-    const { data: convs } = await supabase
-      .from('conversations')
-      .select('id')
-      .or(`participant_one.eq.${profile.id},participant_two.eq.${profile.id}`)
+    // ── DM notifications (NAV-005) ────────────────────────────────────────
+    // Sourced from the explicit notifications table so DMs persist on the
+    // page even after the recipient opens the thread (the message's
+    // is_read=true now controls only the inbox-counter, not this list).
+    const { data: dmRows } = await supabase
+      .from('notifications')
+      .select('id, source_id, link, title, subtitle, read_at, created_at')
+      .eq('user_id', profile.id)
+      .eq('kind', 'dm_received')
+      .order('created_at', { ascending: false })
+      .limit(20)
 
-    if (convs && convs.length > 0) {
-      const convIds = convs.map((c) => c.id)
-      const { data: msgs } = await supabase
-        .from('messages')
-        .select('id, created_at, conversation_id, content, sender_id, profiles(full_name)')
-        .in('conversation_id', convIds)
-        .eq('is_read', false)
-        .neq('sender_id', profile.id)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      for (const m of msgs ?? []) {
-        notifs.push({
-          id:       `msg-${m.id}`,
-          type:     'message',
-          ts:       m.created_at,
-          unread:   true,
-          link:     `/messages/${m.conversation_id}`,
-          title:    `New message from ${(m.profiles as any)?.full_name ?? 'someone'}`,
-          subtitle: m.content.length > 100 ? `${m.content.slice(0, 100)}…` : m.content,
-        })
-      }
+    for (const n of (dmRows ?? []) as { id: string; link: string; title: string; subtitle: string | null; read_at: string | null; created_at: string }[]) {
+      notifs.push({
+        id:       `dm-${n.id}`,
+        type:     'message',
+        ts:       n.created_at,
+        unread:   !n.read_at,
+        link:     n.link,
+        title:    n.title,
+        subtitle: n.subtitle ?? '',
+      })
     }
 
     // ── Applications ─────────────────────────────────────────────────────────
