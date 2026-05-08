@@ -288,19 +288,29 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
     <div className="bg-surface rounded-xl border border-border p-5" style={{ boxShadow: 'var(--shadow-card)' }}>
       {/* Top row */}
       <div className="flex flex-col sm:flex-row gap-4">
-        {/* Applicant info */}
+        {/* Applicant info — name + avatar link to /people/:id (audit task 13). */}
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary-muted flex items-center justify-center text-primary text-sm font-bold shrink-0 overflow-hidden">
+          <Link
+            to={applicant?.id ? `/people/${applicant.id}` : '#'}
+            className="w-10 h-10 rounded-full bg-primary-muted flex items-center justify-center text-primary text-sm font-bold shrink-0 overflow-hidden"
+            aria-label={applicant?.full_name ? `View ${applicant.full_name}'s profile` : undefined}
+          >
             {applicant?.avatar_url ? (
               <img src={applicant.avatar_url} alt={applicant.full_name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
             ) : (
               <span>{initials}</span>
             )}
-          </div>
+          </Link>
 
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-0.5">
-              <p className="font-semibold text-ink">{applicant?.full_name ?? 'Unknown'}</p>
+              {applicant?.id ? (
+                <Link to={`/people/${applicant.id}`} className="font-semibold text-ink hover:text-primary transition-colors">
+                  {applicant.full_name ?? 'Unknown'}
+                </Link>
+              ) : (
+                <p className="font-semibold text-ink">Unknown</p>
+              )}
               {/* Audit M9 — only render grade if the student has opted in to
                   share it with employers/mentors. */}
               {applicant?.grade && applicant.share_grade_with_employers && (
