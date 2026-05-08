@@ -356,7 +356,7 @@ export default function MyApplications() {
         confirmLabel={declineId && decliningId === declineId ? 'Declining…' : 'Yes, decline'}
         confirmDisabled={declineId !== null && decliningId === declineId}
         destructive
-        onConfirm={() => declineId && handleDecline(declineId)}
+        onConfirm={() => { if (declineId) void handleDecline(declineId) }}
         onCancel={() => { if (!decliningId) setDeclineId(null) }}
       />
     </div>
