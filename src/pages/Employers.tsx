@@ -230,7 +230,7 @@ function JobRow({ job, closed }: { job: Job; closed?: boolean }) {
         <p className="text-sm font-medium text-ink truncate">{job.title}</p>
         <p className="text-xs text-ink-muted mt-0.5">
           {job.location}
-          {posterName && <span className="ml-2 text-ink-muted/70">· Posted by {posterName}</span>}
+          {posterName && <span className="text-ink-muted/70">{' · '}Posted by {posterName}</span>}
         </p>
       </div>
       <div className="flex items-center gap-2 shrink-0 text-xs text-ink-muted">

@@ -344,7 +344,9 @@ export default function JobDetail() {
               </div>
               <div className="text-sm">
                 <span className="font-medium text-ink">{job.profiles.full_name}</span>
-                <span className="text-ink-muted ml-1.5">· {ROLE_LABELS[job.profiles.role as import('../types').Role] ?? job.profiles.role}</span>
+                {/* Audit task 16 — explicit spaces around the middot so the
+                    byline always reads "Name · Role". */}
+                <span className="text-ink-muted">{' · '}{ROLE_LABELS[job.profiles.role as import('../types').Role] ?? job.profiles.role}</span>
               </div>
               {/* Message button (shown to everyone except the poster themselves) */}
               {!isPoster && (
