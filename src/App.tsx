@@ -56,6 +56,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/meetings': 'Meetings',
   '/messages': 'Inbox',
   '/profile': 'Profile',
+  '/profile/edit': 'Edit profile',
   '/banned': 'Account suspended',
   '/admin': 'Admin Panel',
   '/about': 'About',
@@ -250,6 +251,12 @@ export default function App() {
 
             {/* ── Profile ──────────────────────────────────────────────── */}
             <Route path="/profile" element={
+              <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>
+            } />
+            {/* Audit task 23 — bookmarkable edit URL. Profile reads
+                useLocation().pathname and opens the edit form when it
+                matches /profile/edit. */}
+            <Route path="/profile/edit" element={
               <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>
             } />
             <Route path="/people/:id" element={

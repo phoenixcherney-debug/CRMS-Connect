@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type React from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   CheckCircle2, AlertCircle, User, Pencil, X, Plus, Trash2, Briefcase, Heart, Upload,
 } from 'lucide-react'
@@ -17,7 +18,9 @@ import { usePushNotifications } from '../hooks/usePushNotifications'
 export default function Profile() {
   const { profile, user, refreshProfile, loading } = useAuth()
   const toast = useToast()
-  const [editing, setEditing] = useState(false)
+  const { pathname } = useLocation()
+  // Audit task 23 — /profile/edit opens the form by default.
+  const [editing, setEditing] = useState(pathname === '/profile/edit')
 
   const [fullName, setFullName]                     = useState('')
   const [bio, setBio]                               = useState('')
