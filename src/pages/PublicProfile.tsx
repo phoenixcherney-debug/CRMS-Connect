@@ -296,7 +296,9 @@ export default function PublicProfile() {
               )}
               {isEM && mentorTypeLabel && (
                 <div className="flex gap-2">
-                  <span className="font-medium text-ink w-28 shrink-0">Type</span>
+                  {/* Audit task 21 — "Role" disambiguates from the student
+                      "Looking for: Both" elsewhere on this same page. */}
+                  <span className="font-medium text-ink w-28 shrink-0">Role</span>
                   <span className="text-ink-secondary">{mentorTypeLabel}</span>
                 </div>
               )}

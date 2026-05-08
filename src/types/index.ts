@@ -162,7 +162,9 @@ export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {
 export const MENTOR_TYPE_LABELS: Record<MentorType, string> = {
   employer: 'Employer',
   mentor: 'Mentor',
-  both: 'Both',
+  // Audit task 21 — disambiguated from the student-side "Both" (which means
+  // "looking for both job and mentor"). Same DB value, clearer label.
+  both: 'Employer & Mentor',
   other: 'Other',
 }
 

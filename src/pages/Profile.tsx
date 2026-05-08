@@ -402,7 +402,7 @@ export default function Profile() {
                 )}
                 {isEmployerMentor && mentorTypeLabel && (
                   <div className="flex gap-2">
-                    <span className="font-medium text-ink w-28 shrink-0">Type</span>
+                    <span className="font-medium text-ink w-28 shrink-0">Role</span>
                     <span className="text-ink-secondary">{mentorTypeLabel}</span>
                   </div>
                 )}
