@@ -188,6 +188,15 @@ export default function Profile() {
       return
     }
 
+    // Audit M5 — company is required for employer/mentor profiles. Catches
+    // pre-existing rows whose company was never filled (the field used to
+    // be optional in onboarding) and prevents the user from saving over a
+    // populated company with empty.
+    if (isEmployerMentor && !company.trim()) {
+      setSaveError('Please enter a company or organization name.')
+      return
+    }
+
     setSaving(true)
 
     const updates: Record<string, unknown> = {
@@ -685,10 +694,11 @@ export default function Profile() {
 
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">
-                        Company / Organization <span className="text-ink-muted font-normal">(optional)</span>
+                        Company / Organization <span className="text-error">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
                         placeholder="Where do you work?"

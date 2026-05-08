@@ -86,12 +86,12 @@ export default function Onboarding() {
     !graduationYear ||
     (!isNaN(parsedGradYear) && parsedGradYear >= minGradYear && parsedGradYear <= maxGradYear)
 
-  // Validation: sub-role fields + industry (EM, with company) + interests (student) are required.
-  // Employers must also fill in a company name now — the audit flagged it as
-  // a strange optional field for a platform connecting students with companies.
-  // (Mentor-only and "Both" don't need a company.)
-  const employerNeedsCompany =
-    isEmployerMentor && (mentorType === 'employer' || mentorType === 'both')
+  // Validation: sub-role fields + industry + company + interests (student) are required.
+  // Audit M5 — company is now required for ALL employer/mentor sub-roles
+  // (previously only Employer / Both). Mentor-only accounts often still
+  // represent a workplace, and the platform's value prop depends on
+  // knowing where someone is when they're posting.
+  const employerNeedsCompany = isEmployerMentor
   const canSubmit = isEmployerMentor
     ? mentorType !== ''
         && (mentorType !== 'other' || mentorTypeOther.trim() !== '')
@@ -268,7 +268,7 @@ export default function Onboarding() {
                 )}
                 {employerNeedsCompany && (
                   <p className="mt-2 text-xs text-ink-muted">
-                    Employers must specify a company name.
+                    A company / organization name is required.
                   </p>
                 )}
               </div>
