@@ -848,17 +848,11 @@ export default function Profile() {
                   {avatarUploadError && (
                     <p className="mt-1 text-xs text-error">{avatarUploadError}</p>
                   )}
-
-                  {/* Fallback URL */}
-                  <p className="mt-2 text-xs text-ink-muted">Or paste a URL:</p>
-                  <input
-                    type="url"
-                    value={avatarUrl}
-                    onChange={(e) => { setAvatarUrl(e.target.value); setAvatarBroken(false) }}
-                    placeholder="https://example.com/photo.jpg"
-                    className="mt-1 w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                      placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                  />
+                  {/* Audit task 22 — single canonical input (file upload).
+                      The previous "Or paste a URL" field made it unclear
+                      which one wins when both were filled. Removed; the
+                      file upload writes the resulting public URL into
+                      avatar_url directly. */}
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
