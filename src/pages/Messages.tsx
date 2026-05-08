@@ -331,11 +331,25 @@ export default function Messages() {
               ) : searchQuery.trim() === '' ? (
                 <div className="flex flex-col items-center py-10 text-center px-5">
                   <User size={28} className="text-ink-muted mb-2" />
-                  <p className="text-sm text-ink-muted">Type a name to search for people</p>
+                  <p className="text-sm text-ink-muted">
+                    {profile?.role === 'student'
+                      ? 'Search for an employer or mentor by name.'
+                      : 'Search for a student by name.'}
+                  </p>
+                  <p className="mt-2 text-xs text-ink-muted">
+                    {profile?.role === 'student'
+                      ? 'You can only start conversations with employers and mentors. To talk to other students, comment on their post.'
+                      : 'You can only start conversations with students. To talk to other employers/mentors, post or comment on the activity feed.'}
+                  </p>
                 </div>
               ) : searchResults.length === 0 ? (
-                <div className="py-10 text-center">
-                  <p className="text-sm text-ink-muted">No users found for "{searchQuery}"</p>
+                <div className="py-10 text-center px-5">
+                  <p className="text-sm text-ink-muted">No users found for "{searchQuery}".</p>
+                  <p className="mt-2 text-xs text-ink-muted">
+                    {profile?.role === 'student'
+                      ? 'You can only start conversations with employers and mentors.'
+                      : 'You can only start conversations with students.'}
+                  </p>
                 </div>
               ) : (
                 <div className="divide-y divide-border">
