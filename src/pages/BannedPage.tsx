@@ -49,7 +49,7 @@ export default function BannedPage() {
           Your account has been suspended. If you believe this is a mistake,
           please contact a school administrator.
         </p>
-        <button
+        <button type="button"
           onClick={handleSignOut}
           className="text-sm font-medium hover:underline"
           style={{ color: 'var(--color-primary)' }}

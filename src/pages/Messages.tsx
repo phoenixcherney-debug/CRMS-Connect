@@ -196,7 +196,7 @@ export default function Messages() {
           <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Inbox</h1>
           <p className="text-ink-secondary text-sm mt-0.5">Your direct conversations</p>
         </div>
-        <button
+        <button type="button"
           onClick={() => setComposeOpen(true)}
           className="btn-gold px-4 py-2"
           title="New conversation"
@@ -289,7 +289,7 @@ export default function Messages() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
               <h2 className="text-base font-semibold text-ink">New conversation</h2>
-              <button
+              <button type="button"
                 onClick={closeCompose}
                 className="flex items-center justify-center w-7 h-7 rounded-lg text-ink-muted hover:text-ink hover:bg-primary-faint transition-colors"
               >
@@ -340,7 +340,7 @@ export default function Messages() {
                       .toUpperCase()
                       .slice(0, 2)
                     return (
-                      <button
+                      <button type="button"
                         key={u.id}
                         disabled={!!creatingFor}
                         onClick={() => openOrCreateConversation(u.id)}

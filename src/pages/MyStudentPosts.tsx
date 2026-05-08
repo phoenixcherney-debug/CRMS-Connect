@@ -142,7 +142,7 @@ export default function MyStudentPosts() {
           </p>
         </div>
         {!showForm && (
-          <button
+          <button type="button"
             onClick={() => openForm()}
             className="btn-gold flex items-center gap-1.5 px-4 py-2"
           >
@@ -157,7 +157,7 @@ export default function MyStudentPosts() {
         <div className="bg-surface border border-border rounded-xl p-5 mb-6" style={{ boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center justify-between mb-4">
             <p className="font-semibold text-ink">Create a post</p>
-            <button onClick={() => setShowForm(false)} className="text-ink-muted hover:text-ink">
+            <button type="button" onClick={() => setShowForm(false)} className="text-ink-muted hover:text-ink">
               <X size={16} />
             </button>
           </div>
@@ -170,9 +170,8 @@ export default function MyStudentPosts() {
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {(Object.entries(STUDENT_SEEKING_LABELS) as [StudentSeeking, string][]).map(([val, label]) => (
-                  <button
+                  <button type="button"
                     key={val}
-                    type="button"
                     onClick={() => setSeeking(val === seeking ? '' : val)}
                     className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors
                       ${seeking === val
@@ -238,9 +237,8 @@ export default function MyStudentPosts() {
                 {INTEREST_OPTIONS.map((opt) => {
                   const selected = interests.includes(opt)
                   return (
-                    <button
+                    <button type="button"
                       key={opt}
-                      type="button"
                       onClick={() => setInterests((prev) => selected ? prev.filter((i) => i !== opt) : [...prev, opt])}
                       className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
                         selected ? 'bg-primary text-white border-primary' : 'bg-surface text-ink-secondary border-border hover:border-primary hover:text-ink'
@@ -304,10 +302,10 @@ export default function MyStudentPosts() {
             <h3 className="font-semibold text-ink mb-2">Delete this post?</h3>
             <p className="text-sm text-ink-secondary mb-5">This can't be undone. Employers and mentors will no longer see it.</p>
             <div className="flex gap-3">
-              <button onClick={() => handleDelete(deleteId)} className="flex-1 py-2.5 rounded-lg bg-error text-white text-sm font-medium hover:opacity-90 transition-opacity">
+              <button type="button" onClick={() => handleDelete(deleteId)} className="flex-1 py-2.5 rounded-lg bg-error text-white text-sm font-medium hover:opacity-90 transition-opacity">
                 Delete
               </button>
-              <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors">
+              <button type="button" onClick={() => setDeleteId(null)} className="flex-1 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors">
                 Cancel
               </button>
             </div>
@@ -354,14 +352,14 @@ function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
       <div className="bg-surface rounded-xl border border-primary p-5" style={{ boxShadow: 'var(--shadow-card)' }}>
         <div className="flex items-center justify-between mb-3">
           <p className="font-semibold text-ink text-sm">Edit post</p>
-          <button onClick={() => setEditing(false)} className="text-ink-muted hover:text-ink"><X size={15} /></button>
+          <button type="button" onClick={() => setEditing(false)} className="text-ink-muted hover:text-ink"><X size={15} /></button>
         </div>
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-medium text-ink mb-1.5">Looking for</label>
             <div className="grid grid-cols-2 gap-1.5">
               {(Object.entries(STUDENT_SEEKING_LABELS) as [StudentSeeking, string][]).map(([val, label]) => (
-                <button key={val} type="button" onClick={() => setEditSeeking(val === editSeeking ? '' : val)}
+                <button type="button" key={val} onClick={() => setEditSeeking(val === editSeeking ? '' : val)}
                   className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${editSeeking === val ? 'border-primary text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}
                   style={editSeeking === val ? { backgroundColor: 'var(--color-primary-muted)' } : {}}>{label}</button>
               ))}
@@ -386,7 +384,7 @@ function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
               {INTEREST_OPTIONS.map((opt) => {
                 const sel = editInterests.includes(opt)
                 return (
-                  <button key={opt} type="button"
+                  <button type="button" key={opt}
                     onClick={() => setEditInterests((p) => sel ? p.filter((i) => i !== opt) : [...p, opt])}
                     className={`px-2 py-0.5 rounded-md text-[10px] font-medium border transition-colors ${sel ? 'bg-primary text-white border-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}>
                     {opt}
@@ -396,10 +394,10 @@ function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
             </div>
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={saveEdit} disabled={saving || !editSeeking} className="btn-gold px-4 py-1.5 text-xs">
+            <button type="button" onClick={saveEdit} disabled={saving || !editSeeking} className="btn-gold px-4 py-1.5 text-xs">
               {saving ? 'Saving…' : 'Save'}
             </button>
-            <button onClick={() => setEditing(false)} className="px-3 py-1.5 rounded-lg border border-border text-xs text-ink-secondary hover:bg-primary-faint transition-colors">Cancel</button>
+            <button type="button" onClick={() => setEditing(false)} className="px-3 py-1.5 rounded-lg border border-border text-xs text-ink-secondary hover:bg-primary-faint transition-colors">Cancel</button>
           </div>
         </div>
       </div>
@@ -439,14 +437,14 @@ function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <button
+          <button type="button"
             onClick={() => setEditing(true)}
             title="Edit post"
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
           >
             Edit
           </button>
-          <button
+          <button type="button"
             onClick={() => onToggle(post)}
             title={post.is_closed ? 'Reopen' : 'Close post'}
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
@@ -454,7 +452,7 @@ function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
             {post.is_closed ? <RefreshCw size={12} /> : <Archive size={12} />}
             {post.is_closed ? 'Reopen' : 'Close'}
           </button>
-          <button
+          <button type="button"
             onClick={() => onDelete(post.id)}
             title="Delete post"
             aria-label="Delete post"

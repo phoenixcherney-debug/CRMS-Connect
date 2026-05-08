@@ -223,7 +223,7 @@ function RequestCard({ req, perspective, actioning, onAccept, onDecline, onCance
         <div className="mt-3 flex gap-2">
           {perspective === 'incoming' && (
             <>
-              <button
+              <button type="button"
                 onClick={onAccept}
                 disabled={actioning}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success hover:bg-success/90 text-white text-xs font-medium
@@ -232,7 +232,7 @@ function RequestCard({ req, perspective, actioning, onAccept, onDecline, onCance
                 <CheckCircle2 size={13} />
                 {actioning ? 'Saving…' : 'Accept'}
               </button>
-              <button
+              <button type="button"
                 onClick={onDecline}
                 disabled={actioning}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-status-rejected-border bg-error-bg
@@ -244,7 +244,7 @@ function RequestCard({ req, perspective, actioning, onAccept, onDecline, onCance
             </>
           )}
           {perspective === 'outgoing' && (
-            <button
+            <button type="button"
               onClick={onCancel}
               disabled={actioning}
               className="px-3 py-1.5 rounded-lg border border-border text-xs text-ink-secondary

@@ -126,7 +126,7 @@ export default function Jobs() {
               transition-colors"
           />
           {search && (
-            <button
+            <button type="button"
               onClick={() => setSearch('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink"
               aria-label="Clear search"
@@ -146,7 +146,7 @@ export default function Jobs() {
           {/* Type group */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mr-1">Type</span>
-            <button
+            <button type="button"
               onClick={() => setFilter('')}
               aria-label="All types"
               aria-pressed={filter === ''}
@@ -159,7 +159,7 @@ export default function Jobs() {
               All
             </button>
             {JOB_TYPES.map((t) => (
-              <button
+              <button type="button"
                 key={t}
                 onClick={() => setFilter(filter === t ? '' : t)}
                 aria-pressed={filter === t}
@@ -179,7 +179,7 @@ export default function Jobs() {
           {/* Location group */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mr-1">Location</span>
-            <button
+            <button type="button"
               onClick={() => setLocFilter('')}
               aria-label="All locations"
               aria-pressed={locFilter === ''}
@@ -192,7 +192,7 @@ export default function Jobs() {
               All
             </button>
             {LOCATION_TYPES.map((t) => (
-              <button
+              <button type="button"
                 key={t}
                 onClick={() => setLocFilter(locFilter === t ? '' : t)}
                 aria-pressed={locFilter === t}
@@ -247,7 +247,7 @@ export default function Jobs() {
       ) : fetchError ? (
         <div className="text-center py-20">
           <p className="text-ink-muted">Failed to load opportunities.</p>
-          <button
+          <button type="button"
             onClick={() => { setFetchError(false); setRetryCount((n) => n + 1) }}
             className="mt-3 text-sm text-primary hover:text-primary-light font-medium"
           >

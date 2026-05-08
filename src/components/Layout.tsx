@@ -41,14 +41,14 @@ function PushBanner() {
       <p className="flex-1 text-sm font-bold">
         Enable push notifications for messages and application updates.
       </p>
-      <button
+      <button type="button"
         onClick={handleEnable}
         disabled={subscribing}
         className="shrink-0 px-3 py-1 rounded-md bg-black/10 hover:bg-black/20 text-xs font-semibold transition-colors disabled:opacity-60"
       >
         {subscribing ? 'Enabling…' : 'Enable'}
       </button>
-      <button
+      <button type="button"
         onClick={handleDismiss}
         className="shrink-0 opacity-60 hover:opacity-100 transition-colors"
         aria-label="Dismiss"

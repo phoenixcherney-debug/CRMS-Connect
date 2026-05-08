@@ -158,7 +158,7 @@ export default function Events() {
           </p>
         </div>
         {isPoster && (
-          <button
+          <button type="button"
             onClick={() => setShowForm(true)}
             className="btn-gold"
           >
@@ -182,7 +182,7 @@ export default function Events() {
           >
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-ink">Add an Event</h2>
-              <button
+              <button type="button"
                 onClick={() => { setShowForm(false); setCreateError(null) }}
                 className="w-7 h-7 flex items-center justify-center rounded-lg text-ink-muted hover:text-ink hover:bg-primary-faint transition-colors"
               >
@@ -301,7 +301,7 @@ export default function Events() {
           >
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-semibold text-ink">Edit Event</h2>
-              <button
+              <button type="button"
                 onClick={() => setEditingEvent(null)}
                 className="w-7 h-7 flex items-center justify-center rounded-lg text-ink-muted hover:text-ink hover:bg-primary-faint transition-colors"
               >
@@ -414,13 +414,13 @@ export default function Events() {
             <h3 className="text-base font-semibold text-ink mb-2">Delete this event?</h3>
             <p className="text-sm text-ink-secondary mb-5">This action cannot be undone.</p>
             <div className="flex gap-3">
-              <button
+              <button type="button"
                 onClick={() => handleDelete(confirmDeleteId)}
                 className="flex-1 px-4 py-2.5 rounded-lg bg-error hover:bg-error/90 text-white font-medium text-sm transition-colors"
               >
                 Delete
               </button>
-              <button
+              <button type="button"
                 onClick={() => setConfirmDeleteId(null)}
                 className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors"
               >
@@ -523,14 +523,14 @@ function EventCard({ event, canManage, onEdit, onDelete }: {
               </span>
               {canManage && (
                 <>
-                  <button
+                  <button type="button"
                     onClick={onEdit}
                     className="text-ink-muted hover:text-ink transition-colors"
                     title="Edit event"
                   >
                     <Edit3 size={13} />
                   </button>
-                  <button
+                  <button type="button"
                     onClick={onDelete}
                     className="text-ink-muted hover:text-error transition-colors"
                     title="Delete event"

@@ -372,9 +372,8 @@ export default function PublicProfile() {
                   <div className="space-y-2">
                     <div className="grid gap-2">
                       {slots.map((slot) => (
-                        <button
+                        <button type="button"
                           key={slot.id}
-                          type="button"
                           onClick={() => setSelectedSlot(selectedSlot?.id === slot.id ? null : slot)}
                           className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors
                             ${selectedSlot?.id === slot.id
@@ -440,7 +439,7 @@ export default function PublicProfile() {
 
             {/* Message / Edit buttons */}
             {!isSelf && (
-              <button
+              <button type="button"
                 onClick={openConversation}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
                   border border-border text-sm font-medium text-ink-secondary

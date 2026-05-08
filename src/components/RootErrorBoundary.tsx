@@ -61,13 +61,13 @@ export default class RootErrorBoundary extends Component<Props, State> {
             The error was logged. Try reloading, or head back to your dashboard.
           </p>
           <div className="flex gap-3 justify-center">
-            <button
+            <button type="button"
               onClick={this.handleReload}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-border text-sm font-medium text-ink-secondary hover:bg-primary-faint transition-colors"
             >
               <RefreshCw size={14} /> Reload
             </button>
-            <button
+            <button type="button"
               onClick={this.handleHome}
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-light transition-colors"
             >

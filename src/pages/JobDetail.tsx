@@ -287,7 +287,7 @@ export default function JobDetail() {
                 >
                   <Edit3 size={14} /> Edit
                 </Link>
-                <button
+                <button type="button"
                   onClick={() => setConfirmDelete(true)}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-status-rejected-border
                     text-sm text-error hover:bg-error-bg transition-colors"
@@ -345,7 +345,7 @@ export default function JobDetail() {
               </div>
               {/* Message button (shown to everyone except the poster themselves) */}
               {!isPoster && (
-                <button
+                <button type="button"
                   onClick={startConversation}
                   className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
                     border border-border text-sm text-ink-secondary hover:bg-primary-faint
@@ -405,7 +405,7 @@ export default function JobDetail() {
                       </div>
                     </div>
                     {status === 'pending' && (
-                      <button
+                      <button type="button"
                         onClick={handleWithdraw}
                         disabled={withdrawing}
                         className="text-xs text-error hover:text-error/80 font-medium disabled:opacity-50"
@@ -527,7 +527,7 @@ export default function JobDetail() {
                 <div className="flex gap-3 pt-1">
                   {confirmApply ? (
                     <>
-                      <button
+                      <button type="button"
                         onClick={() => { setConfirmApply(false); handleApply() }}
                         disabled={applyLoading}
                         className="btn-gold flex-1"
@@ -535,7 +535,7 @@ export default function JobDetail() {
                         {applyLoading ? <Spinner size="sm" className="border-white/30 border-t-white" /> : null}
                         {applyLoading ? 'Submitting…' : 'Yes, submit'}
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => setConfirmApply(false)}
                         className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
                           hover:bg-primary-faint transition-colors"
@@ -562,7 +562,7 @@ export default function JobDetail() {
                       >
                         Submit application
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => { setApplying(false); setApplyError(null) }}
                         className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
                           hover:bg-primary-faint transition-colors"
@@ -574,7 +574,7 @@ export default function JobDetail() {
                 </div>
               </div>
             ) : (
-              <button
+              <button type="button"
                 onClick={() => setApplying(true)}
                 className="btn-gold w-full sm:w-auto px-6"
               >
@@ -597,7 +597,7 @@ export default function JobDetail() {
               <p className="mb-3 text-sm text-error">{deleteError}</p>
             )}
             <div className="flex gap-3">
-              <button
+              <button type="button"
                 onClick={handleDelete}
                 disabled={deleteLoading}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
@@ -607,7 +607,7 @@ export default function JobDetail() {
                 {deleteLoading ? <Spinner size="sm" className="border-white/30 border-t-white" /> : null}
                 {deleteLoading ? 'Deleting…' : 'Yes, delete'}
               </button>
-              <button
+              <button type="button"
                 onClick={() => setConfirmDelete(false)}
                 className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
                   hover:bg-primary-faint transition-colors"

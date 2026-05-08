@@ -86,7 +86,7 @@ export default function Employers() {
             transition-colors"
         />
         {search && (
-          <button
+          <button type="button"
             onClick={() => setSearch('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink"
           >
@@ -100,7 +100,7 @@ export default function Employers() {
       ) : fetchError ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted">Failed to load employers.</p>
-          <button
+          <button type="button"
             onClick={() => setRetryCount((n) => n + 1)}
             className="mt-3 text-sm text-primary hover:text-primary-light font-medium"
           >
@@ -167,7 +167,7 @@ export default function Employers() {
                       </div>
                     </div>
 
-                    <button
+                    <button type="button"
                       onClick={() => setExpandedCompany(isExpanded ? null : employer.company)}
                       className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs text-ink-secondary hover:bg-primary-faint transition-colors"
                     >

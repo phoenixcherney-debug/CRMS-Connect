@@ -94,7 +94,7 @@ export default function VerifyEmail() {
                   {resendError}
                 </div>
               )}
-              <button
+              <button type="button"
                 onClick={handleResend}
                 disabled={resending || !email.trim()}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border

@@ -158,7 +158,7 @@ export default function Feed() {
           <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Activity</h1>
           <p className="text-ink-secondary text-sm mt-0.5">{subtitle}</p>
         </div>
-        <button
+        <button type="button"
           onClick={() => load(true)}
           disabled={refreshing}
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-50"

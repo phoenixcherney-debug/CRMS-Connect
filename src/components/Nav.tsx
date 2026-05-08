@@ -162,7 +162,7 @@ export default function Nav() {
             </Link>
 
             <div className="flex items-center gap-1">
-              <button
+              <button type="button"
                 onClick={toggleTheme}
                 className="flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
                 style={{ color: 'rgba(255,255,255,0.7)' }}
@@ -173,7 +173,7 @@ export default function Nav() {
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </button>
 
-              <button
+              <button type="button"
                 onClick={() => setOpen((o) => !o)}
                 className="flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
                 style={{ color: 'rgba(255,255,255,0.7)' }}
@@ -302,7 +302,7 @@ export default function Nav() {
             </div>
 
             <div className="py-2 border-t border-border">
-              <button
+              <button type="button"
                 onClick={handleSignOut}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-ink-secondary hover:bg-error-bg hover:text-error transition-colors"
               >

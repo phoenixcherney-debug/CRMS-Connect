@@ -291,7 +291,7 @@ export default function Profile() {
           </p>
         </div>
         {!editing && (
-          <button
+          <button type="button"
             onClick={() => setEditing(true)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border
               text-ink-secondary hover:text-ink hover:border-border-strong hover:bg-primary-faint
@@ -599,9 +599,8 @@ export default function Profile() {
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         {(Object.entries(STUDENT_SEEKING_LABELS) as [StudentSeeking, string][]).map(([val, label]) => (
-                          <button
+                          <button type="button"
                             key={val}
-                            type="button"
                             onClick={() => setStudentSeeking(val === studentSeeking ? '' : val)}
                             className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors
                               ${studentSeeking === val
@@ -651,9 +650,8 @@ export default function Profile() {
                         {INTEREST_OPTIONS.map((opt) => {
                           const selected = interests.includes(opt)
                           return (
-                            <button
+                            <button type="button"
                               key={opt}
-                              type="button"
                               onClick={() => setInterests((prev) => selected ? prev.filter((i) => i !== opt) : [...prev, opt])}
                               className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
                                 selected
@@ -680,9 +678,8 @@ export default function Profile() {
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         {(Object.entries(MENTOR_TYPE_LABELS) as [MentorType, string][]).map(([val, label]) => (
-                          <button
+                          <button type="button"
                             key={val}
-                            type="button"
                             onClick={() => setMentorType(val === mentorType ? '' : val)}
                             className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors
                               ${mentorType === val
@@ -888,7 +885,7 @@ export default function Profile() {
                       Career History
                     </p>
                     {!showAddForm && (
-                      <button onClick={() => setShowAddForm(true)} className="flex items-center gap-1 text-xs text-primary hover:text-primary-light font-medium">
+                      <button type="button" onClick={() => setShowAddForm(true)} className="flex items-center gap-1 text-xs text-primary hover:text-primary-light font-medium">
                         <Plus size={13} /> Add position
                       </button>
                     )}
@@ -947,7 +944,7 @@ export default function Profile() {
                         I currently work here
                       </label>
                       <div className="flex gap-2">
-                        <button
+                        <button type="button"
                           onClick={handleAddCareerEntry}
                           disabled={addingEntry || !newEntry.title.trim() || !newEntry.company.trim() || !newEntry.start_year}
                           className="btn-gold"
@@ -955,7 +952,7 @@ export default function Profile() {
                           {addingEntry ? <Spinner size="sm" className="border-white/30 border-t-white" /> : <Plus size={14} />}
                           {addingEntry ? 'Adding…' : 'Add'}
                         </button>
-                        <button
+                        <button type="button"
                           onClick={() => { setShowAddForm(false); setNewEntry({ company: '', title: '', start_year: '', end_year: '', is_current: false }) }}
                           className="px-4 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors"
                         >
@@ -975,7 +972,7 @@ export default function Profile() {
                             <p className="font-medium text-ink">{entry.title}</p>
                             <p className="text-ink-secondary">{entry.company} · {entry.start_year}–{entry.is_current ? 'Present' : entry.end_year ?? ''}</p>
                           </div>
-                          <button
+                          <button type="button"
                             onClick={() => handleDeleteCareerEntry(entry.id)}
                             className="text-ink-muted hover:text-error transition-colors shrink-0 mt-0.5"
                             title="Remove this position"
@@ -1100,14 +1097,14 @@ function DeleteAccountSection() {
               <p className="text-xs text-error mb-3">{errorMsg}</p>
             )}
             <div className="flex gap-3">
-              <button
+              <button type="button"
                 onClick={handleDelete}
                 disabled={!matches || submitting}
                 className="flex-1 px-4 py-2.5 rounded-lg bg-error hover:bg-error/90 text-white font-medium text-sm transition-colors disabled:opacity-50"
               >
                 {submitting ? 'Deleting…' : 'Permanently delete'}
               </button>
-              <button
+              <button type="button"
                 onClick={() => setOpen(false)}
                 disabled={submitting}
                 className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-50"

@@ -111,7 +111,7 @@ export default function MyApplications() {
       ) : fetchError ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted">Failed to load your applications.</p>
-          <button
+          <button type="button"
             onClick={() => load()}
             className="mt-3 text-sm text-primary hover:text-primary-light font-medium"
           >
@@ -199,7 +199,7 @@ export default function MyApplications() {
                       )
                     })()}
                     {app.status === 'pending' && (
-                      <button
+                      <button type="button"
                         onClick={() => handleWithdraw(app.id)}
                         disabled={withdrawingId === app.id}
                         className="flex items-center gap-1 text-error hover:text-error/80 font-medium disabled:opacity-50"

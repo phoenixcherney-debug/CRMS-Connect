@@ -211,7 +211,7 @@ export default function AdminUserView() {
             </span>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={openConversation}
           disabled={messagingLoading}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-ink-secondary hover:bg-surface-raised transition-colors"
@@ -220,7 +220,7 @@ export default function AdminUserView() {
           Message
         </button>
         {person.banned_at ? (
-          <button
+          <button type="button"
             onClick={handleUnban}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:bg-surface-raised"
             style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}
@@ -229,7 +229,7 @@ export default function AdminUserView() {
             Unban
           </button>
         ) : (
-          <button
+          <button type="button"
             onClick={handleBan}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
             style={{ borderColor: 'var(--color-error)', color: 'var(--color-error)' }}
@@ -518,14 +518,14 @@ export default function AdminUserView() {
                       {confirmDeleteJob === job.id ? (
                         <div className="flex items-center gap-1">
                           <span className="text-xs text-ink-muted hidden sm:inline">Delete?</span>
-                          <button
+                          <button type="button"
                             onClick={() => handleDeleteJob(job.id)}
                             className="px-2 py-1 rounded text-xs font-semibold"
                             style={{ backgroundColor: 'var(--color-error)', color: '#ffffff' }}
                           >
                             Yes
                           </button>
-                          <button
+                          <button type="button"
                             onClick={() => setConfirmDeleteJob(null)}
                             className="px-2 py-1 rounded text-xs font-semibold text-ink-secondary hover:bg-surface-raised"
                           >
@@ -533,7 +533,7 @@ export default function AdminUserView() {
                           </button>
                         </div>
                       ) : (
-                        <button
+                        <button type="button"
                           onClick={() => setConfirmDeleteJob(job.id)}
                           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-error-bg"
                           style={{ color: 'var(--color-error)' }}

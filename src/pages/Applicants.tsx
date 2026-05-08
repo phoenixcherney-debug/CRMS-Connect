@@ -189,7 +189,7 @@ export default function Applicants() {
       {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b border-border">
         {TABS.map(({ key, label, count }) => (
-          <button
+          <button type="button"
             key={key}
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
@@ -329,7 +329,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                 )
               })()}
               {applicant && profile && (
-                <button
+                <button type="button"
                   onClick={async () => {
                     const { data: existing } = await supabase
                       .from('conversations')
@@ -365,7 +365,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
         <div className="flex flex-col items-end gap-2 shrink-0">
           {activeTab === 'inbox' && confirming === null && (
             <div className="flex items-start gap-2">
-              <button
+              <button type="button"
                 onClick={() => setConfirming('accepted')}
                 disabled={isUpdating}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-accepted-bg text-status-accepted-text border border-status-accepted-border hover:opacity-80 transition-opacity disabled:opacity-40"
@@ -373,7 +373,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                 {isUpdating ? <Spinner size="sm" /> : <CheckCircle2 size={13} />}
                 Accept
               </button>
-              <button
+              <button type="button"
                 onClick={() => setConfirming('rejected')}
                 disabled={isUpdating}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-rejected-bg text-status-rejected-text border border-status-rejected-border hover:opacity-80 transition-opacity disabled:opacity-40"
@@ -386,7 +386,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
 
           {activeTab === 'inbox' && confirming !== null && confirming !== 'reverse' && (
             <div className="flex items-start gap-2">
-              <button
+              <button type="button"
                 onClick={() => { updateStatus(app.id, confirming); setConfirming(null) }}
                 disabled={isUpdating}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-opacity disabled:opacity-40 ${
@@ -398,7 +398,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                 {isUpdating ? <Spinner size="sm" /> : confirming === 'accepted' ? <CheckCircle2 size={13} /> : <X size={13} />}
                 {confirming === 'accepted' ? 'Yes, accept' : 'Yes, decline'}
               </button>
-              <button
+              <button type="button"
                 onClick={() => setConfirming(null)}
                 disabled={isUpdating}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-40"
@@ -418,7 +418,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                   the inbox tab can be undone without contacting support. */}
               {confirming === 'reverse' ? (
                 <div className="flex items-start gap-2">
-                  <button
+                  <button type="button"
                     onClick={() => { updateStatus(app.id, 'pending'); setConfirming(null) }}
                     disabled={isUpdating}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-ink hover:bg-primary-faint transition-colors disabled:opacity-40"
@@ -426,7 +426,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                     {isUpdating ? <Spinner size="sm" /> : null}
                     Yes, reverse
                   </button>
-                  <button
+                  <button type="button"
                     onClick={() => setConfirming(null)}
                     disabled={isUpdating}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-40"
@@ -435,7 +435,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                   </button>
                 </div>
               ) : (
-                <button
+                <button type="button"
                   onClick={() => setConfirming('reverse')}
                   className="text-[11px] text-ink-muted hover:text-ink underline transition-colors"
                 >
@@ -454,7 +454,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
             "{app.cover_note}"
           </p>
           {app.cover_note.length > 200 && (
-            <button
+            <button type="button"
               onClick={() => setExpandedId(isExpanded ? null : app.id)}
               className="mt-1.5 text-xs text-primary hover:text-primary-light font-medium"
             >

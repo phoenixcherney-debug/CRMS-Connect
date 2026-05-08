@@ -176,12 +176,12 @@ export default function People({ directory }: PeopleProps = {}) {
               focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink">
+            <button type="button" onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink">
               <X size={14} />
             </button>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors
             ${showFilters || hasActiveFilters
@@ -198,7 +198,7 @@ export default function People({ directory }: PeopleProps = {}) {
           )}
         </button>
         {hasActiveFilters && (
-          <button
+          <button type="button"
             onClick={clearFilters}
             className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border text-sm text-ink-muted hover:text-ink hover:bg-primary-faint transition-colors"
           >
@@ -216,7 +216,7 @@ export default function People({ directory }: PeopleProps = {}) {
             <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Availability</p>
             <div className="flex flex-wrap gap-1.5">
               {WEEKLY_AVAILABILITY_OPTIONS.map((opt) => (
-                <button
+                <button type="button"
                   key={opt}
                   onClick={() => setFilterAvailability(filterAvailability === opt ? '' : opt)}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors
@@ -237,7 +237,7 @@ export default function People({ directory }: PeopleProps = {}) {
               <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Grade</p>
               <div className="flex flex-wrap gap-1.5">
                 {STUDENT_GRADES.map((g) => (
-                  <button
+                  <button type="button"
                     key={g}
                     onClick={() => setFilterGrade(filterGrade === g ? '' : g)}
                     className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors
@@ -261,7 +261,7 @@ export default function People({ directory }: PeopleProps = {}) {
             <div className="flex flex-wrap gap-1.5">
               {targetRole === 'student'
                 ? Object.entries(STUDENT_SEEKING_LABELS).map(([val, label]) => (
-                    <button
+                    <button type="button"
                       key={val}
                       onClick={() => setFilterLooking(filterLooking === val ? '' : val)}
                       className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors
@@ -274,7 +274,7 @@ export default function People({ directory }: PeopleProps = {}) {
                     </button>
                   ))
                 : Object.entries(MENTOR_TYPE_LABELS).map(([val, label]) => (
-                    <button
+                    <button type="button"
                       key={val}
                       onClick={() => setFilterLooking(filterLooking === val ? '' : val)}
                       className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors
@@ -297,7 +297,7 @@ export default function People({ directory }: PeopleProps = {}) {
             </p>
             <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
               {INTEREST_OPTIONS.map((opt) => (
-                <button
+                <button type="button"
                   key={opt}
                   onClick={() => toggleInterest(opt)}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors
@@ -319,7 +319,7 @@ export default function People({ directory }: PeopleProps = {}) {
       ) : fetchError ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted">Failed to load people.</p>
-          <button onClick={() => setRetryCount((n) => n + 1)} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">
+          <button type="button" onClick={() => setRetryCount((n) => n + 1)} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">
             Try again
           </button>
         </div>
@@ -329,7 +329,7 @@ export default function People({ directory }: PeopleProps = {}) {
             {search ? `No members found for "${search}"` : 'No members match your filters.'}
           </p>
           {(search || hasActiveFilters) && (
-            <button onClick={() => { setSearch(''); clearFilters() }} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">
+            <button type="button" onClick={() => { setSearch(''); clearFilters() }} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">
               Clear filters
             </button>
           )}
@@ -398,7 +398,7 @@ export default function People({ directory }: PeopleProps = {}) {
                 <div className="flex-1" />
 
                 {!isSelf && (
-                  <button
+                  <button type="button"
                     onClick={() => openConversation(person.id)}
                     disabled={creatingFor === person.id}
                     className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg

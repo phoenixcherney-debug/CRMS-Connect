@@ -106,7 +106,7 @@ export default function AdminPanel() {
         <div className="rounded-xl border border-border overflow-hidden">
           <div className="divide-y divide-border">
             {filtered.map(user => (
-              <button
+              <button type="button"
                 key={user.id}
                 onClick={() => navigate(`/admin/users/${user.id}`)}
                 className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-raised"

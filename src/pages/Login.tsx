@@ -141,7 +141,7 @@ export default function Login() {
         <div className="w-full max-w-sm">
           {forgotMode ? (
             <>
-              <button onClick={() => setForgotMode(false)} className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink mb-6 font-semibold">
+              <button type="button" onClick={() => setForgotMode(false)} className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink mb-6 font-semibold">
                 <ArrowLeft size={14} /> Back to sign in
               </button>
               <h1 className="text-2xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>Reset password</h1>
@@ -205,7 +205,7 @@ export default function Login() {
                   {resent ? (
                     <p className="text-xs font-medium" style={{ color: 'var(--color-success)' }}>Verification email resent! Check your inbox.</p>
                   ) : (
-                    <button
+                    <button type="button"
                       onClick={handleResend}
                       disabled={resending}
                       className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-light"

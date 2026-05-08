@@ -203,9 +203,8 @@ export default function Signup() {
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {ROLES.map((r) => (
-                  <button
+                  <button type="button"
                     key={r}
-                    type="button"
                     onClick={() => setRole(r)}
                     className={`px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors text-center
                       ${role === r

@@ -159,7 +159,7 @@ function SlotModal({
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-ink">{slot ? 'Edit Slot' : 'Add Slot'}</h2>
-          <button onClick={onClose} className="text-ink-muted hover:text-ink transition-colors">
+          <button type="button" onClick={onClose} className="text-ink-muted hover:text-ink transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -228,9 +228,8 @@ function SlotModal({
                 <label className="block text-xs font-medium text-ink mb-1.5">Repeats</label>
                 <div className="grid grid-cols-3 gap-1.5">
                   {(['daily', 'weekly', 'monthly'] as const).map(p => (
-                    <button
+                    <button type="button"
                       key={p}
-                      type="button"
                       onClick={() => setPattern(p)}
                       className={`py-1.5 rounded-lg text-xs font-medium border transition-colors capitalize
                         ${pattern === p
@@ -283,7 +282,7 @@ function SlotModal({
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">
-            <button
+            <button type="button"
               onClick={save}
               disabled={saving}
               className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-medium text-sm text-white transition-colors disabled:opacity-50"
@@ -293,7 +292,7 @@ function SlotModal({
               {saving ? 'Saving…' : 'Save'}
             </button>
             {slot && (
-              <button
+              <button type="button"
                 onClick={del}
                 disabled={deleting}
                 className="px-3 py-2.5 rounded-lg border border-error/40 text-error hover:bg-error-bg text-sm transition-colors disabled:opacity-50"
@@ -302,7 +301,7 @@ function SlotModal({
                 {deleting ? '…' : <Trash2 size={15} />}
               </button>
             )}
-            <button
+            <button type="button"
               onClick={onClose}
               className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors"
             >
@@ -761,7 +760,7 @@ export default function Availability() {
         <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>
           Availability
         </h1>
-        <button onClick={() => openNew()} className="btn-gold shrink-0">
+        <button type="button" onClick={() => openNew()} className="btn-gold shrink-0">
           <Plus size={15} /> Add Slot
         </button>
       </div>
@@ -774,7 +773,7 @@ export default function Availability() {
           style={{ boxShadow: 'var(--shadow-card)' }}
         >
           {VIEWS.map(({ key, label, icon: Icon }) => (
-            <button
+            <button type="button"
               key={key}
               onClick={() => setView(key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
@@ -793,20 +792,20 @@ export default function Availability() {
         {view !== 'agenda' && (
           <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
             <div className="flex items-center gap-1">
-              <button
+              <button type="button"
                 onClick={navPrev}
                 className="p-1.5 rounded-lg border border-border hover:bg-primary-faint transition-colors text-ink-secondary"
                 aria-label="Previous"
               >
                 <ChevronLeft size={16} />
               </button>
-              <button
+              <button type="button"
                 onClick={() => setCurrentDate(new Date())}
                 className="px-3 py-1 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors"
               >
                 Today
               </button>
-              <button
+              <button type="button"
                 onClick={navNext}
                 className="p-1.5 rounded-lg border border-border hover:bg-primary-faint transition-colors text-ink-secondary"
                 aria-label="Next"

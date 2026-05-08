@@ -257,9 +257,8 @@ export default function Onboarding() {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {MENTOR_TYPES.map((t) => (
-                    <button
+                    <button type="button"
                       key={t}
-                      type="button"
                       onClick={() => setMentorType(t)}
                       className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors text-center
                         ${mentorType === t
@@ -302,9 +301,8 @@ export default function Onboarding() {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {STUDENT_SEEKINGS.map((s) => (
-                    <button
+                    <button type="button"
                       key={s}
-                      type="button"
                       onClick={() => setStudentSeeking(s)}
                       className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors text-center
                         ${studentSeeking === s
@@ -483,9 +481,8 @@ export default function Onboarding() {
                   {INTEREST_OPTIONS.map((opt) => {
                     const selected = interests.includes(opt)
                     return (
-                      <button
+                      <button type="button"
                         key={opt}
-                        type="button"
                         onClick={() => setInterests((prev) => selected ? prev.filter((i) => i !== opt) : [...prev, opt])}
                         className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors
                           ${selected ? 'bg-primary text-white border-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}

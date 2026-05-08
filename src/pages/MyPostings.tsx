@@ -166,7 +166,7 @@ export default function MyPostings() {
                       <Eye size={14} /> View applicants
                     </Link>
                   )}
-                  <button
+                  <button type="button"
                     onClick={() => toggleActive(job.id, job.is_active)}
                     className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-colors
                       ${job.is_active
@@ -186,7 +186,7 @@ export default function MyPostings() {
                   >
                     <Edit3 size={14} /> Edit
                   </Link>
-                  <button
+                  <button type="button"
                     onClick={() => { setConfirmDeleteId(job.id); setDeleteError(null) }}
                     aria-label="Delete opportunity (permanently remove)"
                     title="Permanently delete this opportunity"
@@ -221,7 +221,7 @@ export default function MyPostings() {
               <p className="mb-3 text-sm text-error">{deleteError}</p>
             )}
             <div className="flex gap-3">
-              <button
+              <button type="button"
                 onClick={() => handleDelete(confirmDeleteId)}
                 disabled={deletingId === confirmDeleteId}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
@@ -234,7 +234,7 @@ export default function MyPostings() {
                 }
                 {deletingId === confirmDeleteId ? 'Deleting…' : 'Yes, delete'}
               </button>
-              <button
+              <button type="button"
                 onClick={() => setConfirmDeleteId(null)}
                 disabled={!!deletingId}
                 className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary

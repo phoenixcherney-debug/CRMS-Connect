@@ -285,7 +285,7 @@ export default function Conversation() {
             {/* Load earlier messages */}
             {hasMore && (
               <div className="flex justify-center py-2">
-                <button
+                <button type="button"
                   onClick={loadMore}
                   disabled={loadingMore}
                   className="inline-flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink-secondary

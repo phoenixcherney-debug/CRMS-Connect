@@ -129,12 +129,12 @@ export default function StudentPosts() {
               placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink">
+            <button type="button" onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink">
               <X size={14} />
             </button>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors
             ${showFilters || hasActiveFilters ? 'border-primary bg-primary-muted text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}
@@ -148,7 +148,7 @@ export default function StudentPosts() {
           )}
         </button>
         {hasActiveFilters && (
-          <button onClick={clearFilters} className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border text-sm text-ink-muted hover:text-ink hover:bg-primary-faint transition-colors">
+          <button type="button" onClick={clearFilters} className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-border text-sm text-ink-muted hover:text-ink hover:bg-primary-faint transition-colors">
             <X size={13} /> Clear filters
           </button>
         )}
@@ -161,7 +161,7 @@ export default function StudentPosts() {
             <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Looking for</p>
             <div className="flex flex-wrap gap-1.5">
               {Object.entries(STUDENT_SEEKING_LABELS).map(([val, label]) => (
-                <button key={val} onClick={() => setFilterSeeking(filterSeeking === val ? '' : val)}
+                <button type="button" key={val} onClick={() => setFilterSeeking(filterSeeking === val ? '' : val)}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${filterSeeking === val ? 'bg-primary-muted border-primary text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}>
                   {label}
                 </button>
@@ -172,7 +172,7 @@ export default function StudentPosts() {
             <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Grade</p>
             <div className="flex flex-wrap gap-1.5">
               {STUDENT_GRADES.map((g) => (
-                <button key={g} onClick={() => setFilterGrade(filterGrade === g ? '' : g)}
+                <button type="button" key={g} onClick={() => setFilterGrade(filterGrade === g ? '' : g)}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${filterGrade === g ? 'bg-primary-muted border-primary text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}>
                   {g}
                 </button>
@@ -183,7 +183,7 @@ export default function StudentPosts() {
             <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Availability</p>
             <div className="flex flex-wrap gap-1.5">
               {WEEKLY_AVAILABILITY_OPTIONS.map((opt) => (
-                <button key={opt} onClick={() => setFilterAvailability(filterAvailability === opt ? '' : opt)}
+                <button type="button" key={opt} onClick={() => setFilterAvailability(filterAvailability === opt ? '' : opt)}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${filterAvailability === opt ? 'bg-primary-muted border-primary text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}>
                   {opt}
                 </button>
@@ -194,7 +194,7 @@ export default function StudentPosts() {
             <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">Interests</p>
             <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
               {INTEREST_OPTIONS.map((opt) => (
-                <button key={opt} onClick={() => toggleInterest(opt)}
+                <button type="button" key={opt} onClick={() => toggleInterest(opt)}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${filterInterests.includes(opt) ? 'bg-primary text-white border-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}>
                   {opt}
                 </button>
@@ -209,7 +209,7 @@ export default function StudentPosts() {
       ) : fetchError ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted">Failed to load student posts.</p>
-          <button onClick={() => setRetryCount((n) => n + 1)} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">Try again</button>
+          <button type="button" onClick={() => setRetryCount((n) => n + 1)} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">Try again</button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
@@ -218,7 +218,7 @@ export default function StudentPosts() {
             {search || hasActiveFilters ? 'No student posts match your filters.' : 'No student posts yet.'}
           </p>
           {(search || hasActiveFilters) && (
-            <button onClick={() => { setSearch(''); clearFilters() }} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">Clear filters</button>
+            <button type="button" onClick={() => { setSearch(''); clearFilters() }} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">Clear filters</button>
           )}
         </div>
       ) : (
@@ -276,7 +276,7 @@ export default function StudentPosts() {
                   </div>
                 </div>
 
-                <button
+                <button type="button"
                   onClick={() => openConversation(studentId)}
                   disabled={creatingFor === studentId}
                   className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
