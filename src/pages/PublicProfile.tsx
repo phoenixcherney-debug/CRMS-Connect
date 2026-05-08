@@ -178,8 +178,6 @@ export default function PublicProfile() {
       : person.role === 'employer_mentor'
         ? '/mentors'
         : '/people'
-  const directoryLabel =
-    person.role === 'student' ? 'Students' : person.role === 'employer_mentor' ? 'Mentors' : 'People'
 
   const initials = person.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
   const isSelf = person.id === myProfile?.id
@@ -194,10 +192,25 @@ export default function PublicProfile() {
 
   return (
     <div className="max-w-xl mx-auto">
-      <Link to={directoryHref} className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6">
+      {/* Audit task 29 — go back via history when there is one (i.e. the
+          user got here from another in-app page) so the link returns to
+          /students, /postings, /explore, etc. depending on the actual
+          referrer. Falls back to the role-specific directory when there's
+          no history (direct link, fresh tab). */}
+      <button
+        type="button"
+        onClick={() => {
+          if (window.history.length > 1) {
+            navigate(-1)
+          } else {
+            navigate(directoryHref)
+          }
+        }}
+        className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6 bg-transparent border-0 p-0 cursor-pointer"
+      >
         <ChevronLeft size={16} />
-        {directoryLabel}
-      </Link>
+        Back
+      </button>
 
       <div className="bg-surface rounded-2xl border border-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
         {/* Banner */}
