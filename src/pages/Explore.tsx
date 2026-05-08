@@ -333,12 +333,17 @@ export default function Explore() {
             <Users size={18} className="text-primary" />
             <h2 className="text-lg font-semibold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Recently Joined</h2>
           </div>
-          <Link
-            to={isEmployerMentor ? '/students' : '/mentors'}
-            className="text-sm text-primary hover:text-primary-light font-medium flex items-center gap-1"
-          >
-            View all <ArrowRight size={14} />
-          </Link>
+          {/* NAV-010 — surface both directories so the panel header can link
+              to /students AND /mentors regardless of viewer role. */}
+          <div className="flex items-center gap-3 text-sm font-medium">
+            <Link to="/students" className="text-primary hover:text-primary-light flex items-center gap-1">
+              All students
+            </Link>
+            <span className="text-ink-muted">·</span>
+            <Link to="/mentors" className="text-primary hover:text-primary-light flex items-center gap-1">
+              All mentors <ArrowRight size={14} />
+            </Link>
+          </div>
         </div>
 
         {loading ? (
