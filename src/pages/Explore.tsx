@@ -97,7 +97,7 @@ export default function Explore() {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    navigate(search.trim() ? `/jobs?q=${encodeURIComponent(search.trim())}` : '/jobs')
+    navigate(search.trim() ? `/opportunities?q=${encodeURIComponent(search.trim())}` : '/opportunities')
   }
 
   const others = recentPeople.filter((p) => p.id !== profile?.id).slice(0, 8)
@@ -199,12 +199,12 @@ export default function Explore() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {isEmployerMentor ? (
           <>
-            <Link to="/jobs/new" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <Link to="/opportunities/new" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <PlusSquare size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
               <p className="text-sm font-semibold text-ink">Post an Opportunity</p>
               <p className="text-xs text-ink-muted mt-0.5">Share opportunities</p>
             </Link>
-            <Link to="/my-postings" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <Link to="/my-opportunities" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <ClipboardList size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
               <p className="text-sm font-semibold text-ink">My Opportunities</p>
               <p className="text-xs text-ink-muted mt-0.5">Manage your opportunities</p>
@@ -222,12 +222,12 @@ export default function Explore() {
           </>
         ) : (
           <>
-            <Link to="/feed" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <Link to="/activity" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <Rss size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
               <p className="text-sm font-semibold text-ink">Activity</p>
               <p className="text-xs text-ink-muted mt-0.5">Latest activity</p>
             </Link>
-            <Link to="/jobs" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <Link to="/opportunities" className="bg-surface rounded-xl border border-border p-4 hover:bg-primary-faint hover:border-primary transition-colors" style={{ boxShadow: 'var(--shadow-card)' }}>
               <Briefcase size={18} className="mb-2" style={{ color: 'var(--color-accent-dark)' }} />
               <p className="text-sm font-semibold text-ink">Opportunities</p>
               <p className="text-xs text-ink-muted mt-0.5">Jobs & internships</p>
@@ -297,7 +297,7 @@ export default function Explore() {
             <h2 className="text-lg font-semibold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Recent Opportunities</h2>
           </div>
           <Link
-            to="/jobs"
+            to="/opportunities"
             className="text-sm text-primary hover:text-primary-light font-medium flex items-center gap-1"
           >
             View all <ArrowRight size={14} />
@@ -312,7 +312,7 @@ export default function Explore() {
             <p className="text-ink-muted text-sm">No active opportunities right now.</p>
             {isEmployerMentor && (
               <Link
-                to="/jobs/new"
+                to="/opportunities/new"
                 className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary font-medium"
               >
                 Post an opportunity <ArrowRight size={13} />

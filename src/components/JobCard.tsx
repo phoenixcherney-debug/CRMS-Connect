@@ -62,7 +62,7 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
         borderLeft: expired || !job.is_active ? undefined : '3px solid var(--color-primary)',
       }}
     >
-      <Link to={`/jobs/${job.id}`} className="flex-1 p-5 flex flex-col gap-3">
+      <Link to={`/opportunities/${job.id}`} className="flex-1 p-5 flex flex-col gap-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">

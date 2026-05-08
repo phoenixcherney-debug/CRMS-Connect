@@ -190,7 +190,7 @@ export default function Feed() {
               return (
                 <Link
                   key={item.key}
-                  to={`/jobs/${item.job.id}`}
+                  to={`/opportunities/${item.job.id}`}
                   className="flex items-start gap-4 p-4 bg-surface rounded-xl border border-border hover:bg-primary-faint transition-colors"
                   style={{ boxShadow: 'var(--shadow-card)' }}
                 >
@@ -221,7 +221,7 @@ export default function Feed() {
               return (
                 <Link
                   key={item.key}
-                  to={`/jobs/${job?.id}/applicants`}
+                  to={`/opportunities/${job?.id}/applicants`}
                   className="flex items-start gap-4 p-4 bg-surface rounded-xl border border-border hover:bg-primary-faint transition-colors"
                   style={{ boxShadow: 'var(--shadow-card)' }}
                 >
@@ -253,7 +253,7 @@ export default function Feed() {
               return (
                 <Link
                   key={item.key}
-                  to={author?.id ? `/people/${author.id}` : '/postings'}
+                  to={author?.id ? `/people/${author.id}` : '/student-posts'}
                   className="flex items-start gap-4 p-4 bg-surface rounded-xl border border-border hover:bg-primary-faint transition-colors"
                   style={{ boxShadow: 'var(--shadow-card)' }}
                 >

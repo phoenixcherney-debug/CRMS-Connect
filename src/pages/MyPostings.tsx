@@ -79,7 +79,7 @@ export default function MyPostings() {
           </p>
         </div>
         <Link
-          to="/jobs/new"
+          to="/opportunities/new"
           className="btn-gold shrink-0"
         >
           <Plus size={16} /> Post an opportunity
@@ -92,7 +92,7 @@ export default function MyPostings() {
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted mb-3">You haven't posted any opportunities yet.</p>
           <Link
-            to="/jobs/new"
+            to="/opportunities/new"
             className="btn-gold"
           >
             <Plus size={15} /> Post your first opportunity
@@ -115,7 +115,7 @@ export default function MyPostings() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Link
-                      to={`/jobs/${job.id}`}
+                      to={`/opportunities/${job.id}`}
                       className="font-semibold text-ink hover:text-primary transition-colors truncate"
                     >
                       {job.title}
@@ -167,7 +167,7 @@ export default function MyPostings() {
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">
                   {applicantCount > 0 && (
                     <Link
-                      to={`/jobs/${job.id}/applicants`}
+                      to={`/opportunities/${job.id}/applicants`}
                       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-primary-muted
                         text-sm text-primary hover:bg-primary-muted transition-colors"
                     >
@@ -188,7 +188,7 @@ export default function MyPostings() {
                     {job.is_active ? 'Close' : 'Reopen'}
                   </button>
                   <Link
-                    to={`/jobs/${job.id}/edit`}
+                    to={`/opportunities/${job.id}/edit`}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border
                       text-sm text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
                   >

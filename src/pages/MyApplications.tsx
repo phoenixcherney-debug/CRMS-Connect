@@ -169,7 +169,7 @@ export default function MyApplications() {
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted mb-3">You haven't applied to any opportunities yet.</p>
           <Link
-            to="/jobs"
+            to="/opportunities"
             className="btn-gold"
           >
             Browse opportunities →
@@ -193,7 +193,7 @@ export default function MyApplications() {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-start gap-2 mb-1">
                     <Link
-                      to={`/jobs/${job.id}`}
+                      to={`/opportunities/${job.id}`}
                       className="font-semibold text-ink hover:text-primary transition-colors"
                     >
                       {job.title}

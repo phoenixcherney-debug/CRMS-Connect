@@ -185,7 +185,7 @@ export default function JobDetail() {
         job.posted_by,
         `New applicant for ${job.title}`,
         `${profile.full_name} just applied.`,
-        `/jobs/${job.id}/applicants`
+        `/opportunities/${job.id}/applicants`
       )
     }
   }
@@ -199,7 +199,7 @@ export default function JobDetail() {
       setDeleteError('Failed to delete. Please try again.')
       return
     }
-    navigate('/my-postings')
+    navigate('/my-opportunities')
   }
 
   if (loading) {
@@ -214,7 +214,7 @@ export default function JobDetail() {
     return (
       <div className="text-center py-20">
         <p className="text-ink-muted">This opportunity could not be found.</p>
-        <Link to="/jobs" className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
+        <Link to="/opportunities" className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
           ← Back to Jobs
         </Link>
       </div>
@@ -228,7 +228,7 @@ export default function JobDetail() {
     <div className="max-w-3xl mx-auto">
       {/* Back */}
       <Link
-        to="/jobs"
+        to="/opportunities"
         className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6"
       >
         <ChevronLeft size={16} />
@@ -281,7 +281,7 @@ export default function JobDetail() {
             {isPoster && (
               <div className="flex gap-2">
                 <Link
-                  to={`/jobs/${job.id}/edit`}
+                  to={`/opportunities/${job.id}/edit`}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border
                     text-sm text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
                 >

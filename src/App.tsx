@@ -1,10 +1,22 @@
 import { lazy, Suspense, useEffect, useLayoutEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import ToastProvider from './components/ToastProvider'
+
+/** NAV-002: rename redirects that need to preserve a dynamic :id param.
+ *  Pass a template like "/opportunities/:id/edit" — :id is filled in from
+ *  useParams. Append `?…` query strings get carried over by the router. */
+function ParamRedirect({ to }: { to: string }) {
+  const params = useParams()
+  let dest = to
+  for (const [key, val] of Object.entries(params)) {
+    if (val) dest = dest.replace(`:${key}`, val)
+  }
+  return <Navigate to={dest} replace />
+}
 
 /** Audit M1: /people now redirects to the role-specific directory. */
 function PeopleRedirect() {
@@ -38,23 +50,23 @@ const ROUTE_TITLES: Record<string, string> = {
   '/verify-email': 'Verify email',
   '/onboarding': 'Welcome',
   '/explore': 'Explore',
-  '/feed': 'Activity',
+  '/activity': 'Activity',
   '/events': 'Events',
   '/people': 'People',
   '/students': 'Students',
   '/mentors': 'Mentors',
   '/notifications': 'Notifications',
   '/employers': 'Employers & Mentors',
-  '/jobs': 'Opportunities',
-  '/jobs/new': 'Post an opportunity',
-  '/my-postings': 'My Opportunities',
-  '/postings': 'Student Posts',
-  '/my-applications': 'Applications',
-  '/my-posts': 'My Posts',
+  '/opportunities': 'Opportunities',
+  '/opportunities/new': 'Post an Opportunity',
+  '/my-opportunities': 'My Opportunities',
+  '/student-posts': 'Student Posts',
+  '/student-posts/mine': 'My Post',
+  '/applications': 'Applications',
   '/availability': 'Availability',
   '/my-bookings': 'My Bookings',
   '/meetings': 'Meetings',
-  '/messages': 'Inbox',
+  '/messages': 'Messages',
   '/profile': 'Profile',
   '/profile/edit': 'Edit profile',
   '/banned': 'Account suspended',
@@ -73,9 +85,9 @@ function DocumentTitle() {
     let title = exact
     if (!title) {
       // Match dynamic routes by their best-fitting prefix.
-      if (pathname.startsWith('/jobs/') && pathname.endsWith('/applicants')) title = 'Applicants'
-      else if (pathname.startsWith('/jobs/') && pathname.endsWith('/edit')) title = 'Edit opportunity'
-      else if (pathname.startsWith('/jobs/')) title = 'Opportunity'
+      if (pathname.startsWith('/opportunities/') && pathname.endsWith('/applicants')) title = 'Applicants'
+      else if (pathname.startsWith('/opportunities/') && pathname.endsWith('/edit')) title = 'Edit opportunity'
+      else if (pathname.startsWith('/opportunities/')) title = 'Opportunity'
       else if (pathname.startsWith('/messages/')) title = 'Conversation'
       else if (pathname.startsWith('/people/')) title = 'Profile'
       else if (pathname.startsWith('/admin/users/')) title = 'User · Admin'
@@ -163,9 +175,11 @@ export default function App() {
             <Route path="/explore" element={
               <ProtectedRoute><Layout><Explore /></Layout></ProtectedRoute>
             } />
-            <Route path="/feed" element={
+            {/* NAV-002 — /activity is canonical; /feed redirects. */}
+            <Route path="/activity" element={
               <ProtectedRoute><Layout><Feed /></Layout></ProtectedRoute>
             } />
+            <Route path="/feed" element={<Navigate to="/activity" replace />} />
             <Route path="/events" element={
               <ProtectedRoute><Layout><Events /></Layout></ProtectedRoute>
             } />
@@ -189,52 +203,62 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* ── Jobs / Opportunities ─────────────────────────────────── */}
-            <Route path="/jobs" element={
+            {/* ── Opportunities (NAV-002 — canonical names; /jobs/* redirect) */}
+            <Route path="/opportunities" element={
               <ProtectedRoute><Layout><Jobs /></Layout></ProtectedRoute>
             } />
-            <Route path="/jobs/:id" element={
+            <Route path="/opportunities/new" element={
+              <ProtectedRoute roles={['employer_mentor']}>
+                <Layout><PostJob /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/opportunities/:id" element={
               <ProtectedRoute><Layout><JobDetail /></Layout></ProtectedRoute>
             } />
-            <Route path="/jobs/new" element={
+            <Route path="/opportunities/:id/edit" element={
               <ProtectedRoute roles={['employer_mentor']}>
                 <Layout><PostJob /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/jobs/:id/edit" element={
-              <ProtectedRoute roles={['employer_mentor']}>
-                <Layout><PostJob /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/jobs/:id/applicants" element={
+            <Route path="/opportunities/:id/applicants" element={
               <ProtectedRoute roles={['employer_mentor']}>
                 <Layout><Applicants /></Layout>
               </ProtectedRoute>
             } />
+            {/* Legacy /jobs/* — preserve params via ParamRedirect. */}
+            <Route path="/jobs"                    element={<Navigate to="/opportunities" replace />} />
+            <Route path="/jobs/new"                element={<Navigate to="/opportunities/new" replace />} />
+            <Route path="/jobs/:id"                element={<ParamRedirect to="/opportunities/:id" />} />
+            <Route path="/jobs/:id/edit"           element={<ParamRedirect to="/opportunities/:id/edit" />} />
+            <Route path="/jobs/:id/applicants"     element={<ParamRedirect to="/opportunities/:id/applicants" />} />
 
             {/* ── Employer/mentor: my postings + student posts feed ────── */}
-            <Route path="/my-postings" element={
+            <Route path="/my-opportunities" element={
               <ProtectedRoute roles={['employer_mentor']}>
                 <Layout><MyPostings /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/postings" element={
+            <Route path="/my-postings" element={<Navigate to="/my-opportunities" replace />} />
+            <Route path="/student-posts" element={
               <ProtectedRoute roles={['employer_mentor']}>
                 <Layout><StudentPosts /></Layout>
               </ProtectedRoute>
             } />
+            <Route path="/postings" element={<Navigate to="/student-posts" replace />} />
 
             {/* ── Student: applications + my posts ─────────────────────── */}
-            <Route path="/my-applications" element={
+            <Route path="/applications" element={
               <ProtectedRoute roles={['student']}>
                 <Layout><MyApplications /></Layout>
               </ProtectedRoute>
             } />
-            <Route path="/my-posts" element={
+            <Route path="/student-posts/mine" element={
               <ProtectedRoute roles={['student']}>
                 <Layout><MyStudentPosts /></Layout>
               </ProtectedRoute>
             } />
+            <Route path="/my-applications" element={<Navigate to="/applications" replace />} />
+            <Route path="/my-posts" element={<Navigate to="/student-posts/mine" replace />} />
 
             {/* ── Availability / Bookings / Meetings ───────────────────── */}
             <Route path="/availability" element={
@@ -301,14 +325,9 @@ export default function App() {
               </ProtectedRoute>
             } />
 
-            {/* ── Permanent redirects (legacy URLs) ────────────────────── */}
-            <Route path="/applications" element={<Navigate to="/my-applications" replace />} />
-            {/* NAV-001 — menu labels say "My Opportunities", "Inbox",
-                "Activity"; expose those URLs and redirect to the actual
-                routes. Keep both for ~90 days, then fold into NAV-002. */}
-            <Route path="/my-opportunities" element={<Navigate to="/my-postings" replace />} />
-            <Route path="/inbox"            element={<Navigate to="/messages" replace />} />
-            <Route path="/activity"         element={<Navigate to="/feed" replace />} />
+            {/* ── Legacy URL aliases (NAV-001 / NAV-002) ───────────────── */}
+            {/* /inbox doesn't have a canonical replacement — /messages is canonical. */}
+            <Route path="/inbox" element={<Navigate to="/messages" replace />} />
 
             {/* ── Defaults ─────────────────────────────────────────────── */}
             <Route path="/"  element={<Navigate to="/explore" replace />} />

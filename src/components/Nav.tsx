@@ -15,12 +15,12 @@ const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-
 
 const BASE_NAV_HEAD = [
   { to: '/explore',       label: 'Explore',       icon: Compass  },
-  { to: '/jobs',          label: 'Jobs',           icon: Briefcase },
+  { to: '/opportunities', label: 'Opportunities', icon: Briefcase },
 ] as const
 
 const BASE_NAV_TAIL = [
   { to: '/notifications', label: 'Notifications',  icon: Bell     },
-  { to: '/messages',      label: 'Inbox',          icon: Mail     },
+  { to: '/messages',      label: 'Messages',       icon: Mail     },
 ] as const
 
 export default function Nav() {
@@ -51,15 +51,15 @@ export default function Nav() {
       : { to: '/people' as const, label: 'People' as const, icon: Users }
 
   const NAV_ITEMS = [
-    ...BASE_NAV_HEAD, // Explore, Jobs
+    ...BASE_NAV_HEAD, // Explore, Opportunities
     ...(isStudent ? [
-      { to: '/my-applications' as const, label: 'Applications' as const, icon: FileText },
+      { to: '/applications' as const, label: 'Applications' as const, icon: FileText },
     ] : []),
     ...(isEmployerMentor ? [
-      { to: '/my-postings' as const, label: 'My Opportunities' as const, icon: ClipboardList },
+      { to: '/my-opportunities' as const, label: 'My Opportunities' as const, icon: ClipboardList },
     ] : []),
     directoryItem,
-    ...BASE_NAV_TAIL, // Notifications, Inbox
+    ...BASE_NAV_TAIL, // Notifications, Messages
   ]
 
   const SECONDARY_ITEMS = [
@@ -70,16 +70,16 @@ export default function Nav() {
       { to: '/admin/reports', label: 'Reports', icon: Shield },
     ] : []),
     ...(isEmployerMentor ? [
-      { to: '/jobs/new',  label: 'Post an Opportunity', icon: PlusSquare  },
-      { to: '/postings',  label: 'Student Posts',       icon: BookOpen    },
+      { to: '/opportunities/new',  label: 'Post an Opportunity', icon: PlusSquare  },
+      { to: '/student-posts',      label: 'Student Posts',       icon: BookOpen    },
     ] : []),
     ...(isStudent ? [
-      { to: '/my-posts', label: 'My Posts', icon: BookOpen },
+      { to: '/student-posts/mine', label: 'My Post', icon: BookOpen },
     ] : []),
     { to: '/availability', label: 'Availability', icon: CalendarClock },
     { to: '/meetings', label: 'Meetings', icon: CalendarCheck },
-    { to: '/feed',    label: 'Activity', icon: Rss      },
-    { to: '/events',  label: 'Events', icon: Calendar  },
+    { to: '/activity', label: 'Activity', icon: Rss      },
+    { to: '/events',   label: 'Events', icon: Calendar  },
     ...(isStudent ? [
       { to: '/employers', label: 'Employers & Mentors', icon: Building2 },
       // Audit M11 — students can also browse other students.
@@ -248,7 +248,7 @@ export default function Nav() {
                 Navigation
               </p>
               {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
-                const isInbox = label === 'Inbox'
+                const isInbox = label === 'Messages'
                 return (
                   <NavLink
                     key={to}

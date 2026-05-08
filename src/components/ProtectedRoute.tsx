@@ -64,7 +64,7 @@ export default function ProtectedRoute({ children, roles, skipOnboarding, skipAp
 
   // Role restriction — admin always passes
   if (!isAdmin && roles && profile && !roles.includes(profile.role)) {
-    return <Navigate to="/jobs" replace />
+    return <Navigate to="/opportunities" replace />
   }
 
   return <>{children}</>

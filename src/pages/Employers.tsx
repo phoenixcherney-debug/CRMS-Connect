@@ -256,7 +256,7 @@ function JobRow({ job, closed }: { job: Job; closed?: boolean }) {
   const posterName = (job.profiles as any)?.full_name as string | undefined
   return (
     <Link
-      to={`/jobs/${job.id}`}
+      to={`/opportunities/${job.id}`}
       className={`flex items-center gap-3 px-5 py-3.5 hover:bg-primary-faint transition-colors ${closed ? 'opacity-60' : ''}`}
     >
       <div className="flex-1 min-w-0">

@@ -135,7 +135,7 @@ export default function Applicants() {
           applicantId,
           `Application update: ${job.title}`,
           STATUS_PUSH[status],
-          `/my-applications`
+          `/applications`
         )
       }
     }
@@ -151,7 +151,7 @@ export default function Applicants() {
       <div className="text-center py-20">
         <h1 className="text-2xl font-bold text-ink mb-2" style={{ fontFamily: 'var(--font-serif)' }}>Page not found</h1>
         <p className="text-ink-muted">This opportunity doesn't exist or you don't have access to view its applicants.</p>
-        <Link to="/my-postings" className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
+        <Link to="/my-opportunities" className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
           ← My Opportunities
         </Link>
       </div>
@@ -176,7 +176,7 @@ export default function Applicants() {
   return (
     <div className="max-w-3xl mx-auto">
       <Link
-        to={`/jobs/${job.id}`}
+        to={`/opportunities/${job.id}`}
         className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6"
       >
         <ChevronLeft size={16} />

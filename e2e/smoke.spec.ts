@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test'
  * has broken in audit passes 1–4.
  *
  *   - employer signup + onboarding              (catches signup-trigger bugs)
- *   - blank required-field submit on /jobs/new  (catches §1 from brief 2)
+ *   - blank required-field submit on /opportunities/new  (catches §1 from brief 2)
  *   - real publish                              (catches NOT NULL / column bugs)
  *   - student signup + onboarding
  *   - apply to the new job                      (catches the applicant_count bug)
@@ -45,11 +45,11 @@ test('employer signup → blank publish blocked → real publish succeeds', asyn
   await page.getByRole('button', { name: /complete setup/i }).click()
   await expect(page).toHaveURL(/\/explore/, { timeout: 15_000 })
 
-  // ── 2. Blank submit on /jobs/new must NOT post ───────────────────────
-  await page.goto('/jobs/new')
+  // ── 2. Blank submit on /opportunities/new must NOT post ───────────────────────
+  await page.goto('/opportunities/new')
   await page.getByRole('button', { name: /publish opportunity/i }).click()
-  // Stayed on the form (no redirect to /my-postings or /jobs/<id>)
-  await expect(page).toHaveURL(/\/jobs\/new/)
+  // Stayed on the form (no redirect to /my-opportunities or /opportunities/<id>)
+  await expect(page).toHaveURL(/\/opportunities\/new/)
   // Visible error banner mentions required fields, not Postgres jargon
   const errorBanner = page.getByText(/required fields/i)
   await expect(errorBanner).toBeVisible()
@@ -61,7 +61,7 @@ test('employer signup → blank publish blocked → real publish succeeds', asyn
   await page.getByPlaceholder(/Describe the role/i)
     .fill('Building things end-to-end. This text exists only for the smoke test.')
   await page.getByRole('button', { name: /publish opportunity/i }).click()
-  await expect(page).toHaveURL(/\/my-postings/, { timeout: 15_000 })
+  await expect(page).toHaveURL(/\/my-opportunities/, { timeout: 15_000 })
   await expect(page.getByText(JOB_TITLE)).toBeVisible()
 })
 
@@ -87,7 +87,7 @@ test('student signup → apply → application visible to the employer', async (
 
   // Open the freshly-posted opportunity. Search by title since other tests
   // may have left other postings in the DB.
-  await student.goto(`/jobs?q=${encodeURIComponent(JOB_TITLE)}`)
+  await student.goto(`/opportunities?q=${encodeURIComponent(JOB_TITLE)}`)
   await student.getByText(JOB_TITLE).first().click()
 
   // Apply (no gate — audit pass 4 §2 dropped it)

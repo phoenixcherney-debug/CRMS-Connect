@@ -200,7 +200,7 @@ export default function PostJob() {
       }
 
       toast(isEdit ? 'Saved.' : 'Opportunity published.')
-      navigate(isEdit ? `/jobs/${id}` : '/my-postings')
+      navigate(isEdit ? `/opportunities/${id}` : '/my-opportunities')
     } catch (err) {
       setError(friendlyError(err, SAVE_FAIL_MSG))
     } finally {
@@ -219,7 +219,7 @@ export default function PostJob() {
   return (
     <div className="max-w-2xl mx-auto">
       <Link
-        to={isEdit ? `/jobs/${id}` : '/my-postings'}
+        to={isEdit ? `/opportunities/${id}` : '/my-opportunities'}
         className="inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink mb-6"
       >
         <ChevronLeft size={16} />
@@ -497,7 +497,7 @@ export default function PostJob() {
               }
             </button>
             <Link
-              to={isEdit ? `/jobs/${id}` : '/my-postings'}
+              to={isEdit ? `/opportunities/${id}` : '/my-opportunities'}
               className="px-5 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
                 hover:bg-primary-faint transition-colors"
             >

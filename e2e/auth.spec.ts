@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test'
  *
  *   §1  Signing out lands on /login and the previous user's name is no
  *       longer in the DOM (no manual reload required).
- *   §2  Visiting /jobs/{X}/applicants as an employer who does NOT own job X
+ *   §2  Visiting /opportunities/{X}/applicants as an employer who does NOT own job X
  *       returns a "Page not found" view — not the inbox chrome.
  *
  * Like e2e/smoke.spec.ts these tests create real users in Supabase. Use a
@@ -35,24 +35,24 @@ async function signUpEmployer(page: import('@playwright/test').Page, who: typeof
   await expect(page).toHaveURL(/\/explore/, { timeout: 15_000 })
 }
 
-test('§2: non-owner cannot view /jobs/:id/applicants', async ({ browser }) => {
+test('§2: non-owner cannot view /opportunities/:id/applicants', async ({ browser }) => {
   // Employer A signs up and posts a job.
   const ctxA = await browser.newContext()
   const a    = await ctxA.newPage()
   await signUpEmployer(a, EMPLOYER_A)
-  await a.goto('/jobs/new')
+  await a.goto('/opportunities/new')
   await a.getByPlaceholder(/Software Engineering Intern/i).fill(JOB_TITLE)
   await a.getByPlaceholder(/Acme Corp/i).fill('AuthSpec Co')
   await a.getByPlaceholder(/Denver, CO or Remote/i).fill('Carbondale, CO')
   await a.getByPlaceholder(/Describe the role/i).fill('Auth spec — applicants 404 test.')
   await a.getByRole('button', { name: /publish opportunity/i }).click()
-  await expect(a).toHaveURL(/\/my-postings/, { timeout: 15_000 })
+  await expect(a).toHaveURL(/\/my-opportunities/, { timeout: 15_000 })
 
   // Pull the new job's id from the link-out on the My Opportunities row.
-  const jobLink = a.locator('a[href^="/jobs/"]').first()
+  const jobLink = a.locator('a[href^="/opportunities/"]').first()
   const href    = await jobLink.getAttribute('href')
-  const match   = href?.match(/\/jobs\/([0-9a-f-]+)/)
-  expect(match, 'expected /jobs/{id} link on My Opportunities').toBeTruthy()
+  const match   = href?.match(/\/opportunities\/([0-9a-f-]+)/)
+  expect(match, 'expected /opportunities/{id} link on My Opportunities').toBeTruthy()
   const jobId = match![1]
   await ctxA.close()
 
@@ -60,7 +60,7 @@ test('§2: non-owner cannot view /jobs/:id/applicants', async ({ browser }) => {
   const ctxB = await browser.newContext()
   const b    = await ctxB.newPage()
   await signUpEmployer(b, EMPLOYER_B)
-  await b.goto(`/jobs/${jobId}/applicants`)
+  await b.goto(`/opportunities/${jobId}/applicants`)
   // Should see the 404 view, NOT the "Applicants" inbox chrome.
   await expect(b.getByRole('heading', { name: /page not found/i })).toBeVisible()
   await expect(b.getByText(/no new applicants/i)).toHaveCount(0)
@@ -73,7 +73,7 @@ test('§1: sign-out redirects to /login and clears the previous user from the DO
   await page.getByLabel(/email/i).fill(EMPLOYER_A.email)
   await page.getByLabel(/password/i).fill(EMPLOYER_A.password)
   await page.getByRole('button', { name: /^sign in$/i }).click()
-  await expect(page).toHaveURL(/\/explore|\/jobs|\/my-postings/, { timeout: 15_000 })
+  await expect(page).toHaveURL(/\/explore|\/jobs|\/my-opportunities/, { timeout: 15_000 })
 
   // Confirm the dashboard greeting includes the user's first name.
   const firstName = EMPLOYER_A.name.split(' ')[0]

@@ -97,7 +97,7 @@ export default function Jobs() {
         </div>
         {isPoster && (
           <Link
-            to="/jobs/new"
+            to="/opportunities/new"
             className="btn-gold shrink-0"
           >
             <Plus size={16} />
