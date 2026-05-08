@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ExternalLink, MapPin, Calendar, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { safeExternalHref } from '../lib/url'
 import { useAuth } from '../contexts/AuthContext'
 import type { Application, ApplicationStatus } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
@@ -183,16 +184,20 @@ export default function MyApplications() {
 
                   <div className="flex flex-col gap-1.5 text-xs text-ink-muted">
                     <span>Applied {format(parseISO(app.created_at), 'MMM d, yyyy')}</span>
-                    {app.resume_link && (
-                      <a
-                        href={app.resume_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-primary hover:text-primary-light"
-                      >
-                        <ExternalLink size={11} /> Resume/Portfolio
-                      </a>
-                    )}
+                    {(() => {
+                      const safeHref = safeExternalHref(app.resume_link)
+                      if (!safeHref) return null
+                      return (
+                        <a
+                          href={safeHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-primary hover:text-primary-light"
+                        >
+                          <ExternalLink size={11} /> Resume/Portfolio
+                        </a>
+                      )
+                    })()}
                     {app.status === 'pending' && (
                       <button
                         onClick={() => handleWithdraw(app.id)}

@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
 import { friendlyError } from '../lib/errors'
+import { validateExternalUrl, safeExternalHref } from '../lib/url'
 import type { Job, Application, ApplicationStatus } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS, ROLE_LABELS } from '../types'
 
@@ -125,6 +126,16 @@ export default function JobDetail() {
       setApplyError('Please write a short cover note before submitting.')
       return
     }
+
+    // Reject anything other than http(s) before it lands in the DB —
+    // `javascript:` / `data:` URLs would otherwise render as a clickable
+    // link in the applicant view (audit HIGH-7).
+    const { safe: safeResumeLink, reason: resumeReason } = validateExternalUrl(resumeLink)
+    if (resumeLink.trim() && !safeResumeLink) {
+      setApplyError(resumeReason ?? 'Please enter a valid http(s) URL for your resume / portfolio.')
+      return
+    }
+
     setApplyError(null)
     setApplyLoading(true)
 
@@ -134,7 +145,7 @@ export default function JobDetail() {
         job_id: job.id,
         applicant_id: profile.id,
         cover_note: note,
-        resume_link: resumeLink.trim() || null,
+        resume_link: safeResumeLink,
         status: 'pending',
       })
       .select()
@@ -423,14 +434,18 @@ export default function JobDetail() {
                             <dd className="text-ink whitespace-pre-wrap">{coverNote.trim()}</dd>
                           </div>
                         )}
-                        {resumeLink.trim() && (
-                          <div className="flex gap-2">
-                            <dt className="text-ink-muted w-36 shrink-0">Resume / Portfolio</dt>
-                            <dd className="text-ink">
-                              <a href={resumeLink.trim()} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-light underline break-all">{resumeLink.trim()}</a>
-                            </dd>
-                          </div>
-                        )}
+                        {(() => {
+                          const safeHref = safeExternalHref(resumeLink)
+                          if (!safeHref) return null
+                          return (
+                            <div className="flex gap-2">
+                              <dt className="text-ink-muted w-36 shrink-0">Resume / Portfolio</dt>
+                              <dd className="text-ink">
+                                <a href={safeHref} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-light underline break-all">{safeHref}</a>
+                              </dd>
+                            </div>
+                          )
+                        })()}
                       </dl>
                     </div>
                   )}

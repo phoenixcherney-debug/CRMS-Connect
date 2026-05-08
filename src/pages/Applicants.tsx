@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ExternalLink, User, Calendar, MessageSquare, CheckCircle2, X, Clock } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { safeExternalHref } from '../lib/url'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
 import type { Application, ApplicationStatus, Job, StudentSeeking, OpportunityType } from '../types'
@@ -306,14 +307,19 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                 <Calendar size={11} />
                 Applied {format(parseISO(app.created_at), 'MMM d, yyyy')}
               </span>
-              {app.resume_link && (
-                <a href={app.resume_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:text-primary-light">
-                  <ExternalLink size={11} /> Resume/Portfolio
-                </a>
-              )}
-              {!app.resume_link && (
-                <span className="flex items-center gap-1 text-ink-muted/60"><User size={11} /> No resume link</span>
-              )}
+              {(() => {
+                const safeHref = safeExternalHref(app.resume_link)
+                if (safeHref) {
+                  return (
+                    <a href={safeHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:text-primary-light">
+                      <ExternalLink size={11} /> Resume/Portfolio
+                    </a>
+                  )
+                }
+                return (
+                  <span className="flex items-center gap-1 text-ink-muted/60"><User size={11} /> No resume link</span>
+                )
+              })()}
               {applicant && profile && (
                 <button
                   onClick={async () => {
