@@ -146,7 +146,7 @@ export default function MyStudentPosts() {
             Let employers and mentors know what you're looking for
           </p>
         </div>
-        {!showForm && (
+        {!showForm && openPosts.length === 0 && (
           <button type="button"
             onClick={() => openForm()}
             className="btn-gold flex items-center gap-1.5 px-4 py-2"
@@ -156,6 +156,15 @@ export default function MyStudentPosts() {
           </button>
         )}
       </div>
+
+      {!showForm && openPosts.length > 0 && (
+        // Audit task 8 — only one open post at a time. Surface the existing
+        // post here with edit / close affordances; "New post" only reappears
+        // once the open post is closed.
+        <div className="mb-4 rounded-lg border border-border bg-primary-faint px-4 py-3 text-sm text-ink-secondary">
+          You have an open post. Close it below if you want to start a new one.
+        </div>
+      )}
 
       {/* Create form */}
       {showForm && (
