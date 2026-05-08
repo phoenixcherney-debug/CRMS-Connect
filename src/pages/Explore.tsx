@@ -12,14 +12,11 @@ import JobCard from '../components/JobCard'
 import Spinner from '../components/Spinner'
 import { isPast, parseISO } from 'date-fns'
 
-/** Audit F-001 / F-007 — render-only normalization for greetings. Trims and
- *  title-cases the first whitespace-delimited token of a stored full name so
- *  "  alice " or "ALICE" render as "Alice's Dashboard" without mutating
- *  the persisted value. */
+/** Audit task 17 — preserve the casing the user typed. We only trim
+ *  whitespace; we don't re-capitalize. Names like "O'Brien", "Mary-Ann",
+ *  or a deliberately lowercase "sam" all render verbatim. */
 function greetingFirstName(fullName: string): string {
-  const first = fullName.trim().split(/\s+/)[0] ?? ''
-  if (!first) return ''
-  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase()
+  return fullName.trim().split(/\s+/)[0] ?? ''
 }
 
 export default function Explore() {
@@ -138,9 +135,12 @@ export default function Explore() {
             {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}
           </p>
           <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
-            {profile?.full_name
-              ? `${greetingFirstName(profile.full_name)}'s Dashboard`
-              : 'CRMS Connect'}
+            {(() => {
+              const first = profile?.full_name ? greetingFirstName(profile.full_name) : ''
+              // Audit task 17 — fall back to "Your Dashboard" rather than
+              // "'s Dashboard" when the user has no name set.
+              return first ? `${first}'s Dashboard` : 'Your Dashboard'
+            })()}
           </h1>
           <p className="text-white/65 mb-7 text-base max-w-lg">
             {isEmployerMentor
