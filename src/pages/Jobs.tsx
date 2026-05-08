@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Search, Plus, SlidersHorizontal, X, ArrowUpDown, Briefcase } from 'lucide-react'
+import { Search, Plus, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react'
 import { isPast, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -51,9 +51,10 @@ export default function Jobs() {
     fetchJobs()
   }, [retryCount])
 
+  // Audit task 1 — /jobs is the community-wide index of active openings.
+  // Both roles see every active opportunity here. /my-postings is the only
+  // place that scopes to `posted_by = current_user`.
   const filtered = jobs.filter((j) => {
-    // Employers/mentors only see their own posts
-    if (isPoster && j.posted_by !== profile?.id) return false
     const matchesSearch =
       search === '' ||
       j.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -77,7 +78,9 @@ export default function Jobs() {
     if (sort === 'oldest')  return a.created_at.localeCompare(b.created_at)
     return b.created_at.localeCompare(a.created_at)
   })
-  // Closed jobs: for employers the filter above already scopes to their own; for students still restrict to poster's own
+  // Closed jobs panel only renders the viewer's own closed postings (still
+  // useful to employers as a "your archive" preview from /jobs); the
+  // canonical archive lives on /my-postings.
   const closedJobs = filtered.filter((j) => !isJobActive(j) && j.posted_by === profile?.id)
 
   return (
@@ -251,14 +254,6 @@ export default function Jobs() {
             Try again
           </button>
         </div>
-      ) : activeJobs.length === 0 && isPoster ? (
-        <EmptyState
-          icon={Briefcase}
-          title="No active opportunities found."
-          description="Your opportunities live on My Opportunities."
-          ctaLabel="Go to My Opportunities →"
-          ctaTo="/my-postings"
-        />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Search}
