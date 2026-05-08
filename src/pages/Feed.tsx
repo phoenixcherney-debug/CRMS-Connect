@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Briefcase, Bell, RefreshCw, MessageSquare, UserCheck } from 'lucide-react'
+import { Briefcase, Bell, RefreshCw, MessageSquare, UserCheck, BookOpen } from 'lucide-react'
 import { formatDistanceToNow, parseISO, isPast } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { Job, Application } from '../types'
-import { JOB_TYPE_LABELS } from '../types'
+import type { Job, Application, StudentPost } from '../types'
+import { JOB_TYPE_LABELS, STUDENT_SEEKING_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 
@@ -20,6 +20,7 @@ type FeedItem =
   | { kind: 'job';         ts: string; job:  Job;         key: string }
   | { kind: 'application'; ts: string; app:  Application; key: string }
   | { kind: 'message';     ts: string; msg:  MsgItem;     key: string }
+  | { kind: 'student_post'; ts: string; post: StudentPost; key: string }
 
 export default function Feed() {
   const { profile } = useAuth()
@@ -53,6 +54,22 @@ export default function Feed() {
         // Don't show employer/mentors their own posts in their feed.
         if (isEmployerMentor && j.posted_by === profile.id) continue
         feed.push({ kind: 'job', ts: j.created_at, job: j, key: `job-${j.id}` })
+      }
+    }
+
+    // ── Employer/Mentors: live student "looking for" posts ─────────────────
+    // Audit M10 — feed previously only showed opportunities + applications +
+    // messages. Surface student-side posts in EM feeds so mentors actually
+    // see who's looking. Open posts only.
+    if (isEmployerMentor) {
+      const { data: posts } = await supabase
+        .from('student_posts')
+        .select('*, profiles(id, full_name, avatar_url, role, grade)')
+        .eq('is_closed', false)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      for (const p of (posts as StudentPost[]) ?? []) {
+        feed.push({ kind: 'student_post', ts: p.created_at, post: p, key: `sp-${p.id}` })
       }
     }
 
@@ -220,6 +237,41 @@ export default function Feed() {
                     </p>
                     <p className="text-sm font-semibold text-ink mt-0.5 truncate">
                       {job?.title} · {job?.company}
+                    </p>
+                    <p className="text-xs text-ink-muted mt-1">
+                      {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
+                    </p>
+                  </div>
+                  <span className="text-xs text-primary font-medium shrink-0 self-center">View →</span>
+                </Link>
+              )
+            }
+
+            // ── Student "looking for" post ───────────────────────────────────
+            if (item.kind === 'student_post') {
+              const author = item.post.profiles as { id?: string; full_name?: string } | null
+              const seekingLabel =
+                item.post.seeking === 'other'
+                  ? (item.post.seeking_other ?? 'something else')
+                  : STUDENT_SEEKING_LABELS[item.post.seeking].toLowerCase()
+              return (
+                <Link
+                  key={item.key}
+                  to={author?.id ? `/people/${author.id}` : '/postings'}
+                  className="flex items-start gap-4 p-4 bg-surface rounded-xl border border-border hover:bg-primary-faint transition-colors"
+                  style={{ boxShadow: 'var(--shadow-card)' }}
+                >
+                  <div className="w-9 h-9 rounded-xl bg-primary-muted flex items-center justify-center text-primary shrink-0">
+                    <BookOpen size={17} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-ink">
+                      <span className="font-semibold">{author?.full_name ?? 'A student'}</span>
+                      {' '}is looking for{' '}
+                      <span className="font-medium">{seekingLabel}</span>
+                    </p>
+                    <p className="text-sm text-ink-secondary mt-0.5 line-clamp-2 italic">
+                      "{item.post.pitch}"
                     </p>
                     <p className="text-xs text-ink-muted mt-1">
                       {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
