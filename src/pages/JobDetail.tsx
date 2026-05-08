@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
 import { friendlyError } from '../lib/errors'
 import { validateExternalUrl, safeExternalHref } from '../lib/url'
+import { sanitizeUserText } from '../lib/sanitize'
 import type { Job, Application, ApplicationStatus } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, OPPORTUNITY_TYPE_LABELS, ROLE_LABELS } from '../types'
 
@@ -127,6 +128,13 @@ export default function JobDetail() {
       return
     }
 
+    // Audit task 2 — friendly error before the DB trigger raises.
+    const cleanedNote = sanitizeUserText(note)
+    if (cleanedNote.rejected) {
+      setApplyError(cleanedNote.reason ?? 'Cover note contains characters we don\'t allow.')
+      return
+    }
+
     // Reject anything other than http(s) before it lands in the DB —
     // `javascript:` / `data:` URLs would otherwise render as a clickable
     // link in the applicant view (audit HIGH-7).
@@ -144,7 +152,7 @@ export default function JobDetail() {
       .insert({
         job_id: job.id,
         applicant_id: profile.id,
-        cover_note: note,
+        cover_note: cleanedNote.clean,
         resume_link: safeResumeLink,
         status: 'pending',
       })

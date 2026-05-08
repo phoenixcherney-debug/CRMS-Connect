@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FileText, Plus, X, RefreshCw, Archive, Trash2 } from 'lucide-react'
+import { sanitizeUserText } from '../lib/sanitize'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { StudentPost, StudentSeeking } from '../types'
@@ -54,15 +55,31 @@ export default function MyStudentPosts() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!profile || !seeking) return
+
+    // Audit task 2 — surface sanitization rejection as an inline error
+    // before round-tripping. The DB trigger is the source of truth; this
+    // is just for nicer UX.
+    const cleaned = sanitizeUserText(pitch.trim())
+    if (cleaned.rejected) {
+      setSubmitting(false)
+      window.alert(cleaned.reason ?? 'That text contains characters we don\'t allow.')
+      return
+    }
+    const seekingOtherClean = seeking === 'other' ? sanitizeUserText(seekingOther.trim()) : null
+    if (seekingOtherClean?.rejected) {
+      window.alert(seekingOtherClean.reason ?? 'That text contains characters we don\'t allow.')
+      return
+    }
+
     setSubmitting(true)
 
     const { data, error } = await supabase
       .from('student_posts')
       .insert({
         student_id:    profile.id,
-        pitch:         pitch.trim(),
+        pitch:         cleaned.clean,
         seeking:       seeking,
-        seeking_other: seeking === 'other' ? seekingOther.trim() || null : null,
+        seeking_other: seeking === 'other' ? (seekingOtherClean?.clean || null) : null,
         interests,
         availability:  availability || null,
         is_closed:     false,
