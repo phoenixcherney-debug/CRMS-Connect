@@ -19,7 +19,7 @@ type SortOption = 'newest' | 'oldest' | 'deadline' | 'company' | 'title'
 
 export default function Jobs() {
   const { profile } = useAuth()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
@@ -127,7 +127,16 @@ export default function Jobs() {
           />
           {search && (
             <button type="button"
-              onClick={() => setSearch('')}
+              onClick={() => {
+                // Audit task 7 — clear local state AND remove ?q from the URL
+                // so the cleared input doesn't leave a stale query in history.
+                setSearch('')
+                if (searchParams.has('q')) {
+                  const next = new URLSearchParams(searchParams)
+                  next.delete('q')
+                  setSearchParams(next, { replace: true })
+                }
+              }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink"
               aria-label="Clear search"
             >
