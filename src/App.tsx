@@ -63,6 +63,9 @@ function DocumentTitle() {
       else if (pathname.startsWith('/people/')) title = 'Profile'
       else if (pathname.startsWith('/admin/users/')) title = 'User · Admin'
     }
+    // Catch-all paths fall through to NotFound — set the title here so the
+    // browser tab matches the page (audit M6).
+    if (!title && pathname !== '/' && !ROUTE_TITLES[pathname]) title = 'Page not found'
     document.title = title ? `${title} · CRMS Connect` : 'CRMS Connect'
   }, [pathname])
   return null
@@ -101,6 +104,7 @@ const AdminUserView     = lazy(() => import('./pages/AdminUserView'))
 const BannedPage        = lazy(() => import('./pages/BannedPage'))
 const About             = lazy(() => import('./pages/About'))
 const Privacy           = lazy(() => import('./pages/Privacy'))
+const NotFound          = lazy(() => import('./pages/NotFound'))
 
 export default function App() {
   return (
@@ -252,7 +256,7 @@ export default function App() {
 
             {/* ── Defaults ─────────────────────────────────────────────── */}
             <Route path="/"  element={<Navigate to="/explore" replace />} />
-            <Route path="*"  element={<Navigate to="/explore" replace />} />
+            <Route path="*"  element={<Layout><NotFound /></Layout>} />
 
           </Routes>
         </Suspense>
