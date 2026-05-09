@@ -13,9 +13,18 @@ export default function Login() {
   const { user, signIn, loading, bootstrapTimedOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  // Audit F-051 — default landing is /explore (the welcome dashboard) not
-  // /jobs. Preserves any explicit redirect target via state.from.
-  const from = (location.state as { from?: Location })?.from?.pathname || '/explore'
+  // P1-10 — read `?next=<path>` first (survives a hard refresh / new tab),
+  // fall back to the router-state form, fall back to /explore. Same-origin
+  // allow-list: the path must start with `/` and not `//` (which would
+  // open the door to protocol-relative URLs).
+  const from = (() => {
+    const search = new URLSearchParams(location.search)
+    const next = search.get('next')
+    if (next && next.startsWith('/') && !next.startsWith('//')) return next
+    const stateFrom = (location.state as { from?: Location })?.from?.pathname
+    if (stateFrom && stateFrom.startsWith('/') && !stateFrom.startsWith('//')) return stateFrom
+    return '/explore'
+  })()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

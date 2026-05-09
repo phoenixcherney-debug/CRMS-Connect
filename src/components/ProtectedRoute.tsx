@@ -26,11 +26,14 @@ export default function ProtectedRoute({ children, roles, skipOnboarding, skipAp
     )
   }
 
-  // Not logged in (or bootstrap timed out) → go to login. The login page has
-  // its own "Reset the app" escape hatch for the rare case where caches need
-  // to be cleared.
+  // Not logged in (or bootstrap timed out) → go to login. P1-10: also
+  // pass the intended destination as a `?next=` URL param so it survives
+  // a hard refresh / new-tab open. The router state is the fallback.
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    const next = location.pathname + location.search + location.hash
+    const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/explore'
+    const qs = safeNext === '/login' ? '' : `?next=${encodeURIComponent(safeNext)}`
+    return <Navigate to={`/login${qs}`} state={{ from: location }} replace />
   }
 
   // Logged in but email not verified
