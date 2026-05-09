@@ -12,6 +12,21 @@
   your inbox" success card on that branch, and the `validate-signup`
   Edge Function enforces server-side @crms.org domain rules and
   deletes the auth user if validation fails.
+- **P3-45 — 'Other' role on signup**: deferred. The `role_type`
+  Postgres enum is referenced by RLS policies on profiles, jobs,
+  applications, conversations, events, etc. Adding a new role
+  value (e.g. 'other') is a multi-migration change that needs
+  product-side decisions about what such users can see / post /
+  message. Holding until those decisions land. The DB enum already
+  carries `alumni` and `parent` values that are not exposed in the
+  signup UI — those would be the natural first targets if we wanted
+  to widen signup without inventing a new role.
+- **P3-54 — light / dark theme audit**: there is no dark theme to
+  audit. The app ships a single light palette via CSS custom
+  properties in `src/index.css` (no `prefers-color-scheme` block,
+  no Tailwind `dark:` variants, no theme toggle). Building one is
+  feature work, not an audit fix; deferring until a real design
+  decision is made.
 
 ## Unreleased — QA pass: black-box backlog (BLOCKER + HIGH + MEDIUM + LOW)
 
