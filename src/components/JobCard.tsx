@@ -3,7 +3,7 @@ import {
   MapPin, Calendar, Building2, Clock, Users,
   GraduationCap, Briefcase, Heart, Star, Wifi, Home, Globe,
 } from 'lucide-react'
-import { formatDistanceToNow, isPast, parseISO, format } from 'date-fns'
+import { isPast, parseISO, format } from 'date-fns'
 import type { Job, JobType, LocationType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS } from '../types'
 
@@ -121,7 +121,9 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
           </span>
           <span className="flex items-center gap-1">
             <Calendar size={12} />
-            {expired ? 'Expired' : deadline ? `Due ${formatDistanceToNow(deadline, { addSuffix: true })}` : 'Rolling'}
+            {/* P2-23 — same format on cards and detail. Absolute date for
+                actual deadlines; the static word "Rolling" when none. */}
+            {expired ? 'Expired' : deadline ? `Due ${format(deadline, 'MMM d, yyyy')}` : 'Rolling'}
           </span>
           {(job.start_date || job.end_date) && (
             <span className="flex items-center gap-1">

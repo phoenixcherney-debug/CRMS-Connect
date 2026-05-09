@@ -305,9 +305,12 @@ export default function JobDetail() {
             </span>
             <span className="flex items-center gap-1.5">
               <Calendar size={14} />
+              {/* P2-23 — match the card format ("Rolling" instead of
+                  "Rolling — no deadline"). Card format already shipped in
+                  the parallel commit. */}
               {deadline
                 ? <>Deadline: {format(deadline, 'MMMM d, yyyy')}{expired && <span className="text-error font-medium ml-1">(Passed)</span>}</>
-                : 'Rolling — no deadline'}
+                : 'Rolling'}
             </span>
             {job.expected_weekly_hours && (
               <span className="flex items-center gap-1.5">
