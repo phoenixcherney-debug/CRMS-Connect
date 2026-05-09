@@ -15,8 +15,9 @@ export default function About() {
       <p className="text-ink-secondary mt-3 leading-relaxed">
         Use of CRMS Connect is restricted to verified members of the CRMS
         community. Student accounts require a <code>@crms.org</code> email.
-        Employer and mentor accounts are added by school staff or self-
-        register; questions about account access go to the registrar.
+        Employer and mentor accounts can self-register but must be approved
+        by school staff before they can post opportunities or message
+        students; questions about account access go to the registrar.
       </p>
       <h2 className="text-lg font-semibold text-ink mt-6 mb-2">Questions?</h2>
       <p className="text-ink-secondary leading-relaxed">
