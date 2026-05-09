@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Calendar, MapPin, Clock, Plus, X, Users, Trash2, Edit3 } from 'lucide-react'
+import { Calendar, MapPin, Clock, Plus, X, Users, Trash2, Edit3, ExternalLink } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
+import { validateExternalUrl, safeExternalHref } from '../lib/url'
 
 interface DBEvent {
   id: string
@@ -13,6 +14,10 @@ interface DBEvent {
   location: string | null
   date: string
   time: string | null
+  end_time: string | null
+  all_day: boolean
+  registration_link: string | null
+  capacity: number | null
   type: 'career_fair' | 'networking' | 'workshop' | 'info_session' | 'other'
   host_id: string
   profiles: { full_name: string } | null
@@ -34,7 +39,25 @@ const EVENT_TYPE_COLORS: Record<DBEvent['type'], string> = {
   other:        'bg-event-other-bg text-event-other-text border-event-other-border',
 }
 
-const BLANK_FORM = { title: '', description: '', location: '', date: '', time: '', type: 'networking' as DBEvent['type'] }
+interface EventForm {
+  title: string
+  description: string
+  location: string
+  date: string
+  time: string
+  end_time: string
+  all_day: boolean
+  registration_link: string
+  capacity: string
+  type: DBEvent['type']
+}
+
+const BLANK_FORM: EventForm = {
+  title: '', description: '', location: '', date: '',
+  time: '', end_time: '', all_day: false,
+  registration_link: '', capacity: '',
+  type: 'networking',
+}
 
 export default function Events() {
   const { profile } = useAuth()
@@ -47,11 +70,11 @@ export default function Events() {
   const [createError, setCreateError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [form, setForm] = useState(BLANK_FORM)
+  const [form, setForm] = useState<EventForm>(BLANK_FORM)
 
   // Edit modal state
   const [editingEvent, setEditingEvent] = useState<DBEvent | null>(null)
-  const [editForm, setEditForm] = useState(BLANK_FORM)
+  const [editForm, setEditForm] = useState<EventForm>(BLANK_FORM)
   const [editSubmitting, setEditSubmitting] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
 
@@ -67,22 +90,55 @@ export default function Events() {
 
   useEffect(() => { load() }, [])
 
+  function buildPayload(f: EventForm): { ok: true; payload: Partial<DBEvent> } | { ok: false; error: string } {
+    if (!f.title.trim()) return { ok: false, error: 'Title is required.' }
+    if (!f.date)         return { ok: false, error: 'Date is required.' }
+    if (!f.all_day && !f.time) {
+      return { ok: false, error: 'Start time is required (or toggle "All day").' }
+    }
+    if (!f.all_day && f.end_time && f.end_time <= f.time) {
+      return { ok: false, error: 'End time must be after start time.' }
+    }
+    let regLink: string | null = null
+    if (f.registration_link.trim()) {
+      const v = validateExternalUrl(f.registration_link.trim())
+      if (!v.safe) return { ok: false, error: 'Registration link must be a valid http(s) URL.' }
+      regLink = v.safe
+    }
+    let capNum: number | null = null
+    if (f.capacity.trim()) {
+      const n = parseInt(f.capacity, 10)
+      if (isNaN(n) || n <= 0) return { ok: false, error: 'Capacity must be a positive number.' }
+      capNum = n
+    }
+    return {
+      ok: true,
+      payload: {
+        title: f.title.trim(),
+        description: f.description.trim() || null,
+        location: f.location.trim() || null,
+        date: f.date,
+        time: f.all_day ? null : f.time,
+        end_time: f.all_day ? null : (f.end_time || null),
+        all_day: f.all_day,
+        registration_link: regLink,
+        capacity: capNum,
+        type: f.type,
+      },
+    }
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!profile) return
-    setSubmitting(true)
     setCreateError(null)
-
+    const built = buildPayload(form)
+    if (!built.ok) { setCreateError(built.error); return }
+    setSubmitting(true)
     const { error } = await supabase.from('events').insert({
-      title: form.title,
-      description: form.description || null,
-      location: form.location || null,
-      date: form.date,
-      time: form.time || null,
-      type: form.type,
+      ...built.payload,
       host_id: profile.id,
     })
-
     setSubmitting(false)
     if (error) {
       setCreateError('Failed to create event. Please try again.')
@@ -101,6 +157,10 @@ export default function Events() {
       location: ev.location ?? '',
       date: ev.date,
       time: ev.time ?? '',
+      end_time: ev.end_time ?? '',
+      all_day: ev.all_day,
+      registration_link: ev.registration_link ?? '',
+      capacity: ev.capacity?.toString() ?? '',
       type: ev.type,
     })
     setEditError(null)
@@ -109,18 +169,11 @@ export default function Events() {
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault()
     if (!editingEvent) return
-    setEditSubmitting(true)
     setEditError(null)
-
-    const { error } = await supabase.from('events').update({
-      title: editForm.title,
-      description: editForm.description || null,
-      location: editForm.location || null,
-      date: editForm.date,
-      time: editForm.time || null,
-      type: editForm.type,
-    }).eq('id', editingEvent.id)
-
+    const built = buildPayload(editForm)
+    if (!built.ok) { setEditError(built.error); return }
+    setEditSubmitting(true)
+    const { error } = await supabase.from('events').update(built.payload).eq('id', editingEvent.id)
     setEditSubmitting(false)
     if (error) {
       setEditError('Failed to update event. Please try again.')
@@ -175,238 +228,32 @@ export default function Events() {
 
       {/* Create event modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div
-            className="bg-surface rounded-2xl border border-border p-6 max-w-md w-full"
-            style={{ boxShadow: 'var(--shadow-modal)' }}
-          >
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-ink">Add an Event</h2>
-              <button type="button"
-                onClick={() => { setShowForm(false); setCreateError(null) }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-ink-muted hover:text-ink hover:bg-primary-faint transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {createError && (
-              <p className="mb-3 text-sm text-error">{createError}</p>
-            )}
-
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">
-                  Event title <span className="text-error">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                  placeholder="CRMS Alumni Career Fair"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                    placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1.5">Date <span className="text-error">*</span></label>
-                  <input
-                    type="date"
-                    required
-                    min={today}
-                    value={form.date}
-                    onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1.5">Time</label>
-                  <input
-                    type="time"
-                    value={form.time}
-                    onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">Location</label>
-                <input
-                  type="text"
-                  value={form.location}
-                  onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                  placeholder="Carbondale, CO or Virtual"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                    placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">Type</label>
-                <select
-                  value={form.type}
-                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as DBEvent['type'] }))}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                >
-                  {(Object.keys(EVENT_TYPE_LABELS) as DBEvent['type'][]).map((t) => (
-                    <option key={t} value={t}>{EVENT_TYPE_LABELS[t]}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">Description</label>
-                <textarea
-                  rows={3}
-                  maxLength={4000}
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="What's this event about?"
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                    placeholder:text-ink-placeholder resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="submit"
-                  disabled={!form.title || !form.date || submitting}
-                  className="btn-gold flex-1"
-                >
-                  {submitting && <Spinner size="sm" className="border-white/30 border-t-white" />}
-                  {submitting ? 'Adding…' : 'Add Event'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowForm(false); setCreateError(null) }}
-                  className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <EventModal
+          title="Add an Event"
+          form={form}
+          setForm={setForm}
+          today={today}
+          submitting={submitting}
+          error={createError}
+          onSubmit={handleCreate}
+          onClose={() => { setShowForm(false); setCreateError(null) }}
+          submitLabel={submitting ? 'Adding…' : 'Add Event'}
+        />
       )}
 
       {/* Edit event modal */}
       {editingEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div
-            className="bg-surface rounded-2xl border border-border p-6 max-w-md w-full"
-            style={{ boxShadow: 'var(--shadow-modal)' }}
-          >
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-semibold text-ink">Edit Event</h2>
-              <button type="button"
-                onClick={() => setEditingEvent(null)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-ink-muted hover:text-ink hover:bg-primary-faint transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {editError && (
-              <p className="mb-3 text-sm text-error">{editError}</p>
-            )}
-
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">
-                  Event title <span className="text-error">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.title}
-                  onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                    focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1.5">Date <span className="text-error">*</span></label>
-                  <input
-                    type="date"
-                    required
-                    value={editForm.date}
-                    onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1.5">Time</label>
-                  <input
-                    type="time"
-                    value={editForm.time}
-                    onChange={(e) => setEditForm((f) => ({ ...f, time: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">Location</label>
-                <input
-                  type="text"
-                  value={editForm.location}
-                  onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                    focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">Type</label>
-                <select
-                  value={editForm.type}
-                  onChange={(e) => setEditForm((f) => ({ ...f, type: e.target.value as DBEvent['type'] }))}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                >
-                  {(Object.keys(EVENT_TYPE_LABELS) as DBEvent['type'][]).map((t) => (
-                    <option key={t} value={t}>{EVENT_TYPE_LABELS[t]}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1.5">Description</label>
-                <textarea
-                  rows={3}
-                  maxLength={4000}
-                  value={editForm.description}
-                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                    placeholder:text-ink-placeholder resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="submit"
-                  disabled={!editForm.title || !editForm.date || editSubmitting}
-                  className="btn-gold flex-1"
-                >
-                  {editSubmitting && <Spinner size="sm" className="border-white/30 border-t-white" />}
-                  {editSubmitting ? 'Saving…' : 'Save changes'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingEvent(null)}
-                  className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <EventModal
+          title="Edit Event"
+          form={editForm}
+          setForm={setEditForm}
+          today={today}
+          submitting={editSubmitting}
+          error={editError}
+          onSubmit={handleEdit}
+          onClose={() => setEditingEvent(null)}
+          submitLabel={editSubmitting ? 'Saving…' : 'Save changes'}
+        />
       )}
 
       {/* Delete confirmation */}
@@ -493,6 +340,193 @@ export default function Events() {
   )
 }
 
+function EventModal({
+  title, form, setForm, today, submitting, error, onSubmit, onClose, submitLabel,
+}: {
+  title: string
+  form: EventForm
+  setForm: React.Dispatch<React.SetStateAction<EventForm>>
+  today: string
+  submitting: boolean
+  error: string | null
+  onSubmit: (e: React.FormEvent) => void
+  onClose: () => void
+  submitLabel: string
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+      <div
+        className="bg-surface rounded-2xl border border-border p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+        style={{ boxShadow: 'var(--shadow-modal)' }}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-semibold text-ink">{title}</h2>
+          <button type="button"
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-ink-muted hover:text-ink hover:bg-primary-faint transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {error && (
+          <p className="mb-3 text-sm text-error">{error}</p>
+        )}
+
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">
+              Event title <span className="text-error">*</span>
+            </label>
+            <input
+              type="text"
+              required
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="CRMS Alumni Career Fair"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">Date <span className="text-error">*</span></label>
+            <input
+              type="date"
+              required
+              min={today}
+              value={form.date}
+              onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-ink-secondary cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.all_day}
+              onChange={(e) => setForm((f) => ({
+                ...f,
+                all_day: e.target.checked,
+                time: e.target.checked ? '' : f.time,
+                end_time: e.target.checked ? '' : f.end_time,
+              }))}
+              className="rounded border-border text-primary focus:ring-primary/30"
+            />
+            All day
+          </label>
+
+          {!form.all_day && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1.5">
+                  Start time <span className="text-error">*</span>
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={form.time}
+                  onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-ink mb-1.5">End time</label>
+                <input
+                  type="time"
+                  value={form.end_time}
+                  onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">Location</label>
+            <input
+              type="text"
+              value={form.location}
+              onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+              placeholder="Carbondale, CO or Virtual"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">Type</label>
+            <select
+              value={form.type}
+              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as DBEvent['type'] }))}
+              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            >
+              {(Object.keys(EVENT_TYPE_LABELS) as DBEvent['type'][]).map((t) => (
+                <option key={t} value={t}>{EVENT_TYPE_LABELS[t]}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">Registration link</label>
+              <input
+                type="url"
+                value={form.registration_link}
+                onChange={(e) => setForm((f) => ({ ...f, registration_link: e.target.value }))}
+                placeholder="https://…"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">Capacity</label>
+              <input
+                type="number"
+                min={1}
+                value={form.capacity}
+                onChange={(e) => setForm((f) => ({ ...f, capacity: e.target.value }))}
+                placeholder="Max attendees"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">Description</label>
+            <textarea
+              rows={3}
+              maxLength={4000}
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              placeholder="What's this event about?"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                placeholder:text-ink-placeholder resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="submit"
+              disabled={!form.title || !form.date || submitting}
+              className="btn-gold flex-1"
+            >
+              {submitting && <Spinner size="sm" className="border-white/30 border-t-white" />}
+              {submitLabel}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 function EventCard({ event, canManage, onEdit, onDelete }: {
   event: DBEvent
   canManage: boolean
@@ -501,6 +535,11 @@ function EventCard({ event, canManage, onEdit, onDelete }: {
 }) {
   const dateObj = new Date(event.date + 'T12:00:00')
   const hostName = event.profiles?.full_name ?? 'Unknown'
+  const timeLabel = event.all_day
+    ? 'All day'
+    : event.end_time
+      ? `${event.time}–${event.end_time}`
+      : event.time
 
   return (
     <div
@@ -544,11 +583,14 @@ function EventCard({ event, canManage, onEdit, onDelete }: {
             </div>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-ink-muted">
-            {event.time && (
-              <span className="flex items-center gap-1"><Clock size={11} />{event.time}</span>
+            {timeLabel && (
+              <span className="flex items-center gap-1"><Clock size={11} />{timeLabel}</span>
             )}
             {event.location && (
               <span className="flex items-center gap-1"><MapPin size={11} />{event.location}</span>
+            )}
+            {event.capacity && (
+              <span className="flex items-center gap-1"><Users size={11} />Cap. {event.capacity}</span>
             )}
             <span className="flex items-center gap-1">
               <Users size={11} />
@@ -556,7 +598,17 @@ function EventCard({ event, canManage, onEdit, onDelete }: {
             </span>
           </div>
           {event.description && (
-            <p className="text-sm text-ink-secondary mt-2 leading-relaxed">{event.description}</p>
+            <p className="text-sm text-ink-secondary mt-2 leading-relaxed whitespace-pre-line">{event.description}</p>
+          )}
+          {event.registration_link && safeExternalHref(event.registration_link) && (
+            <a
+              href={safeExternalHref(event.registration_link)!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-primary hover:underline"
+            >
+              Register / RSVP <ExternalLink size={11} />
+            </a>
           )}
         </div>
       </div>
