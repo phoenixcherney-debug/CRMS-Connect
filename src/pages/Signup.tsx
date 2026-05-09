@@ -23,6 +23,8 @@ export default function Signup() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  // P3-39 — confirm-password.
+  const [confirm, setConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [role, setRole] = useState<Role>('student')
   const [emailError, setEmailError] = useState<string | null>(null)
@@ -94,10 +96,19 @@ export default function Signup() {
     )
   }
 
+  // P3-40 — stronger password rule. Length AND at least one of each:
+  // letter (any case), digit, and either a special char or another
+  // letter case. Keeps the bar reasonable without forcing rare symbols.
+  const passwordOk =
+    password.length >= 8 &&
+    /[A-Za-z]/.test(password) &&
+    /[0-9]/.test(password)
+  const confirmOk = password === confirm
   const canSubmit =
     fullName.trim() &&
     email &&
-    password.length >= 8 &&
+    passwordOk &&
+    confirmOk &&
     !emailError &&
     !submitting
 
@@ -280,8 +291,33 @@ export default function Signup() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {password && password.length < 8 && (
-                <p className="mt-1.5 text-xs text-ink-muted">Password must be at least 8 characters.</p>
+              {password && !passwordOk && (
+                <p className="mt-1.5 text-xs text-ink-muted">
+                  Use at least 8 characters and include a letter and a number.
+                </p>
+              )}
+            </div>
+
+            {/* P3-39 — confirm-password. */}
+            <div>
+              <label htmlFor="confirm" className="block text-sm text-ink mb-1.5" style={{ fontWeight: 700 }}>
+                Confirm password
+              </label>
+              <input
+                id="confirm"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Re-enter your password"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                  placeholder:text-ink-placeholder
+                  focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
+                  transition-colors"
+              />
+              {confirm && !confirmOk && (
+                <p className="mt-1.5 text-xs text-error">Passwords don't match.</p>
               )}
             </div>
 
