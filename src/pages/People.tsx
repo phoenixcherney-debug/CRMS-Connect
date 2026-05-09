@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Search, MessageSquare, X, Heart, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { initialsOf } from '../lib/initials'
+import { pluralize } from '../lib/pluralize'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile } from '../types'
 import {
@@ -158,9 +159,16 @@ export default function People({ directory }: PeopleProps = {}) {
   }
 
   const pageTitle = targetRole === 'employer_mentor' ? 'Mentors' : 'Students'
+  // S6.6 — for /mentors specifically, count is "open to new mentees" (rows
+  // already filtered server-side via .eq('open_to_mentorship', true)).
+  // Surface that explicitly so an empty list reads as "no one's open" rather
+  // than "no mentors exist".
+  const visibleCount = people.filter((p) => p.id !== profile?.id).length
   const pageSubtitle = loading
     ? 'Loading…'
-    : `${people.filter((p) => p.id !== profile?.id).length} ${pageTitle.toLowerCase()} in the CRMS community`
+    : directory === 'mentors'
+      ? `${pluralize(visibleCount, 'mentor')} accepting new mentees right now`
+      : `${pluralize(visibleCount, pageTitle.toLowerCase().slice(0, -1))} in the CRMS community`
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -350,6 +358,16 @@ export default function People({ directory }: PeopleProps = {}) {
             <button type="button" onClick={() => { setSearch(''); clearFilters() }} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">
               Clear filters
             </button>
+          )}
+          {/* S6.6 — when /mentors is empty (no filters), give the student a
+              real next step rather than a dead end. */}
+          {!search && !hasActiveFilters && directory === 'mentors' && (
+            <p className="mt-3 text-xs text-ink-muted">
+              Want to be a mentor, or know someone who should be?{' '}
+              <a href="mailto:registrar@crms.org" className="text-primary hover:text-primary-light font-medium">
+                Email the registrar
+              </a>.
+            </p>
           )}
         </div>
       ) : (
