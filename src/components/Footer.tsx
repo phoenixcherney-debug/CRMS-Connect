@@ -18,12 +18,7 @@ export default function Footer() {
         <nav className="flex items-center gap-5">
           <Link to="/about"   className="hover:text-ink transition-colors">About</Link>
           <Link to="/privacy" className="hover:text-ink transition-colors">Privacy</Link>
-          <a
-            href="mailto:registrar@crms.org?subject=CRMS%20Connect%20support"
-            className="hover:text-ink transition-colors"
-          >
-            Contact
-          </a>
+          <Link to="/contact" className="hover:text-ink transition-colors">Contact</Link>
         </nav>
       </div>
     </footer>

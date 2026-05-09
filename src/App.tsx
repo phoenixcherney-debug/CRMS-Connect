@@ -76,6 +76,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/awaiting-approval': 'Awaiting Approval',
   '/about': 'About',
   '/privacy': 'Privacy',
+  '/contact': 'Contact',
 }
 
 function DocumentTitle() {
@@ -134,6 +135,7 @@ const BannedPage        = lazy(() => import('./pages/BannedPage'))
 const About             = lazy(() => import('./pages/About'))
 const Privacy           = lazy(() => import('./pages/Privacy'))
 const NotFound          = lazy(() => import('./pages/NotFound'))
+const Contact           = lazy(() => import('./pages/Contact'))
 const AwaitingApproval  = lazy(() => import('./pages/AwaitingApproval'))
 const PendingAccounts   = lazy(() => import('./pages/PendingAccounts'))
 const AdminReports      = lazy(() => import('./pages/AdminReports'))
@@ -160,6 +162,7 @@ export default function App() {
             <Route path="/verify-email"   element={<VerifyEmail />} />
             <Route path="/about"          element={<Layout><About /></Layout>} />
             <Route path="/privacy"        element={<Layout><Privacy /></Layout>} />
+            <Route path="/contact"        element={<Layout><Contact /></Layout>} />
 
             {/* ── Onboarding (auth required, onboarding check skipped) ── */}
             <Route
