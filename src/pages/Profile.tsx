@@ -14,6 +14,7 @@ import type { CareerHistory, MentorType, StudentSeeking } from '../types'
 import Spinner from '../components/Spinner'
 import { useToast } from '../components/ToastProvider'
 import { validateDisplayName } from '../lib/nameFilter'
+import { formatDisplayName } from '../lib/displayName'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 
 export default function Profile() {
@@ -215,7 +216,7 @@ export default function Profile() {
     setSaving(true)
 
     const updates: Record<string, unknown> = {
-      full_name: trimmedName,
+      full_name: formatDisplayName(trimmedName),
       bio: bio.trim() || null,
       avatar_url: avatarUrl.trim() || null,
       graduation_year: isNaN(yr) ? null : yr,
