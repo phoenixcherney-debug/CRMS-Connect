@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Compass, ArrowLeft } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 /**
  * Catch-all 404. Renders inside the same Layout as the rest of the app so
@@ -8,6 +9,11 @@ import { Compass, ArrowLeft } from 'lucide-react'
  */
 export default function NotFound() {
   const { pathname } = useLocation()
+  const { user } = useAuth()
+  // P2-27 — return-link adapts to auth state. "Back to dashboard" only
+  // makes sense once the user is signed in.
+  const target = user ? '/explore' : '/login'
+  const label = user ? 'Back to dashboard' : 'Back to sign in'
   return (
     <div className="max-w-xl mx-auto py-16">
       <div
@@ -26,10 +32,10 @@ export default function NotFound() {
           have been moved or never existed.
         </p>
         <Link
-          to="/explore"
+          to={target}
           className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-light transition-colors"
         >
-          <ArrowLeft size={14} /> Back to dashboard
+          <ArrowLeft size={14} /> {label}
         </Link>
       </div>
     </div>
