@@ -75,6 +75,11 @@ export function friendlyError(err: unknown, fallback = 'Something went wrong. Pl
   if (lower.includes('weak password')) {
     return 'Please use a stronger password (at least 8 characters).'
   }
+  // S1.4 — Supabase's "Unable to validate email address: invalid format"
+  // never made it through any of the other branches.
+  if (lower.includes('unable to validate email') || lower.includes('invalid format')) {
+    return 'Please enter a valid email address.'
+  }
 
   // ── Network / fetch ──────────────────────────────────────────────────────
   if (

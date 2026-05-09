@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type React from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, ArrowLeft, RefreshCw } from 'lucide-react'
@@ -34,6 +34,14 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false)
 
   const [forgotMode, setForgotMode] = useState(false)
+  // S1.5 — sync document.title with the visible mode so the browser tab is
+  // accurate without splitting into two routes (which would touch every
+  // /login link in the app). Same effect, much smaller blast radius.
+  useEffect(() => {
+    document.title = forgotMode
+      ? 'Reset password · CRMS Connect'
+      : 'Sign in · CRMS Connect'
+  }, [forgotMode])
   const [resetEmail, setResetEmail] = useState('')
   const [resetSending, setResetSending] = useState(false)
   const [resetSent, setResetSent] = useState(false)
@@ -100,6 +108,10 @@ export default function Login() {
     setResetEmail(email)
     setResetSent(false)
     setResetError(null)
+    // S1.3 — entering reset mode also clears the previous sign-in error so
+    // it doesn't ghost-echo behind the reset form.
+    setError(null)
+    setUnverifiedEmail(null)
     setForgotMode(true)
   }
 
@@ -163,7 +175,22 @@ export default function Login() {
         <div className="w-full max-w-sm">
           {forgotMode ? (
             <>
-              <button type="button" onClick={() => setForgotMode(false)} className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink mb-6 font-semibold">
+              <button
+                type="button"
+                onClick={() => {
+                  // S1.3 — clear stale state when leaving reset mode so a
+                  // failed-login error from before doesn't reappear when
+                  // the user comes back. Form fields stay (the user just
+                  // typed their email, no need to wipe it).
+                  setForgotMode(false)
+                  setError(null)
+                  setUnverifiedEmail(null)
+                  setPassword('')
+                  setResetSent(false)
+                  setResetError(null)
+                }}
+                className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink mb-6 font-semibold"
+              >
                 <ArrowLeft size={14} /> Back to sign in
               </button>
               <h1 className="text-2xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>Reset password</h1>

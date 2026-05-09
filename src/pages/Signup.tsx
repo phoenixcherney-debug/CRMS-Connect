@@ -298,10 +298,23 @@ export default function Signup() {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {password && !passwordOk && (
-                <p className="mt-1.5 text-xs text-ink-muted">
-                  Use at least 8 characters and include a letter and a number.
-                </p>
+              {/* S1.7 — live password strength indicators. Shows three checks
+                  that flip green as the user types. */}
+              {password && (
+                <ul className="mt-1.5 text-xs space-y-0.5">
+                  {(() => {
+                    const checks: { ok: boolean; label: string }[] = [
+                      { ok: password.length >= 8, label: 'At least 8 characters' },
+                      { ok: /[A-Za-z]/.test(password), label: 'Contains a letter' },
+                      { ok: /[0-9]/.test(password), label: 'Contains a number' },
+                    ]
+                    return checks.map((c) => (
+                      <li key={c.label} className={c.ok ? 'text-success' : 'text-ink-muted'}>
+                        {c.ok ? '✓' : '·'} {c.label}
+                      </li>
+                    ))
+                  })()}
+                </ul>
               )}
             </div>
 
