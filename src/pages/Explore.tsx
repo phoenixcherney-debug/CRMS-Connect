@@ -142,9 +142,10 @@ export default function Explore() {
           <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
             {(() => {
               const first = profile?.full_name ? greetingFirstName(profile.full_name) : ''
-              // Audit task 17 — fall back to "Your Dashboard" rather than
-              // "'s Dashboard" when the user has no name set.
-              return first ? `${first}'s Dashboard` : 'Your Dashboard'
+              // M-01 — H1 used to read "{first}'s Dashboard" but the URL is
+              // /explore. Reframed as a personal welcome so the heading
+              // matches the route's purpose (explore community + stats).
+              return first ? `Welcome back, ${first}` : 'Welcome back'
             })()}
           </h1>
           <p className="text-white/65 mb-7 text-base max-w-lg">
