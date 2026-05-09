@@ -18,6 +18,16 @@ function ParamRedirect({ to }: { to: string }) {
   return <Navigate to={dest} replace />
 }
 
+/** P1-12 — students hitting /student-posts (the EM-facing directory)
+ *  used to bounce silently to /opportunities. Send them to their own
+ *  /student-posts/mine instead so they see something coherent. */
+function StudentPostsByRole({ DirectoryComponent }: { DirectoryComponent: React.ComponentType }) {
+  const { profile, loading } = useAuth()
+  if (loading) return null
+  if (profile?.role === 'student') return <Navigate to="/student-posts/mine" replace />
+  return <DirectoryComponent />
+}
+
 /** Audit M1: /people now redirects to the role-specific directory. */
 function PeopleRedirect() {
   const { profile, loading } = useAuth()
@@ -243,8 +253,8 @@ export default function App() {
             } />
             <Route path="/my-postings" element={<Navigate to="/my-opportunities" replace />} />
             <Route path="/student-posts" element={
-              <ProtectedRoute roles={['employer_mentor']}>
-                <Layout><StudentPosts /></Layout>
+              <ProtectedRoute>
+                <Layout><StudentPostsByRole DirectoryComponent={StudentPosts} /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/postings" element={<Navigate to="/student-posts" replace />} />
