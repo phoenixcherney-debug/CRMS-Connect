@@ -168,8 +168,11 @@ export default function Notifications() {
     supabase.from('profiles').update({ notifications_seen_at: new Date().toISOString() }).eq('id', profile.id)
   }, [profile?.id])
 
-  // An item is "new" if it arrived after the last seen timestamp
-  const isNew = (item: NotifItem) => !seenAt || item.ts > seenAt
+  // An item is "new" if it arrived after the last seen timestamp AND the
+  // per-row unread flag is still set. (S9.1 — clicking a single row stamps
+  // unread=false locally so the visual flips even before the global
+  // notifications_seen_at gets bumped.)
+  const isNew = (item: NotifItem) => item.unread !== false && (!seenAt || item.ts > seenAt)
   const unreadCount = items.filter(isNew).length
 
   // P2-31 — bulk mark-as-read. Bumps profile.notifications_seen_at to now,
@@ -271,10 +274,24 @@ export default function Notifications() {
                   {secItems.map((item) => {
                     const Icon = ICON[item.type]
                     const bgColor = ICON_BG[item.type]
+                    // S9.1 — mark this single item as read on click,
+                    // optimistically. Server then catches up; failure is
+                    // harmless (next visit re-renders from truth).
+                    const handleClick = () => {
+                      if (!isNew(item) || !profile) return
+                      const now = new Date().toISOString()
+                      setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, unread: false } : i))
+                      void supabase
+                        .from('notifications')
+                        .update({ read_at: now })
+                        .eq('id', item.id)
+                        .eq('user_id', profile.id)
+                    }
                     return (
                       <Link
                         key={item.id}
                         to={item.link}
+                        onClick={handleClick}
                         className={`flex items-start gap-4 px-5 py-4 hover:bg-primary-faint transition-colors ${isNew(item) ? 'bg-primary-faint/60' : ''}`}
                       >
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${bgColor}`}>
