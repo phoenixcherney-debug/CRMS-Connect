@@ -253,9 +253,12 @@ export default function PublicProfile() {
             <div className="pb-1 flex-1">
               <p className="font-semibold text-ink text-lg">{person.full_name}</p>
               <div className="flex items-center gap-2 flex-wrap">
+                {/* P1-19 — chip and table now agree. For EM accounts the
+                    chip shows the sub-role (Employer / Mentor / Employer&Mentor /
+                    Other); for students it stays as the broad role. */}
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-muted text-primary text-xs font-medium">
                   <User size={11} />
-                  {ROLE_LABELS[person.role]}
+                  {isEM && mentorTypeLabel ? mentorTypeLabel : ROLE_LABELS[person.role]}
                 </span>
                 {/* Audit M9 — viewer-side: hide grade unless the student
                     opted in. A student viewing their own profile sees their
