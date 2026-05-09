@@ -82,7 +82,7 @@ export default function Events() {
     setLoading(true)
     const { data } = await supabase
       .from('events')
-      .select('*, profiles(full_name)')
+      .select('*, profiles!events_host_id_fkey(full_name)')
       .order('date', { ascending: true })
     setEvents((data as DBEvent[]) ?? [])
     setLoading(false)

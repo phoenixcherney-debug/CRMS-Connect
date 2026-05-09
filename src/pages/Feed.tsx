@@ -44,7 +44,7 @@ export default function Feed() {
     {
       const { data: jobs } = await supabase
         .from('jobs')
-        .select('*, profiles(id, full_name, role)')
+        .select('*, profiles!jobs_posted_by_fkey(id, full_name, role)')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(40)
@@ -64,7 +64,7 @@ export default function Feed() {
     if (isEmployerMentor) {
       const { data: posts } = await supabase
         .from('student_posts')
-        .select('*, profiles(id, full_name, avatar_url, role, grade)')
+        .select('*, profiles!student_posts_student_id_fkey(id, full_name, avatar_url, role, grade)')
         .eq('is_closed', false)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -85,7 +85,7 @@ export default function Feed() {
       if (myJobIds.length > 0) {
         const { data: apps } = await supabase
           .from('applications')
-          .select('*, profiles(id, full_name, avatar_url, graduation_year, grade), jobs(id, title, company)')
+          .select('*, profiles!applications_applicant_id_fkey(id, full_name, avatar_url, graduation_year, grade), jobs(id, title, company)')
           .in('job_id', myJobIds)
           .order('created_at', { ascending: false })
           .limit(40)
@@ -122,7 +122,7 @@ export default function Feed() {
     if (convoIds.length > 0) {
       const { data: msgs } = await supabase
         .from('messages')
-        .select('id, content, created_at, conversation_id, sender_id, profiles(full_name)')
+        .select('id, content, created_at, conversation_id, sender_id, profiles!messages_sender_id_fkey(full_name)')
         .in('conversation_id', convoIds)
         .neq('sender_id', profile.id)
         .order('created_at', { ascending: false })

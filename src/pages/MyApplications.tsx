@@ -68,7 +68,7 @@ export default function MyApplications() {
       .select(`
         *,
         jobs(id, title, company, location, job_type, deadline, is_active,
-          profiles(id, full_name))
+          profiles!jobs_posted_by_fkey(id, full_name))
       `)
       .eq('applicant_id', profile.id)
       .order('created_at', { ascending: false })

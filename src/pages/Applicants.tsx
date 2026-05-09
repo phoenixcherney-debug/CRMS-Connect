@@ -94,7 +94,7 @@ export default function Applicants() {
 
       const { data: appData } = await supabase
         .from('applications')
-        .select('*, profiles(id, full_name, graduation_year, bio, avatar_url, role, interests, weekly_availability, student_seeking, grade, share_grade_with_employers)')
+        .select('*, profiles!applications_applicant_id_fkey(id, full_name, graduation_year, bio, avatar_url, role, interests, weekly_availability, student_seeking, grade, share_grade_with_employers)')
         .eq('job_id', id!)
         .order('created_at', { ascending: true })
 

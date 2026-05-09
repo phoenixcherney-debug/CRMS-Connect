@@ -113,7 +113,7 @@ export default function Notifications() {
         const jobMap = Object.fromEntries((myJobs ?? []).map((j: any) => [j.id, j]))
         const { data: apps } = await supabase
           .from('applications')
-          .select('id, created_at, job_id, status, profiles(full_name)')
+          .select('id, created_at, job_id, status, profiles!applications_applicant_id_fkey(full_name)')
           .in('job_id', jobIds)
           .order('created_at', { ascending: false })
           .limit(30)

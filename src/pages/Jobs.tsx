@@ -38,7 +38,7 @@ export default function Jobs() {
       setFetchError(false)
       const { data, error } = await supabase
         .from('jobs')
-        .select('*, profiles(id, full_name, role)')
+        .select('*, profiles!jobs_posted_by_fkey(id, full_name, role)')
         .order('created_at', { ascending: false })
 
       if (error) {

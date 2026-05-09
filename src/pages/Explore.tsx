@@ -43,7 +43,7 @@ export default function Explore() {
       ] = await Promise.all([
         supabase
           .from('jobs')
-          .select('*, profiles(id, full_name, role)')
+          .select('*, profiles!jobs_posted_by_fkey(id, full_name, role)')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(4),

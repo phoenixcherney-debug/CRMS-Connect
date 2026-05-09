@@ -57,7 +57,7 @@ export default function JobDetail() {
       setLoading(true)
       const { data } = await supabase
         .from('jobs')
-        .select('*, profiles(id, full_name, role, graduation_year)')
+        .select('*, profiles!jobs_posted_by_fkey(id, full_name, role, graduation_year)')
         .eq('id', id!)
         .single()
       setJob(data as Job)

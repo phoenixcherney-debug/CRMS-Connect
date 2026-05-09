@@ -24,7 +24,7 @@ export default function SavedJobs() {
       setLoading(true)
       const { data } = await supabase
         .from('saved_jobs')
-        .select('created_at, jobs(*, profiles(id, full_name, role))')
+        .select('created_at, jobs(*, profiles!jobs_posted_by_fkey(id, full_name, role))')
         .eq('user_id', profile!.id)
         .order('created_at', { ascending: false })
       if (!mounted) return
