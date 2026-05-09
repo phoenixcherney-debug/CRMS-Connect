@@ -4,6 +4,7 @@ import { Search, MessageSquare, X, Heart, SlidersHorizontal } from 'lucide-react
 import { supabase } from '../lib/supabase'
 import { initialsOf } from '../lib/initials'
 import { pluralize } from '../lib/pluralize'
+import { disambiguateNames } from '../lib/disambiguateNames'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile } from '../types'
 import {
@@ -372,7 +373,7 @@ export default function People({ directory }: PeopleProps = {}) {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((person) => {
+          {disambiguateNames(filtered).map(({ user: person, nameSuffix }) => {
             const initials = initialsOf(person.full_name)
             const isSelf = person.id === profile?.id
             const isEM = person.role === 'employer_mentor'
@@ -406,6 +407,13 @@ export default function People({ directory }: PeopleProps = {}) {
                   <div className="flex-1 min-w-0">
                     <Link to={`/people/${person.id}`} className="font-semibold text-ink truncate hover:text-primary transition-colors block">
                       {person.full_name}
+                      {/* F.2 — render-time disambiguation when two users share
+                          the same display name. The suffix is computed by
+                          disambiguateNames() and falls back gracefully (e.g.
+                          "joined May 2026") if grade/year aren't shareable. */}
+                      {nameSuffix && (
+                        <span className="text-ink-muted font-normal"> — {nameSuffix}</span>
+                      )}
                     </Link>
                     <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                       <span className="text-xs px-1.5 py-0.5 rounded-md bg-primary-faint text-primary font-medium">
@@ -458,11 +466,14 @@ export default function People({ directory }: PeopleProps = {}) {
                       <p className="text-xs text-ink-secondary line-clamp-2 leading-relaxed">
                         {person.bio}
                       </p>
-                      {person.bio.length > 120 && (
-                        <span className="text-xs text-primary font-medium mt-0.5 inline-block">
-                          Read more →
-                        </span>
-                      )}
+                      {/* F.3 — always render the Read more affordance when a
+                          bio exists. Detecting actual overflow needs JS
+                          (ResizeObserver) and can flicker; always-show is
+                          consistent and the link target is the full profile
+                          either way. */}
+                      <span className="text-xs text-primary font-medium mt-0.5 inline-block">
+                        Read more →
+                      </span>
                     </>
                   ) : (
                     <p className="text-xs text-ink-muted italic">No bio yet.</p>
