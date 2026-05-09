@@ -91,7 +91,7 @@ export default function MyApplications() {
     setLoading(false)
   }
 
-  async function openOrCreateConversation(otherId: string, firstName: string) {
+  async function openOrCreateConversation(otherId: string, displayName: string) {
     if (!profile || openingConvFor) return
     if (convMap[otherId]) {
       navigate(`/messages/${convMap[otherId]}`)
@@ -106,7 +106,7 @@ export default function MyApplications() {
       .single()
     setOpeningConvFor(null)
     if (error || !data) {
-      toast(`Could not start a conversation with ${firstName}.`, { kind: 'error' })
+      toast(`Could not start a conversation with ${displayName}.`, { kind: 'error' })
       return
     }
     setConvMap((prev) => ({ ...prev, [otherId]: data.id }))
@@ -269,9 +269,11 @@ export default function MyApplications() {
                     })()}
                     {(() => {
                       // Audit task 14 — Open conversation / Message <name>.
+                      // P1-14 — use the full display name; first-name slicing
+                      // breaks for single-name cultures and multi-word firsts.
                       const poster = job.profiles as { id?: string; full_name?: string } | null
                       if (!poster?.id) return null
-                      const firstName = poster.full_name?.trim().split(/\s+/)[0] || 'poster'
+                      const displayName = poster.full_name?.trim() || 'poster'
                       const conversationId = convMap[poster.id]
                       if (conversationId) {
                         return (
@@ -286,12 +288,12 @@ export default function MyApplications() {
                       return (
                         <button
                           type="button"
-                          onClick={() => openOrCreateConversation(poster.id!, firstName)}
+                          onClick={() => openOrCreateConversation(poster.id!, displayName)}
                           disabled={openingConvFor === poster.id}
                           className="flex items-center gap-1 text-primary hover:text-primary-light font-medium disabled:opacity-50"
                         >
                           <MessageSquare size={11} />
-                          {openingConvFor === poster.id ? 'Opening…' : `Message ${firstName}`}
+                          {openingConvFor === poster.id ? 'Opening…' : `Message ${displayName}`}
                         </button>
                       )
                     })()}
