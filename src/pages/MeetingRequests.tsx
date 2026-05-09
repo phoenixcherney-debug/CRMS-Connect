@@ -159,6 +159,14 @@ export default function MeetingRequests() {
                   </Link>{' '}
                   to find someone to connect with.
                 </p>
+                {/* S10.4 — students who land here when no mentors are open
+                    were stuck. Surface a direct mailto so the trail doesn't
+                    dead-end at /mentors. */}
+                {profile?.role === 'student' && (
+                  <p className="text-xs text-ink-muted mt-2">
+                    Or <a href="mailto:registrar@crms.org" className="text-primary hover:text-primary-light">email the registrar</a> if no mentors are accepting right now.
+                  </p>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
