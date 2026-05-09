@@ -398,7 +398,10 @@ export default function People({ directory }: PeopleProps = {}) {
                       )}
                     </div>
                     {isEM && (person.industry || person.company) && (
-                      <p className="text-xs text-ink-muted mt-1">
+                      <p
+                        className="text-xs text-ink-muted mt-1 truncate"
+                        title={[person.industry, person.company].filter(Boolean).join(' · ')}
+                      >
                         {[person.industry, person.company].filter(Boolean).join(' · ')}
                       </p>
                     )}
