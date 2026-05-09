@@ -397,7 +397,8 @@ export default function People({ directory }: PeopleProps = {}) {
                     the same row (audit §20). */}
                 <div className="flex-1" />
 
-                {!isSelf && (
+                {/* P0-1 — same-role DMs blocked. */}
+                {!isSelf && (profile?.role === 'admin' || person.role !== profile?.role) && (
                   <button type="button"
                     onClick={() => openConversation(person.id)}
                     disabled={creatingFor === person.id}

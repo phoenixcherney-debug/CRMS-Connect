@@ -455,18 +455,29 @@ export default function PublicProfile() {
               </div>
             )}
 
-            {/* Message / Edit buttons */}
+            {/* Message / Edit buttons. P0-1 — same-role DM is blocked
+                (student↔student / mentor↔mentor); we hide the Message
+                button rather than letting the click hit a 4xx. Admins
+                bypass this gate. */}
             {!isSelf && (
               <>
-                <button type="button"
-                  onClick={openConversation}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-                    border border-border text-sm font-medium text-ink-secondary
-                    hover:bg-primary-faint hover:text-ink transition-colors"
-                >
-                  <MessageSquare size={15} />
-                  Message {person.full_name.trim().split(/\s+/)[0] || 'this person'}
-                </button>
+                {(myProfile?.role === 'admin' || person.role !== myProfile?.role) ? (
+                  <button type="button"
+                    onClick={openConversation}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
+                      border border-border text-sm font-medium text-ink-secondary
+                      hover:bg-primary-faint hover:text-ink transition-colors"
+                  >
+                    <MessageSquare size={15} />
+                    Message {person.full_name.trim() || 'this person'}
+                  </button>
+                ) : (
+                  <p className="text-xs text-ink-muted text-center px-2">
+                    {myProfile?.role === 'student'
+                      ? 'You can only DM employers and mentors. Comment on their post to talk to other students.'
+                      : 'You can only DM students from here.'}
+                  </p>
+                )}
                 {/* SEC-003 — flag a problematic profile to school staff. */}
                 <div className="flex justify-center">
                   <ReportUserButton targetId={person.id} targetName={person.full_name} />
