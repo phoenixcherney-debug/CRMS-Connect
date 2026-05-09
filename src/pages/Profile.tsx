@@ -589,17 +589,23 @@ export default function Profile() {
                       <option value="">Select grade…</option>
                       {STUDENT_GRADES.map((g) => <option key={g} value={g}>{g}</option>)}
                     </select>
-                    {grade && (
-                      <label className="flex items-center gap-2 mt-2 text-xs text-ink-secondary cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={shareGradeWithEmployers}
-                          onChange={(e) => setShareGradeWithEmployers(e.target.checked)}
-                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30"
-                        />
-                        Share my grade with employers and mentors
-                      </label>
-                    )}
+                    {/* A.1 — always render so the privacy choice exists even
+                        before grade is set. Now also gates Class-of-YYYY
+                        on viewer-side rendering, not just the grade chip. */}
+                    <label className="flex items-start gap-2 mt-2 text-xs text-ink-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={shareGradeWithEmployers}
+                        onChange={(e) => setShareGradeWithEmployers(e.target.checked)}
+                        className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary/30"
+                      />
+                      <span>
+                        Share my grade and class year with employers and mentors
+                        <span className="block text-ink-muted">
+                          Off by default. School staff always see your grade.
+                        </span>
+                      </span>
+                    </label>
                   </div>
                 )}
 

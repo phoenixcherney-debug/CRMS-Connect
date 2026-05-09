@@ -411,14 +411,25 @@ export default function People({ directory }: PeopleProps = {}) {
                       <span className="text-xs px-1.5 py-0.5 rounded-md bg-primary-faint text-primary font-medium">
                         {ROLE_LABELS[person.role]}
                       </span>
-                      {/* Grade badge for students. Audit M9: only show if
-                          the student opted in to share their grade. */}
-                      {person.grade && person.share_grade_with_employers && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-md bg-border text-ink-secondary font-medium">
-                          {person.grade}
-                        </span>
+                      {/* A.1 — both grade AND graduation year are gated on
+                          share_grade_with_employers. Previously Class of YYYY
+                          rendered as a fallback when grade was hidden, which
+                          leaked the cohort regardless of the toggle. Either
+                          opt-in OR neither. (Listing view is non-self only,
+                          so we don't need an isOwner check here.) */}
+                      {person.role === 'student' && person.share_grade_with_employers && (
+                        <>
+                          {person.grade && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-md bg-border text-ink-secondary font-medium">
+                              {person.grade}
+                            </span>
+                          )}
+                          {person.graduation_year && !person.grade && (
+                            <span className="text-xs text-ink-muted">Class of {person.graduation_year}</span>
+                          )}
+                        </>
                       )}
-                      {person.graduation_year && (!person.grade || !person.share_grade_with_employers) && (
+                      {person.role !== 'student' && person.graduation_year && (
                         <span className="text-xs text-ink-muted">Class of {person.graduation_year}</span>
                       )}
                       {isEM && person.open_to_mentorship && (

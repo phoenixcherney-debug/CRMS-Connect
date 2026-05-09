@@ -250,10 +250,9 @@ export default function PublicProfile() {
                   <User size={11} />
                   {isEM && mentorTypeLabel ? mentorTypeLabel : ROLE_LABELS[person.role]}
                 </span>
-                {/* Audit M9 — viewer-side: hide grade unless the student
-                    opted in. A student viewing their own profile sees their
-                    grade either way (handled by the `isSelf` checks below). */}
-                {person.grade && person.share_grade_with_employers && (
+                {/* A.1 — gate grade chip on share_grade_with_employers. The
+                    owner sees their own grade either way (isSelf branch). */}
+                {person.grade && (isSelf || person.share_grade_with_employers) && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-border text-ink-secondary text-xs font-medium">
                     {person.grade}
                   </span>
@@ -277,7 +276,12 @@ export default function PublicProfile() {
                   {new Date(person.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </span>
               </div>
+              {/* A.1 — for students, the cohort year is just as identifying
+                  as the grade itself, so it's gated on the same toggle.
+                  Non-students (EM with grad year) are unaffected. */}
               {person.graduation_year && (
+                person.role !== 'student' || isSelf || person.share_grade_with_employers
+              ) && (
                 <div className="flex gap-2">
                   <span className="font-medium text-ink w-28 shrink-0">Class of</span>
                   <span className="text-ink-secondary">{person.graduation_year}</span>
