@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { ROLE_LABELS } from '../types'
 import { useTheme } from '../contexts/ThemeContext'
 import { useUnreadCount } from '../hooks/useUnreadCount'
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications'
 import { usePendingMeetings } from '../hooks/usePendingMeetings'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
@@ -28,6 +29,7 @@ export default function Nav() {
   const navigate = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const unreadCount = useUnreadCount()
+  const unreadNotifications = useUnreadNotifications()
   const pendingMeetings = usePendingMeetings()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -249,6 +251,9 @@ export default function Nav() {
               </p>
               {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
                 const isInbox = label === 'Messages'
+                // P2-31 — bell badge for unread notifications.
+                const isBell  = label === 'Notifications'
+                const badgeCount = isInbox ? unreadCount : isBell ? unreadNotifications : 0
                 return (
                   <NavLink
                     key={to}
@@ -258,12 +263,12 @@ export default function Nav() {
                   >
                     <div className="relative">
                       <Icon size={17} className="shrink-0" />
-                      {isInbox && unreadCount > 0 && (
+                      {(isInbox || isBell) && badgeCount > 0 && (
                         <span
                           className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 rounded-full text-[9px] font-bold leading-none"
                           style={{ backgroundColor: 'var(--color-error)', color: '#ffffff' }}
                         >
-                          {unreadCount > 9 ? '9+' : unreadCount}
+                          {badgeCount > 9 ? '9+' : badgeCount}
                         </span>
                       )}
                     </div>

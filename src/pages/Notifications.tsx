@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, MessageSquare, FileText, UserPlus, CheckCircle2 } from 'lucide-react'
-import { formatDistanceToNow, parseISO } from 'date-fns'
+import { Bell, MessageSquare, FileText, UserPlus, CheckCircle2, CheckCheck } from 'lucide-react'
+import { differenceInDays, formatDistanceToNow, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../components/ToastProvider'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 
@@ -29,9 +30,11 @@ const STATUS_TEXT: Record<string, string> = {
 
 export default function Notifications() {
   const { profile } = useAuth()
+  const toast = useToast()
   const [items, setItems]     = useState<NotifItem[]>([])
   const [loading, setLoading] = useState(true)
   const [seenAt, setSeenAt] = useState<string | null>(null)
+  const [markingAll, setMarkingAll] = useState(false)
 
   async function load(quiet = false) {
     if (!profile) return
@@ -169,6 +172,40 @@ export default function Notifications() {
   const isNew = (item: NotifItem) => !seenAt || item.ts > seenAt
   const unreadCount = items.filter(isNew).length
 
+  // P2-31 — bulk mark-as-read. Bumps profile.notifications_seen_at to now,
+  // and stamps read_at on every unread notifications-table row owned by
+  // this user.
+  async function markAllRead() {
+    if (!profile || markingAll) return
+    setMarkingAll(true)
+    const now = new Date().toISOString()
+    await Promise.all([
+      supabase.from('profiles').update({ notifications_seen_at: now }).eq('id', profile.id),
+      supabase.from('notifications').update({ read_at: now }).eq('user_id', profile.id).is('read_at', null),
+    ])
+    setSeenAt(now)
+    setItems((prev) => prev.map((i) => ({ ...i, unread: false })))
+    setMarkingAll(false)
+    toast('All notifications marked read.')
+  }
+
+  // P2-31 — group items by Today / This week / Older.
+  const todayItems: NotifItem[]   = []
+  const weekItems:  NotifItem[]   = []
+  const olderItems: NotifItem[]   = []
+  const now = new Date()
+  for (const it of items) {
+    const days = differenceInDays(now, parseISO(it.ts))
+    if (days <= 0) todayItems.push(it)
+    else if (days <= 7) weekItems.push(it)
+    else olderItems.push(it)
+  }
+  const sections: { label: string; items: NotifItem[] }[] = [
+    { label: 'Today',     items: todayItems },
+    { label: 'This week', items: weekItems  },
+    { label: 'Older',     items: olderItems },
+  ]
+
   const ICON: Record<NotifType, typeof Bell> = {
     message: MessageSquare,
     app_out: FileText,
@@ -182,18 +219,32 @@ export default function Notifications() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink flex items-center gap-2" style={{ fontFamily: 'var(--font-serif)' }}>
-          Notifications
-          {unreadCount > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-bold">
-              {unreadCount}
-            </span>
-          )}
-        </h1>
-        <p className="text-ink-secondary text-sm mt-0.5">
-          {loading ? 'Loading…' : `${items.length} recent notification${items.length !== 1 ? 's' : ''}`}
-        </p>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-ink flex items-center gap-2" style={{ fontFamily: 'var(--font-serif)' }}>
+            Notifications
+            {unreadCount > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-bold">
+                {unreadCount}
+              </span>
+            )}
+          </h1>
+          <p className="text-ink-secondary text-sm mt-0.5">
+            {loading ? 'Loading…' : `${items.length} recent notification${items.length !== 1 ? 's' : ''}`}
+          </p>
+        </div>
+        {/* P2-31 — explicit Mark all read. The visit-side seen-stamp still
+            runs in the background; this gives users a hard "all done" affordance. */}
+        {unreadCount > 0 && (
+          <button
+            type="button"
+            onClick={markAllRead}
+            disabled={markingAll}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-xs font-medium text-ink-secondary hover:bg-primary-faint disabled:opacity-50 transition-colors"
+          >
+            <CheckCheck size={13} /> Mark all read
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -205,36 +256,47 @@ export default function Notifications() {
           description="No notifications right now."
         />
       ) : (
-        <div className="bg-surface rounded-2xl border border-border divide-y divide-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-          {items.map((item) => {
-            const Icon = ICON[item.type]
-            const bgColor = ICON_BG[item.type]
-            return (
-              <Link
-                key={item.id}
-                to={item.link}
-                className={`flex items-start gap-4 px-5 py-4 hover:bg-primary-faint transition-colors ${isNew(item) ? 'bg-primary-faint/60' : ''}`}
-              >
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${bgColor}`}>
-                  <Icon size={16} />
-                </div>
+        <div className="space-y-5">
+          {sections.map(({ label, items: secItems }) =>
+            secItems.length === 0 ? null : (
+              <section key={label}>
+                <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2 px-1">
+                  {label}
+                </h2>
+                <div className="bg-surface rounded-2xl border border-border divide-y divide-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
+                  {secItems.map((item) => {
+                    const Icon = ICON[item.type]
+                    const bgColor = ICON_BG[item.type]
+                    return (
+                      <Link
+                        key={item.id}
+                        to={item.link}
+                        className={`flex items-start gap-4 px-5 py-4 hover:bg-primary-faint transition-colors ${isNew(item) ? 'bg-primary-faint/60' : ''}`}
+                      >
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${bgColor}`}>
+                          <Icon size={16} />
+                        </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm leading-snug ${isNew(item) ? 'font-semibold text-ink' : 'font-medium text-ink'}`}>
-                    {item.title}
-                  </p>
-                  <p className="text-xs text-ink-secondary mt-0.5 line-clamp-1">{item.subtitle}</p>
-                  <p className="text-xs text-ink-muted mt-1">
-                    {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
-                  </p>
-                </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm leading-snug ${isNew(item) ? 'font-semibold text-ink' : 'font-medium text-ink'}`}>
+                            {item.title}
+                          </p>
+                          <p className="text-xs text-ink-secondary mt-0.5 line-clamp-1">{item.subtitle}</p>
+                          <p className="text-xs text-ink-muted mt-1">
+                            {formatDistanceToNow(parseISO(item.ts), { addSuffix: true })}
+                          </p>
+                        </div>
 
-                {isNew(item) && (
-                  <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
-                )}
-              </Link>
-            )
-          })}
+                        {isNew(item) && (
+                          <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </section>
+            ),
+          )}
         </div>
       )}
     </div>
