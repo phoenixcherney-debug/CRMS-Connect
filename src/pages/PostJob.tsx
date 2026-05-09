@@ -106,7 +106,11 @@ export default function PostJob() {
     const trim = (s: string) => s.trim()
     const title = trim(form.title)
     const company = trim(form.company)
-    const location = trim(form.location)
+    // P2-22 — title-case the location on save so the listings stop looking
+    // like a grab-bag ("denver, co", "Carbondale, CO", "remote", "Aspen,
+    // co"). A full autocomplete + state-code field is the right answer
+    // long-term but this is the minimum viable normalization.
+    const location = trim(form.location).replace(/\b\w/g, (c) => c.toUpperCase())
     const description = trim(form.description)
     if (!title || !company || !location || !description) {
       setError('Please fill in all required fields (title, company, location, and description).')
