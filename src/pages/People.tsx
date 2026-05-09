@@ -409,9 +409,16 @@ export default function People({ directory }: PeopleProps = {}) {
                 </div>
 
                 {person.bio ? (
-                  <p className="text-xs text-ink-secondary mt-3 line-clamp-2 leading-relaxed">
-                    {person.bio}
-                  </p>
+                  <div className="mt-3">
+                    <p className="text-xs text-ink-secondary line-clamp-2 leading-relaxed">
+                      {person.bio}
+                    </p>
+                    {person.bio.length > 120 && (
+                      <span className="text-xs text-primary font-medium mt-0.5 inline-block">
+                        Read more →
+                      </span>
+                    )}
+                  </div>
                 ) : null}
                 {/* Spacer pushes the Message button to the bottom when the
                     bio is short or absent, keeping cards visually aligned in
