@@ -38,7 +38,7 @@ export default function Explore() {
         { data: jobs },
         { data: people, error: peopleError },
         { count: totalJobs },
-        { count: totalPeople },
+        { data: memberCountData },
         { data: allCompanyRows },
       ] = await Promise.all([
         supabase
@@ -60,17 +60,10 @@ export default function Explore() {
           .from('jobs')
           .select('*', { count: 'exact', head: true })
           .eq('is_active', true),
-        // P0-4 — the Members count must match what /students + /mentors
-        // actually render: non-admin, non-banned, non-pending. This was
-        // counting every profile row (including admins, banned, and
-        // pending EM signups), so 13 ≠ 6 students + 5 mentors.
-        supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .neq('role', 'admin')
-          .is('banned_at', null)
-          .neq('account_status', 'pending')
-          .neq('account_status', 'disabled'),
+        // H-06 — the Members count must also exclude unverified accounts.
+        // Routed through a SECURITY DEFINER function so we can join
+        // auth.users.email_confirmed_at, which RLS doesn't expose.
+        supabase.rpc('directory_member_count'),
         // Pull every active job's `company` so we can count distinct companies
         // across the whole community, not just the 4-row sample we render.
         supabase
@@ -78,6 +71,7 @@ export default function Explore() {
           .select('company')
           .eq('is_active', true),
       ])
+      const totalPeople = typeof memberCountData === 'number' ? memberCountData : 0
 
       if (peopleError) console.error('Explore: profiles query failed', peopleError)
 

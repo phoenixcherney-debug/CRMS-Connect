@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — QA pass 6: P0 + P1 audit notes
+
+- **H-05 — CAPTCHA + signup rate limit**: deferred. Cloudflare
+  Turnstile (or hCaptcha) needs a provisioned site key + secret that
+  has to be configured in the Supabase Dashboard (Auth → Providers
+  → CAPTCHA Protection) before the client widget will work.
+  Rate-limiting on `/auth/v1/signup` is already enforced by Supabase
+  Auth at ~30/hour/IP — the brief's 5-per-15-minutes target is
+  stricter and is also a Dashboard setting (Auth → Rate Limits).
+  Both are operational config, not code.
+
 ## Unreleased — QA pass 5: P3 audit notes
 
 - **P3-41 — signup rate limiting**: no code change needed. Supabase
