@@ -338,10 +338,11 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
             {/* Screening fields */}
             <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-ink-secondary">
               {applicant?.weekly_availability && (
-                <span className="flex items-center gap-1"><Clock size={11} />Profile availability: {applicant.weekly_availability}</span>
+                // S4.2 — say what kind of availability this actually is.
+                <span className="flex items-center gap-1"><Clock size={11} />Weekly availability: {applicant.weekly_availability}</span>
               )}
               {applicant?.role === 'student' && !applicant.weekly_availability && (
-                <span className="flex items-center gap-1 text-ink-muted/60"><Clock size={11} /> Profile availability not set</span>
+                <span className="flex items-center gap-1 text-ink-muted/60"><Clock size={11} /> Weekly availability not set</span>
               )}
               <span className="flex items-center gap-1">
                 <Calendar size={11} />
@@ -357,7 +358,8 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
                   )
                 }
                 return (
-                  <span className="flex items-center gap-1 text-ink-muted/60"><User size={11} /> No resume link</span>
+                  // S4.2 — softer copy; the absence isn't an error worth a flag.
+                  <span className="flex items-center gap-1 text-ink-muted">Resume: not provided</span>
                 )
               })()}
               {applicant && profile && (
