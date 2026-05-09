@@ -22,6 +22,9 @@ export default function MyPostings() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  // H-04 — Close (deactivate) needs a confirm so it doesn't fire from a
+  // misclick. We don't gate Reopen — that's recoverable.
+  const [confirmCloseId, setConfirmCloseId] = useState<string | null>(null)
 
   async function load() {
     if (!profile) return
@@ -68,6 +71,7 @@ export default function MyPostings() {
   }
 
   const jobToDelete = postings.find((p) => p.id === confirmDeleteId)
+  const jobToClose  = postings.find((p) => p.id === confirmCloseId)
 
   return (
     <div>
@@ -175,7 +179,11 @@ export default function MyPostings() {
                     </Link>
                   )}
                   <button type="button"
-                    onClick={() => toggleActive(job.id, job.is_active)}
+                    onClick={() => {
+                      // Reopen is non-destructive, fire directly.
+                      if (!job.is_active) { void toggleActive(job.id, job.is_active); return }
+                      setConfirmCloseId(job.id)
+                    }}
                     className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-colors
                       ${job.is_active
                         ? 'border-status-pending-border text-status-pending-text hover:bg-status-pending-bg'
@@ -215,7 +223,15 @@ export default function MyPostings() {
       <ConfirmDialog
         open={confirmDeleteId !== null}
         title="Delete this opportunity?"
-        description={`This permanently removes ${jobToDelete?.title ?? 'the posting'}${jobToDelete?.company ? ` at ${jobToDelete.company}` : ''} and all its applications.`}
+        description={(() => {
+          const count = jobToDelete?.applications?.length ?? 0
+          const title = jobToDelete?.title ?? 'the posting'
+          const company = jobToDelete?.company ? ` at ${jobToDelete.company}` : ''
+          const apps = count === 0
+            ? 'It has no applications.'
+            : `It has ${count} application${count === 1 ? '' : 's'} that will be removed too.`
+          return `This permanently removes ${title}${company}. ${apps}`
+        })()}
         confirmLabel={deletingId === confirmDeleteId ? 'Deleting…' : 'Yes, delete'}
         confirmDisabled={deletingId === confirmDeleteId}
         destructive
@@ -224,6 +240,19 @@ export default function MyPostings() {
       >
         {deleteError && <p className="mb-3 text-sm text-error">{deleteError}</p>}
       </ConfirmDialog>
+
+      {/* Close (deactivate) confirmation — H-04. */}
+      <ConfirmDialog
+        open={confirmCloseId !== null}
+        title="Close this opportunity?"
+        description={`Applicants can no longer apply to ${jobToClose?.title ?? 'this opportunity'}; existing applications are preserved. You can reopen it later.`}
+        confirmLabel="Yes, close it"
+        onConfirm={() => {
+          if (confirmCloseId) void toggleActive(confirmCloseId, true)
+          setConfirmCloseId(null)
+        }}
+        onCancel={() => setConfirmCloseId(null)}
+      />
     </div>
   )
 }
