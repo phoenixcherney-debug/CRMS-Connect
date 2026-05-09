@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ExternalLink, User, Calendar, MessageSquare, CheckCircle2, X, Clock } from 'lucide-react'
+import { ChevronLeft, ExternalLink, Calendar, MessageSquare, CheckCircle2, X, Clock } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { safeExternalHref } from '../lib/url'
