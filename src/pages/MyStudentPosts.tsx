@@ -225,6 +225,8 @@ export default function MyStudentPosts() {
                 className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
                   placeholder:text-ink-placeholder resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
               />
+              {/* S7.2 — visible character counter so the maxLength isn't a surprise. */}
+              <p className="text-xs text-ink-muted text-right mt-1">{pitch.length} / 1000</p>
             </div>
 
             {/* Availability */}
