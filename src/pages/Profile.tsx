@@ -513,6 +513,9 @@ export default function Profile() {
                 </div>
               )}
 
+              {/* P3-43 / P3-44 — change password & update email */}
+              <AccountSecuritySection />
+
               {/* Danger zone — delete account */}
               <DeleteAccountSection />
             </div>
@@ -1002,6 +1005,233 @@ export default function Profile() {
             </>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Account & security section ──────────────────────────────────────────────
+// P3-43: change password (current password re-entry, then supabase.auth.updateUser).
+// P3-44: update email (new email + supabase.auth.updateUser sends a verification
+// link to the new address; the change only takes effect after the user clicks it).
+function AccountSecuritySection() {
+  const { user } = useAuth()
+  const [openPwd, setOpenPwd]     = useState(false)
+  const [openEmail, setOpenEmail] = useState(false)
+
+  // Password change state
+  const [currentPwd, setCurrentPwd] = useState('')
+  const [newPwd, setNewPwd]         = useState('')
+  const [confirmPwd, setConfirmPwd] = useState('')
+  const [pwdSaving, setPwdSaving]   = useState(false)
+  const [pwdError, setPwdError]     = useState<string | null>(null)
+  const [pwdSuccess, setPwdSuccess] = useState(false)
+
+  // Email change state
+  const [newEmail, setNewEmail]       = useState('')
+  const [emailSaving, setEmailSaving] = useState(false)
+  const [emailError, setEmailError]   = useState<string | null>(null)
+  const [emailSent, setEmailSent]     = useState(false)
+
+  if (!user) return null
+  const currentEmail = user.email ?? ''
+
+  const newPwdOk = newPwd.length >= 8 && /[A-Za-z]/.test(newPwd) && /[0-9]/.test(newPwd)
+  const confirmOk = confirmPwd.length > 0 && newPwd === confirmPwd
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault()
+    setPwdError(null)
+    setPwdSuccess(false)
+    if (!newPwdOk) {
+      setPwdError('New password must be at least 8 characters and include a letter and a number.')
+      return
+    }
+    if (!confirmOk) {
+      setPwdError("Passwords don't match.")
+      return
+    }
+    setPwdSaving(true)
+    // Re-auth with the current password so we don't let a hijacked session
+    // change credentials silently.
+    const { error: reauthErr } = await supabase.auth.signInWithPassword({
+      email: currentEmail,
+      password: currentPwd,
+    })
+    if (reauthErr) {
+      setPwdSaving(false)
+      setPwdError('Current password is incorrect.')
+      return
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPwd })
+    setPwdSaving(false)
+    if (error) {
+      setPwdError(error.message)
+      return
+    }
+    setPwdSuccess(true)
+    setCurrentPwd('')
+    setNewPwd('')
+    setConfirmPwd('')
+  }
+
+  async function handleChangeEmail(e: React.FormEvent) {
+    e.preventDefault()
+    setEmailError(null)
+    setEmailSent(false)
+    const trimmed = newEmail.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setEmailError('Enter a valid email address.')
+      return
+    }
+    if (trimmed.toLowerCase() === currentEmail.toLowerCase()) {
+      setEmailError('That is already your current email.')
+      return
+    }
+    setEmailSaving(true)
+    const { error } = await supabase.auth.updateUser({ email: trimmed })
+    setEmailSaving(false)
+    if (error) {
+      setEmailError(error.message)
+      return
+    }
+    setEmailSent(true)
+    setNewEmail('')
+  }
+
+  return (
+    <div className="mt-6 pt-6 border-t border-border space-y-4">
+      <p className="text-sm font-semibold text-ink">Account & security</p>
+
+      {/* Change password */}
+      <div>
+        {!openPwd ? (
+          <button
+            type="button"
+            onClick={() => { setOpenPwd(true); setPwdError(null); setPwdSuccess(false) }}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Change password…
+          </button>
+        ) : (
+          <form onSubmit={handleChangePassword} className="p-4 rounded-lg border border-border bg-primary-faint space-y-3">
+            <p className="text-sm font-medium text-ink">Change password</p>
+            <input
+              type="password"
+              autoComplete="current-password"
+              placeholder="Current password"
+              value={currentPwd}
+              onChange={(e) => setCurrentPwd(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              required
+            />
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="New password"
+              value={newPwd}
+              onChange={(e) => setNewPwd(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              required
+            />
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="Confirm new password"
+              value={confirmPwd}
+              onChange={(e) => setConfirmPwd(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              required
+            />
+            <p className="text-xs text-ink-muted">
+              At least 8 characters, including a letter and a number.
+            </p>
+            {pwdError && <p className="text-xs text-error">{pwdError}</p>}
+            {pwdSuccess && <p className="text-xs text-success">Password updated.</p>}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={pwdSaving || !currentPwd || !newPwdOk || !confirmOk}
+                className="btn-gold px-4 py-2"
+              >
+                {pwdSaving && <Spinner size="sm" className="border-white/30 border-t-white" />}
+                {pwdSaving ? 'Saving…' : 'Update password'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenPwd(false)
+                  setCurrentPwd(''); setNewPwd(''); setConfirmPwd('')
+                  setPwdError(null); setPwdSuccess(false)
+                }}
+                disabled={pwdSaving}
+                className="px-4 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Update email */}
+      <div>
+        {!openEmail ? (
+          <button
+            type="button"
+            onClick={() => { setOpenEmail(true); setEmailError(null); setEmailSent(false) }}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Update email…
+          </button>
+        ) : (
+          <form onSubmit={handleChangeEmail} className="p-4 rounded-lg border border-border bg-primary-faint space-y-3">
+            <p className="text-sm font-medium text-ink">Update email</p>
+            <p className="text-xs text-ink-muted">
+              Current: <span className="font-medium text-ink">{currentEmail}</span>
+            </p>
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="New email address"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              required
+            />
+            <p className="text-xs text-ink-muted">
+              We'll send a verification link to the new address. Your email won't change until you click it.
+            </p>
+            {emailError && <p className="text-xs text-error">{emailError}</p>}
+            {emailSent && (
+              <p className="text-xs text-success">
+                Verification link sent. Check the new address to complete the change.
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={emailSaving || !newEmail.trim()}
+                className="btn-gold px-4 py-2"
+              >
+                {emailSaving && <Spinner size="sm" className="border-white/30 border-t-white" />}
+                {emailSaving ? 'Sending…' : 'Send verification'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenEmail(false)
+                  setNewEmail('')
+                  setEmailError(null); setEmailSent(false)
+                }}
+                disabled={emailSaving}
+                className="px-4 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   )
