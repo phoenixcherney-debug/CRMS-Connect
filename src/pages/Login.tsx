@@ -227,7 +227,8 @@ export default function Login() {
               )}
 
               {error && (
-                <div className="mb-5 rounded-lg px-4 py-3 text-sm" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error)' }}>
+                <div role="alert" aria-live="polite"
+                  className="mb-5 rounded-lg px-4 py-3 text-sm" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error)' }}>
                   {error}
                 </div>
               )}

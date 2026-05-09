@@ -178,7 +178,8 @@ export default function Signup() {
           <p className="text-ink-muted text-sm mb-7">Join Colorado Rocky Mountain School's private network.</p>
 
           {formError && (
-            <div className="mb-5 flex items-start gap-2.5 rounded-lg px-4 py-3 text-sm border border-status-rejected-border"
+            <div role="alert" aria-live="polite"
+              className="mb-5 flex items-start gap-2.5 rounded-lg px-4 py-3 text-sm border border-status-rejected-border"
               style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error)' }}>
               <AlertCircle size={15} className="shrink-0 mt-0.5" />
               <p>{formError}</p>

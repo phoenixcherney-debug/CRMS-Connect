@@ -62,9 +62,20 @@ function PushBanner() {
 export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-background)' }}>
+      {/* P3-55 — keyboard a11y. Hidden until focused, then renders a
+          high-contrast pill so users tabbing in from the address bar can
+          jump past the nav directly to page content. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[60]
+          focus:px-4 focus:py-2 focus:rounded-lg focus:bg-primary focus:text-white
+          focus:font-semibold focus:shadow-lg"
+      >
+        Skip to content
+      </a>
       <PushBanner />
       <Nav />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Boundary lives INSIDE the layout so a page-level render error
             shows a recoverable fallback while the chrome (header / footer)
             stays visible — that's the exact failure mode that caught us in
