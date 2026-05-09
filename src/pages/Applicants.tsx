@@ -219,17 +219,18 @@ export default function Applicants() {
             }`}
           >
             {label}
-            {count > 0 && (
-              <span
-                className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-none ${
-                  activeTab === key
-                    ? 'bg-primary text-white'
-                    : 'bg-border text-ink-secondary'
-                }`}
-              >
-                {count}
-              </span>
-            )}
+            {/* P2-30 — render the badge on every tab (even at 0) for
+                consistency. The previous \`count > 0\` gate hid New=0
+                while Decided=1 had a badge, which made New look broken. */}
+            <span
+              className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-none ${
+                activeTab === key
+                  ? 'bg-primary text-white'
+                  : 'bg-border text-ink-secondary'
+              }`}
+            >
+              {count}
+            </span>
           </button>
         ))}
       </div>
