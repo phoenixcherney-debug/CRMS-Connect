@@ -131,8 +131,19 @@ export default function Employers() {
                 className="bg-surface rounded-xl border border-border overflow-hidden"
                 style={{ boxShadow: 'var(--shadow-card)' }}
               >
-                {/* Company header */}
-                <div className="p-5">
+                {/* Company header. P2-24 — entire header toggles expand. */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setExpandedCompany(isExpanded ? null : employer.company)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setExpandedCompany(isExpanded ? null : employer.company)
+                    }
+                  }}
+                  className="p-5 cursor-pointer hover:bg-primary-faint/40 transition-colors"
+                >
                   <div className="flex items-center gap-4">
                     {/* Company initial */}
                     <div className="w-12 h-12 rounded-xl bg-primary-muted flex items-center justify-center text-primary font-bold text-lg shrink-0">
@@ -168,7 +179,7 @@ export default function Employers() {
                     </div>
 
                     <button type="button"
-                      onClick={() => setExpandedCompany(isExpanded ? null : employer.company)}
+                      onClick={(e) => { e.stopPropagation(); setExpandedCompany(isExpanded ? null : employer.company) }}
                       className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs text-ink-secondary hover:bg-primary-faint transition-colors"
                     >
                       {isExpanded ? (

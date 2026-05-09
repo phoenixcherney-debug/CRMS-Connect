@@ -350,7 +350,19 @@ export default function People({ directory }: PeopleProps = {}) {
             return (
               <div
                 key={person.id}
-                className="bg-surface rounded-xl border border-border p-5 flex flex-col"
+                role="link"
+                tabIndex={0}
+                onClick={() => navigate(`/people/${person.id}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    navigate(`/people/${person.id}`)
+                  }
+                }}
+                /* P2-24 — full-card click affordance. The Message button
+                    inside calls e.stopPropagation() to keep its onClick
+                    from also firing this navigate. */
+                className="bg-surface rounded-xl border border-border p-5 flex flex-col cursor-pointer hover:border-primary-muted hover:bg-primary-faint/40 transition-colors"
                 style={{ boxShadow: 'var(--shadow-card)' }}
               >
                 <div className="flex items-start gap-3">
@@ -406,7 +418,7 @@ export default function People({ directory }: PeopleProps = {}) {
                 {/* P0-1 — same-role DMs blocked. */}
                 {!isSelf && (profile?.role === 'admin' || person.role !== profile?.role) && (
                   <button type="button"
-                    onClick={() => openConversation(person.id)}
+                    onClick={(e) => { e.stopPropagation(); openConversation(person.id) }}
                     disabled={creatingFor === person.id}
                     className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
                       border border-border text-xs font-medium text-ink-secondary
