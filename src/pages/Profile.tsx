@@ -115,7 +115,7 @@ export default function Profile() {
 
   if (!profile) {
     return (
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="bg-surface rounded-2xl border border-border p-8 text-center" style={{ boxShadow: 'var(--shadow-card)' }}>
           <AlertCircle size={32} className="text-error mx-auto mb-3" />
           <p className="text-ink font-medium mb-1">Could not load profile</p>
@@ -299,7 +299,7 @@ export default function Profile() {
     : profile.student_seeking ? STUDENT_SEEKING_PUBLIC[profile.student_seeking] : null
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Profile</h1>
