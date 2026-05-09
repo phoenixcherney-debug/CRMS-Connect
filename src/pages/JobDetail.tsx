@@ -23,6 +23,7 @@ const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string;
 }
 import Spinner from '../components/Spinner'
 import ConfirmDialog from '../components/ConfirmDialog'
+import SaveJobButton from '../components/SaveJobButton'
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>()
@@ -76,6 +77,12 @@ export default function JobDetail() {
     }
     if (id) load()
   }, [id, profile])
+
+  // S3.1 — per-opportunity tab title (Vite analogue of generateMetadata).
+  useEffect(() => {
+    if (job?.title) document.title = `${job.title} · CRMS Connect`
+    return () => { document.title = 'CRMS Connect' }
+  }, [job?.title])
 
   async function startConversation() {
     if (!job?.posted_by || !profile) return
@@ -277,6 +284,11 @@ export default function JobDetail() {
                 <span className="font-medium">{job.company}</span>
               </div>
             </div>
+
+            {/* S3.7 — bookmark on detail (parity with cards). Students only. */}
+            {profile?.role === 'student' && !isPoster && (
+              <SaveJobButton jobId={job.id} size={16} />
+            )}
 
             {/* Poster actions */}
             {isPoster && (

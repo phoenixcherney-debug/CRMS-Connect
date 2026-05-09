@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, AlertCircle } from 'lucide-react'
@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/ToastProvider'
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard'
 import type { JobType, LocationType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
@@ -61,6 +62,12 @@ export default function PostJob() {
   const [loading, setLoading] = useState(isEdit)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // S3.3 — snapshot of the form as it was loaded (or default for create).
+  // Used to detect unsaved changes for the beforeunload guard + Cancel.
+  const initialFormRef = useRef<JobForm>(DEFAULT_FORM)
+  const [savedJustNow, setSavedJustNow] = useState(false)
+  const dirty = !savedJustNow && JSON.stringify(form) !== JSON.stringify(initialFormRef.current)
+  useUnsavedChangesGuard(dirty)
   // Per-field errors so the user sees feedback at the field, not only in the
   // banner at the top of a long form (audit HIGH-5: silent submit on bad dates).
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -71,7 +78,7 @@ export default function PostJob() {
     async function load() {
       const { data } = await supabase.from('jobs').select('*').eq('id', id!).single()
       if (data) {
-        setForm({
+        const next: JobForm = {
           title: data.title,
           company: data.company,
           location: data.location,
@@ -86,7 +93,9 @@ export default function PostJob() {
           end_date: data.end_date ?? '',
           expected_weekly_hours: data.expected_weekly_hours ?? '',
           compensation: data.compensation ?? '',
-        })
+        }
+        setForm(next)
+        initialFormRef.current = next
       }
       setLoading(false)
     }
@@ -132,6 +141,10 @@ export default function PostJob() {
     }
     if (!isEdit && form.start_date && form.start_date < todayIso) {
       fe.start_date = 'Start date must be today or later.'
+    }
+    // S3.2 — deadline can't be after the role's end date.
+    if (form.deadline && form.end_date && form.deadline > form.end_date) {
+      fe.deadline = 'Deadline must be on or before the role\'s end date.'
     }
     // Audit task 5 — contact email is optional, but when present it must
     // be a valid address. Browser-native validity check is enough; the
@@ -207,6 +220,9 @@ export default function PostJob() {
         return
       }
 
+      // S3.3 — flag clean before navigating so the beforeunload guard
+      // doesn't fire on the post-save redirect.
+      setSavedJustNow(true)
       toast(isEdit ? 'Saved.' : 'Opportunity published.')
       navigate(isEdit ? `/opportunities/${id}` : '/my-opportunities')
     } catch (err) {
@@ -527,6 +543,10 @@ export default function PostJob() {
             </button>
             <Link
               to={isEdit ? `/opportunities/${id}` : '/my-opportunities'}
+              onClick={(e) => {
+                // S3.3 — block in-app navigation when there are unsaved changes.
+                if (dirty && !window.confirm('Discard your changes?')) e.preventDefault()
+              }}
               className="px-5 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
                 hover:bg-primary-faint transition-colors"
             >
