@@ -169,6 +169,9 @@ export default function App() {
 
             {/* ── Public ───────────────────────────────────────────────── */}
             <Route path="/login"          element={<Login />} />
+            {/* C.3 — dedicated /login/reset URL. Same component, mode is
+                derived from pathname so deep-linking + browser-back work. */}
+            <Route path="/login/reset"    element={<Login />} />
             <Route path="/signup"         element={<Signup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email"   element={<VerifyEmail />} />

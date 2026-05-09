@@ -34,15 +34,21 @@ export default function Login() {
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const [forgotMode, setForgotMode] = useState(false)
-  // S1.5 — sync document.title with the visible mode so the browser tab is
-  // accurate without splitting into two routes (which would touch every
-  // /login link in the app). Same effect, much smaller blast radius.
+  // C.3 — initial mode comes from the URL so /login/reset renders the
+  // reset form directly (deep-linkable, browser-back works). The internal
+  // toggle still updates state; useEffect mirrors back to the URL on change.
+  const [forgotMode, setForgotMode] = useState<boolean>(
+    () => location.pathname === '/login/reset'
+  )
   useEffect(() => {
     document.title = forgotMode
       ? 'Reset password · CRMS Connect'
       : 'Sign in · CRMS Connect'
-  }, [forgotMode])
+    const wantPath = forgotMode ? '/login/reset' : '/login'
+    if (location.pathname !== wantPath) {
+      navigate(wantPath + location.search, { replace: true })
+    }
+  }, [forgotMode, location.pathname, location.search, navigate])
   const [resetEmail, setResetEmail] = useState('')
   const [resetSending, setResetSending] = useState(false)
   const [resetSent, setResetSent] = useState(false)
