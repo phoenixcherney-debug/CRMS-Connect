@@ -200,11 +200,12 @@ function SlotModal({
 
           {/* Start / End time — pickers are constrained to the visible
               week-view grid range so a user can't add a slot that the
-              same view would hide (audit task 18). */}
+              same view would hide (audit task 18). P2-34 — timezone shown
+              so the user knows what they're picking. */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs font-medium text-ink mb-1">
-                Start time <span className="text-ink-muted font-normal">({HR_S}am–{HR_E - 12}pm)</span>
+                Start time <span className="text-ink-muted font-normal">({HR_S}am–{HR_E - 12}pm · {Intl.DateTimeFormat().resolvedOptions().timeZone})</span>
               </label>
               <select value={st} onChange={e => setSt(e.target.value)} className={INPUT_CLS}>
                 {TIME_OPTS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}

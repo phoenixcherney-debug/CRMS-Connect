@@ -78,7 +78,11 @@ export default function Nav() {
     ...(isStudent ? [
       { to: '/student-posts/mine', label: 'My Post', icon: BookOpen },
     ] : []),
-    { to: '/availability', label: 'Availability', icon: CalendarClock },
+    // P2-33 — Availability is mentor-only (the page sets DM slots students
+    // can request meetings for); hide the menu item for students.
+    ...(isEmployerMentor ? [
+      { to: '/availability' as const, label: 'Availability' as const, icon: CalendarClock },
+    ] : []),
     { to: '/meetings', label: 'Meetings', icon: CalendarCheck },
     { to: '/activity', label: 'Activity', icon: Rss      },
     { to: '/events',   label: 'Events', icon: Calendar  },

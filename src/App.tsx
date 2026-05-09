@@ -275,7 +275,7 @@ export default function App() {
 
             {/* ── Availability / Bookings / Meetings ───────────────────── */}
             <Route path="/availability" element={
-              <ProtectedRoute><Layout><Availability /></Layout></ProtectedRoute>
+              <ProtectedRoute roles={['employer_mentor']}><Layout><Availability /></Layout></ProtectedRoute>
             } />
             <Route path="/my-bookings" element={
               <ProtectedRoute><Layout><MyBookings /></Layout></ProtectedRoute>
