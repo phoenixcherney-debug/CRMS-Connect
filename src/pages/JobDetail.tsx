@@ -22,6 +22,7 @@ const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string;
   waitlisted: { label: 'Submitted',   classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
 }
 import Spinner from '../components/Spinner'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>()
@@ -534,25 +535,11 @@ export default function JobDetail() {
                   </div>
                 </div>
                 <div className="flex gap-3 pt-1">
-                  {confirmApply ? (
-                    <>
-                      <button type="button"
-                        onClick={() => { setConfirmApply(false); handleApply() }}
-                        disabled={applyLoading}
-                        className="btn-gold flex-1"
-                      >
-                        {applyLoading ? <Spinner size="sm" className="border-white/30 border-t-white" /> : null}
-                        {applyLoading ? 'Submitting…' : 'Yes, submit'}
-                      </button>
-                      <button type="button"
-                        onClick={() => setConfirmApply(false)}
-                        className="px-4 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
-                          hover:bg-primary-faint transition-colors"
-                      >
-                        Go back
-                      </button>
-                    </>
-                  ) : (
+                  {/* P2-32 — confirmation now happens in a modal (see
+                      ConfirmDialog at the bottom of this page) so the
+                      submit button keeps its label and a cover-note
+                      preview is visible to the user before they commit. */}
+                  {(
                     <>
                       <button
                         type="button"
@@ -605,6 +592,24 @@ export default function JobDetail() {
           </div>
         )}
       </div>
+
+      {/* P2-32 — confirm submission via the shared dialog. Shows a cover-
+          note preview so the user sees what they're about to send. */}
+      <ConfirmDialog
+        open={confirmApply}
+        title="Submit this application?"
+        description={`Once you submit, ${job?.profiles?.full_name ?? 'the poster'} can see your cover note and any resume link you provided. You can withdraw later if you change your mind.`}
+        confirmLabel={applyLoading ? 'Submitting…' : 'Yes, submit'}
+        confirmDisabled={applyLoading}
+        onConfirm={() => { setConfirmApply(false); void handleApply() }}
+        onCancel={() => { if (!applyLoading) setConfirmApply(false) }}
+      >
+        {coverNote.trim() && (
+          <div className="mb-4 max-h-32 overflow-y-auto rounded-lg border border-border bg-primary-faint p-3 text-xs text-ink-secondary whitespace-pre-wrap">
+            {coverNote.trim()}
+          </div>
+        )}
+      </ConfirmDialog>
 
       {/* Delete confirmation modal */}
       {confirmDelete && (
