@@ -155,6 +155,19 @@ export default function Profile() {
     const file = e.target.files?.[0]
     if (!file || !profile) return
     setAvatarUploadError(null)
+    // S5.6 — client-side size cap. Storage bucket has its own limit but
+    // we want a friendly error before the round-trip.
+    const MAX_BYTES = 5 * 1024 * 1024
+    if (file.size > MAX_BYTES) {
+      setAvatarUploadError('Photo must be 5 MB or less.')
+      e.target.value = ''
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setAvatarUploadError('Please pick an image file.')
+      e.target.value = ''
+      return
+    }
     setAvatarUploading(true)
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
     const path = `${profile.id}/avatar.${ext}`
@@ -460,7 +473,7 @@ export default function Profile() {
                     <p className="text-sm text-ink-muted italic">
                       No career history yet —{' '}
                       <button type="button" onClick={() => setEditing(true)} className="text-primary hover:underline not-italic font-medium">
-                        + Add experience
+                        + Add position
                       </button>
                     </p>
                   ) : (
@@ -619,7 +632,7 @@ export default function Profile() {
                     {/* What they're seeking */}
                     <div>
                       <label className="block text-sm font-medium text-ink mb-2">
-                        What are you looking for? <span className="text-ink-muted font-normal">(optional)</span>
+                        Looking for <span className="text-ink-muted font-normal">(optional)</span>
                       </label>
                       <div className="grid grid-cols-2 gap-2">
                         {(Object.entries(STUDENT_SEEKING_LABELS) as [StudentSeeking, string][]).map(([val, label]) => (

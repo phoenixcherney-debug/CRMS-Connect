@@ -180,7 +180,7 @@ export default function MyStudentPosts() {
             {/* What are you looking for */}
             <div>
               <label className="block text-sm font-medium text-ink mb-2">
-                What are you looking for? <span className="text-error">*</span>
+                Looking for <span className="text-error">*</span>
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {(Object.entries(STUDENT_SEEKING_LABELS) as [StudentSeeking, string][]).map(([val, label]) => (
