@@ -124,8 +124,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex relative">
-      {/* S2.6 — theme toggle on auth pages so they match /about, /privacy, /contact. */}
-      <ThemeToggle className="fixed top-4 right-4 z-20 bg-surface border border-border" />
 
       {/* ── Left panel ── */}
       <div
@@ -169,7 +167,12 @@ export default function Login() {
       </div>
 
       {/* ── Right panel ── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 min-h-screen relative" style={{ backgroundColor: 'var(--color-background)' }}>
+        {/* D.1 — theme toggle anchored to the right panel (not the
+            viewport), so it sits within the page chrome the way it does
+            on /about, /privacy, /contact rather than floating in the
+            viewport corner. */}
+        <ThemeToggle className="absolute top-4 right-4" />
         <div className="lg:hidden mb-8 text-center">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-3" style={{ backgroundColor: 'var(--color-primary)' }}>
             {logoError ? (

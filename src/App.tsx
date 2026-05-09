@@ -28,13 +28,15 @@ function StudentPostsByRole({ DirectoryComponent }: { DirectoryComponent: React.
   return <DirectoryComponent />
 }
 
-/** Audit M1: /people now redirects to the role-specific directory. */
+/** D.2 — top-level /people redirect that runs without waiting for auth.
+ *  Previously this was role-aware (students → /mentors, EM → /students)
+ *  but that needed `useAuth().loading` to settle, which produced a
+ *  visible URL flicker for signed-out visitors going through the
+ *  /login?next=/people round-trip. /students is reachable from /students
+ *  → /mentors via the directory-toggle anyway, so the small UX loss
+ *  buys us a flicker-free redirect at the route layer.
+ */
 function PeopleRedirect() {
-  const { profile, loading } = useAuth()
-  if (loading) return null
-  if (profile?.role === 'student') return <Navigate to="/mentors" replace />
-  if (profile?.role === 'employer_mentor') return <Navigate to="/students" replace />
-  // Admin or no-role: fall back to /students so the route still resolves.
   return <Navigate to="/students" replace />
 }
 
