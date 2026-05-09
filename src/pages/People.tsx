@@ -52,11 +52,17 @@ export default function People({ directory }: PeopleProps = {}) {
     async function load() {
       setLoading(true)
       setFetchError(false)
-      const { data, error } = await supabase
+      // P1-13 — the /mentors directory now respects the
+      // \`open_to_mentorship\` toggle. Mentors with the toggle off don't
+      // appear in the list; they can still be reached via opportunity
+      // bylines or direct profile links. /students directory is unchanged.
+      let q = supabase
         .from('profiles')
         .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, interests, weekly_availability, mentor_type, student_seeking, grade, share_grade_with_employers, created_at')
         .eq('role', targetRole)
         .order('full_name', { ascending: true })
+      if (directory === 'mentors') q = q.eq('open_to_mentorship', true)
+      const { data, error } = await q
       if (error) {
         setFetchError(true)
       } else {
