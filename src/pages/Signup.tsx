@@ -13,7 +13,7 @@ const ROLES: Role[] = ['student', 'employer_mentor']
 
 const ROLE_DESCRIPTIONS: Record<'student' | 'employer_mentor', string> = {
   student: 'Browse and apply to opportunities. Requires your @crms.org school email.',
-  employer_mentor: 'Post opportunities and connect with students. Use your personal email.',
+  employer_mentor: 'Post opportunities and connect with students. Use your personal email. Your account will be reviewed by school staff before you can post or message — typically within 1 school day.',
 }
 
 export default function Signup() {
