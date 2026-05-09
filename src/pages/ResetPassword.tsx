@@ -8,6 +8,14 @@ import Spinner from '../components/Spinner'
 
 export default function ResetPassword() {
   const navigate = useNavigate()
+  // P1-15 — set the tab title immediately on mount so the page doesn't
+  // briefly show a stale title carried over from /login (the QA author
+  // observed "Sign in · CRMS Connect"). The App-level DocumentTitle effect
+  // also covers this on subsequent navigations; this is a belt-and-
+  // suspenders for the fresh-tab / email-link path.
+  useEffect(() => {
+    document.title = 'Reset password · CRMS Connect'
+  }, [])
   const [ready, setReady] = useState(false)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
