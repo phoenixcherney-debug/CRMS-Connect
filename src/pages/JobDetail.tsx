@@ -562,6 +562,18 @@ export default function JobDetail() {
                             return
                           }
                           setCoverNoteError(null)
+                          // P1-5 — validate the resume URL up front, before
+                          // showing the confirmation step. The previous
+                          // order-of-ops let users get to "Yes, submit"
+                          // and only then bounce on bad input.
+                          if (resumeLink.trim()) {
+                            const { safe, reason } = validateExternalUrl(resumeLink)
+                            if (!safe) {
+                              setApplyError(reason ?? 'Please enter a valid http(s) URL for your resume / portfolio.')
+                              return
+                            }
+                          }
+                          setApplyError(null)
                           setConfirmApply(true)
                         }}
                         className="btn-gold flex-1"
