@@ -389,9 +389,7 @@ export default function Profile() {
                 )}
                 {profile.graduation_year && (
                   <div className="flex gap-2">
-                    <span className="font-medium text-ink w-28 shrink-0">
-                      {profile.role === 'student' ? 'Graduating' : 'Graduated'}
-                    </span>
+                    <span className="font-medium text-ink w-28 shrink-0">Class of</span>
                     <span className="text-ink-secondary">{profile.graduation_year}</span>
                   </div>
                 )}

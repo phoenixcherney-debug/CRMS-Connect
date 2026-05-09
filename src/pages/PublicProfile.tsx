@@ -289,9 +289,7 @@ export default function PublicProfile() {
               </div>
               {person.graduation_year && (
                 <div className="flex gap-2">
-                  <span className="font-medium text-ink w-28 shrink-0">
-                    {person.role === 'student' ? 'Graduating' : 'Graduated'}
-                  </span>
+                  <span className="font-medium text-ink w-28 shrink-0">Class of</span>
                   <span className="text-ink-secondary">{person.graduation_year}</span>
                 </div>
               )}
