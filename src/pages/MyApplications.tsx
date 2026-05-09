@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/ToastProvider'
 import type { Application, ApplicationStatus } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
+import { pluralize } from '../lib/pluralize'
 import Spinner from '../components/Spinner'
 import ConfirmDialog from '../components/ConfirmDialog'
 
@@ -190,7 +191,15 @@ export default function MyApplications() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Applications</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
-          {loading ? 'Loading…' : `${filteredApplications.length} of ${applications.length} application${applications.length !== 1 ? 's' : ''}`}
+          {/* S2.2 / S4.3 — empty state reads as a sentence; otherwise show
+              filtered/total only when filtering is actually narrowing. */}
+          {loading
+            ? 'Loading…'
+            : applications.length === 0
+              ? 'No applications yet.'
+              : filteredApplications.length === applications.length
+                ? pluralize(applications.length, 'application')
+                : `${filteredApplications.length} of ${pluralize(applications.length, 'application')}`}
         </p>
       </div>
 

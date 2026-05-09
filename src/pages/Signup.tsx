@@ -6,6 +6,7 @@ import { useAuth, validateEmailForRole } from '../contexts/AuthContext'
 import type { Role } from '../types'
 import { ROLE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
+import ThemeToggle from '../components/ThemeToggle'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
 
@@ -113,7 +114,9 @@ export default function Signup() {
     !submitting
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
+      {/* S2.6 — theme toggle on auth pages. */}
+      <ThemeToggle className="fixed top-4 right-4 z-20 bg-surface border border-border" />
 
       {/* ── Left panel ── */}
       <div

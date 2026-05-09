@@ -181,7 +181,7 @@ export default function Explore() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search jobs, companies, people…"
+                placeholder="Search opportunities by title, company, or keyword…"
                 className="w-full pl-10 pr-4 py-3 rounded-xl border-0 bg-surface text-ink text-sm
                   placeholder:text-ink-placeholder
                   focus:outline-none focus:ring-2 focus:ring-white/40

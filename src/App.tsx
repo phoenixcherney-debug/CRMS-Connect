@@ -251,6 +251,9 @@ export default function App() {
             <Route path="/post-opportunity" element={<Navigate to="/opportunities/new" replace />} />
             <Route path="/my-post"          element={<Navigate to="/student-posts/mine" replace />} />
 
+            {/* S2.7 — old /employers-mentors path used in earlier copy. */}
+            <Route path="/employers-mentors" element={<Navigate to="/employers" replace />} />
+
             {/* ── Employer/mentor: my postings + student posts feed ────── */}
             <Route path="/my-opportunities" element={
               <ProtectedRoute roles={['employer_mentor']}>

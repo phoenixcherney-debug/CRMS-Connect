@@ -117,7 +117,7 @@ export default function Jobs() {
           />
           <input
             type="text"
-            placeholder="Search by title, company, or keyword…"
+            placeholder="Search opportunities by title, company, or keyword…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="block w-full pl-10 pr-9 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm

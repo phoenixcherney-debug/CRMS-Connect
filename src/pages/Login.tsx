@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { friendlyError } from '../lib/errors'
 import Spinner from '../components/Spinner'
+import ThemeToggle from '../components/ThemeToggle'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
 
@@ -116,7 +117,9 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
+      {/* S2.6 — theme toggle on auth pages so they match /about, /privacy, /contact. */}
+      <ThemeToggle className="fixed top-4 right-4 z-20 bg-surface border border-border" />
 
       {/* ── Left panel ── */}
       <div
