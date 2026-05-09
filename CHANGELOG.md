@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased — QA pass 5: P3 audit notes
+
+- **P3-41 — signup rate limiting**: no code change needed. Supabase
+  Auth enforces project-level rate limits on `/auth/v1/signup`
+  (default ~30/hr per IP). The client also gates the submit button
+  on a `submitting` flag, preventing rapid double-submits within a
+  single tab.
+- **P3-42 — email verification**: already shipped. `signUp` returns
+  `needsVerification = !data.session`; Signup.tsx renders the "Check
+  your inbox" success card on that branch, and the `validate-signup`
+  Edge Function enforces server-side @crms.org domain rules and
+  deletes the auth user if validation fails.
+
 ## Unreleased — QA pass: black-box backlog (BLOCKER + HIGH + MEDIUM + LOW)
 
 Second QA pass against the deployed app. Each commit on this branch
