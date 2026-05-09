@@ -332,7 +332,18 @@ export default function People({ directory }: PeopleProps = {}) {
       ) : filtered.length === 0 ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted text-sm">
-            {search ? `No members found for "${search}"` : 'No members match your filters.'}
+            {/* M-12 — when /mentors is empty without filters, the issue is
+                no mentor has flipped open_to_mentorship on. The previous
+                copy ("No members match your filters.") was misleading. */}
+            {search
+              ? `No members found for "${search}"`
+              : hasActiveFilters
+                ? 'No members match your filters.'
+                : directory === 'mentors'
+                  ? 'No mentors are open to new mentees right now.'
+                  : directory === 'students'
+                    ? 'No students yet.'
+                    : 'No members yet.'}
           </p>
           {(search || hasActiveFilters) && (
             <button type="button" onClick={() => { setSearch(''); clearFilters() }} className="mt-3 text-sm text-primary hover:text-primary-light font-medium">

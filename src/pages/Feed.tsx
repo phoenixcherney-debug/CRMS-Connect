@@ -162,9 +162,11 @@ export default function Feed() {
 
   useEffect(() => { load() }, [profile?.id])
 
+  // M-09 — strengthen the IA distinction: Activity is the community-wide
+  // feed (everyone sees similar items), Notifications is "for you" only.
   const subtitle = isStudent
-    ? 'Recent opportunities and community activity'
-    : 'New applications to your postings and community activity'
+    ? 'What\'s happening across the community — opportunities, posts, and messages.'
+    : 'What\'s happening across the community — applications to your postings, student posts, and messages.'
 
   return (
     <div className="max-w-2xl mx-auto">

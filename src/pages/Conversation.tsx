@@ -271,7 +271,12 @@ export default function Conversation() {
         </Link>
 
         {otherProfile && (
-          <div className="flex items-center gap-3">
+          // M-06 — header avatar / name navigates to the participant's profile.
+          <Link
+            to={`/people/${otherProfile.id}`}
+            className="flex items-center gap-3 rounded-lg px-2 py-1 -mx-2 hover:bg-primary-faint transition-colors"
+            aria-label={`View ${otherProfile.full_name}'s profile`}
+          >
             <div className="w-9 h-9 rounded-full bg-primary-muted flex items-center justify-center text-primary font-bold text-sm">
               {initials}
             </div>
@@ -279,20 +284,20 @@ export default function Conversation() {
               <p className="font-semibold text-ink text-sm leading-tight">{otherProfile.full_name}</p>
               <p className="text-xs text-ink-muted">{ROLE_LABELS[otherProfile.role]}</p>
             </div>
-          </div>
+          </Link>
         )}
       </div>
 
-      {/* Messages area. Audit task 25 — flex-col with mt-auto on the inner
-          stack so the most recent messages anchor to the bottom of the
-          scroll viewport (composer is sticky beneath). With a short
-          thread, the empty area now sits *above* the messages instead of
-          between them and the composer. */}
+      {/* Messages area. M-05 — anchor messages at the TOP of the scroll
+          viewport so a short thread doesn't leave a big gap above it.
+          When the thread overflows, normal scrolling kicks in and
+          auto-scroll pins the latest message to the bottom (see
+          scrollIntoView below). */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto pr-1 flex flex-col">
         {loading ? (
-          <div className="flex justify-center py-10 mt-auto"><Spinner size="lg" /></div>
+          <div className="flex justify-center py-10"><Spinner size="lg" /></div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center px-4 mt-auto">
+          <div className="flex flex-col items-center justify-center text-center px-4 py-10">
             <div className="w-12 h-12 rounded-full bg-primary-muted flex items-center justify-center text-primary text-xl font-bold mb-3">
               {initials}
             </div>
@@ -302,7 +307,7 @@ export default function Conversation() {
             </p>
           </div>
         ) : (
-          <div className="space-y-1 mt-auto">
+          <div className="space-y-1">
             {/* Load earlier messages */}
             {hasMore && (
               <div className="flex justify-center py-2">

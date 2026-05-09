@@ -247,6 +247,10 @@ export default function App() {
             <Route path="/jobs/:id/edit"           element={<ParamRedirect to="/opportunities/:id/edit" />} />
             <Route path="/jobs/:id/applicants"     element={<ParamRedirect to="/opportunities/:id/applicants" />} />
 
+            {/* M-13 — nav copy used these labels but the routes 404'd. */}
+            <Route path="/post-opportunity" element={<Navigate to="/opportunities/new" replace />} />
+            <Route path="/my-post"          element={<Navigate to="/student-posts/mine" replace />} />
+
             {/* ── Employer/mentor: my postings + student posts feed ────── */}
             <Route path="/my-opportunities" element={
               <ProtectedRoute roles={['employer_mentor']}>

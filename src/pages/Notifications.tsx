@@ -230,7 +230,11 @@ export default function Notifications() {
             )}
           </h1>
           <p className="text-ink-secondary text-sm mt-0.5">
-            {loading ? 'Loading…' : `${items.length} recent notification${items.length !== 1 ? 's' : ''}`}
+            {/* M-09 — make the IA distinction explicit so this isn't read as
+                a duplicate of /activity. */}
+            {loading
+              ? 'Loading…'
+              : `For you · ${items.length} recent notification${items.length !== 1 ? 's' : ''}`}
           </p>
         </div>
         {/* P2-31 — explicit Mark all read. The visit-side seen-stamp still

@@ -216,28 +216,17 @@ export default function PublicProfile() {
       </button>
 
       <div className="bg-surface rounded-2xl border border-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-        {/* Banner */}
+        {/* M-04 — accent bar in place of the empty 128px gradient banner. */}
         <div
-          className="h-32 relative overflow-hidden"
+          className="h-1"
           style={{
-            background: `
-              radial-gradient(ellipse 70% 120% at 80% 10%, rgba(74,124,47,0.7) 0%, transparent 60%),
-              radial-gradient(ellipse 50% 100% at 10% 90%, rgba(45,80,22,0.5) 0%, transparent 50%),
-              linear-gradient(155deg, #2D5016 0%, #3A6B1E 40%, #4A7C2F 70%, #3A6B1E 100%)
-            `,
+            background: 'linear-gradient(90deg, #2D5016 0%, #3A6B1E 50%, #4A7C2F 100%)',
           }}
-        >
-          <div className="absolute top-[-30%] right-[8%] w-24 h-24 rounded-full opacity-[0.12] border border-white/20"
-            style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15) 0%, transparent 70%)' }} />
-          <div className="absolute top-[-10%] right-[30%] w-14 h-14 rounded-full opacity-[0.09] border border-white/10"
-            style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
-          <div className="absolute bottom-[-20%] left-[15%] w-20 h-20 rounded-full opacity-[0.08] border border-white/10"
-            style={{ background: 'radial-gradient(circle at 40% 30%, rgba(255,255,255,0.1) 0%, transparent 70%)' }} />
-        </div>
+        />
 
-        <div className="px-6 pb-6 relative">
+        <div className="px-6 pb-6 pt-6 relative">
           {/* Avatar + name */}
-          <div className="-mt-8 mb-5 flex items-end gap-4">
+          <div className="mb-5 flex items-end gap-4">
             <div className="w-16 h-16 rounded-2xl border-4 border-surface bg-primary-muted flex items-center justify-center overflow-hidden shrink-0">
               {person.avatar_url ? (
                 <img

@@ -52,10 +52,12 @@ export default function ReportUserButton({ targetId, targetName }: {
       <button
         type="button"
         onClick={() => { setOpen(true); setReason('') }}
-        className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-error transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border
+          text-xs font-medium text-ink-secondary hover:text-error hover:border-status-rejected-border
+          hover:bg-error-bg transition-colors"
         aria-label={targetName ? `Report ${targetName}` : 'Report this user'}
       >
-        <Flag size={11} /> Report
+        <Flag size={13} /> Report
       </button>
       <ConfirmDialog
         open={open}

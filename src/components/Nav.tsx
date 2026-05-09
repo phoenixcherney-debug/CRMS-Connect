@@ -66,7 +66,10 @@ export default function Nav() {
 
   const SECONDARY_ITEMS = [
     { to: '/profile', label: 'Profile', icon: User },
-    { to: '/saved',   label: 'Saved',   icon: Bookmark },
+    // M-07 — bookmarking opportunities is a student concept; hide for E/M & admin.
+    ...(isStudent ? [
+      { to: '/saved' as const, label: 'Saved' as const, icon: Bookmark },
+    ] : []),
     ...(isAdmin ? [
       { to: '/admin', label: 'Admin Panel', icon: Shield },
       { to: '/admin/pending-accounts', label: 'Pending Accounts', icon: Shield },
@@ -112,8 +115,16 @@ export default function Nav() {
     function handler(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false)
     }
+    // M-10 — Esc closes the open menu (a11y).
+    function keyHandler(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('keydown', keyHandler)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      document.removeEventListener('keydown', keyHandler)
+    }
   }, [open])
 
   const [logoError, setLogoError] = useState(false)
