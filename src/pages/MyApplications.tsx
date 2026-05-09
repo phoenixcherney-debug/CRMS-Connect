@@ -297,11 +297,15 @@ export default function MyApplications() {
                         </button>
                       )
                     })()}
-                    {/* NAV-007 — destructive action varies per status. */}
+                    {/* NAV-007 — destructive action varies per status.
+                        P1-18 — added title= helpers so the verb difference
+                        between Withdraw (pre-decision) and Decline (post-
+                        accept) is discoverable on hover. */}
                     {app.status === 'pending' && (
                       <button type="button"
                         onClick={() => handleWithdraw(app.id)}
                         disabled={withdrawingId === app.id}
+                        title="Cancel your application before the employer makes a decision."
                         className="flex items-center gap-1 text-error hover:text-error/80 font-medium disabled:opacity-50"
                       >
                         <Trash2 size={11} />
@@ -311,6 +315,7 @@ export default function MyApplications() {
                     {app.status === 'accepted' && (
                       <button type="button"
                         onClick={() => setDeclineId(app.id)}
+                        title="Tell the employer you're not accepting this offer. Cannot be undone."
                         className="flex items-center gap-1 text-error hover:text-error/80 font-medium"
                       >
                         <Trash2 size={11} />
