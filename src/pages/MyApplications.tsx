@@ -57,6 +57,8 @@ export default function MyApplications() {
   // NAV-007 — decline-offer confirm.
   const [declineId, setDeclineId] = useState<string | null>(null)
   const [decliningId, setDecliningId] = useState<string | null>(null)
+  // P2-26 — withdraw also gets a confirm step.
+  const [withdrawConfirmId, setWithdrawConfirmId] = useState<string | null>(null)
 
   async function load() {
     if (!profile) return
@@ -303,7 +305,7 @@ export default function MyApplications() {
                         accept) is discoverable on hover. */}
                     {app.status === 'pending' && (
                       <button type="button"
-                        onClick={() => handleWithdraw(app.id)}
+                        onClick={() => setWithdrawConfirmId(app.id)}
                         disabled={withdrawingId === app.id}
                         title="Cancel your application before the employer makes a decision."
                         className="flex items-center gap-1 text-error hover:text-error/80 font-medium disabled:opacity-50"
@@ -365,6 +367,18 @@ export default function MyApplications() {
         destructive
         onConfirm={() => { if (declineId) void handleDecline(declineId) }}
         onCancel={() => { if (!decliningId) setDeclineId(null) }}
+      />
+
+      {/* P2-26 — withdraw confirm. */}
+      <ConfirmDialog
+        open={withdrawConfirmId !== null}
+        title="Withdraw this application?"
+        description="The employer will no longer see your application in their inbox. You can re-apply later if the position is still open."
+        confirmLabel={withdrawingId === withdrawConfirmId ? 'Withdrawing…' : 'Yes, withdraw'}
+        confirmDisabled={withdrawingId === withdrawConfirmId}
+        destructive
+        onConfirm={() => { if (withdrawConfirmId) { void handleWithdraw(withdrawConfirmId); setWithdrawConfirmId(null) } }}
+        onCancel={() => { if (!withdrawingId) setWithdrawConfirmId(null) }}
       />
     </div>
   )
