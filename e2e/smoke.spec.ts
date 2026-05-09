@@ -88,6 +88,10 @@ test('student signup → apply → application visible to the employer', async (
   // Open the freshly-posted opportunity. Search by title since other tests
   // may have left other postings in the DB.
   await student.goto(`/opportunities?q=${encodeURIComponent(JOB_TITLE)}`)
+  // C-01 regression — listing must render real cards, not the
+  // "Failed to load opportunities" fallback that the PostgREST 300
+  // error produced before the FK-disambiguated embed shipped.
+  await expect(student.getByText(/failed to load opportunities/i)).toHaveCount(0)
   await student.getByText(JOB_TITLE).first().click()
 
   // Apply (no gate — audit pass 4 §2 dropped it)
@@ -97,6 +101,12 @@ test('student signup → apply → application visible to the employer', async (
   await student.getByRole('button', { name: /submit application/i }).click()
   await student.getByRole('button', { name: /yes, submit/i }).click()
   await expect(student.getByText(/application submitted/i)).toBeVisible({ timeout: 15_000 })
+
+  // C-01 regression — /applications must render the new row, not the
+  // empty / error state. The double-nested applications.jobs(profiles)
+  // embed was the second site of the PostgREST 300.
+  await student.goto('/applications')
+  await expect(student.getByText(JOB_TITLE).first()).toBeVisible({ timeout: 15_000 })
 
   await studentCtx.close()
 })
