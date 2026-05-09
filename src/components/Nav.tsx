@@ -196,6 +196,8 @@ export default function Nav() {
                 onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
                 onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
                 aria-label={open ? 'Close menu' : 'Open menu'}
+                aria-expanded={open}
+                aria-controls="primary-nav-menu"
               >
                 {open ? <X size={20} /> : <Menu size={20} />}
               </button>
@@ -207,6 +209,7 @@ export default function Nav() {
 
       {open && (
         <div
+          id="primary-nav-menu"
           className="fixed inset-x-0 z-30 border-b border-border overflow-y-auto"
           style={{
             top: 'calc(3.5rem + 2px + env(safe-area-inset-top))',
