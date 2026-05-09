@@ -286,7 +286,7 @@ export default function Feed() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-ink">
                       <span className="font-semibold">{author?.full_name ?? 'A student'}</span>
-                      {' '}is looking for{' '}
+                      {' '}posted that they're looking for{' '}
                       <span className="font-medium">{seekingLabel}</span>
                     </p>
                     <p className="text-sm text-ink-secondary mt-0.5 line-clamp-2 italic">
