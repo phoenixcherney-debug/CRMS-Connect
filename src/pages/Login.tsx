@@ -47,10 +47,23 @@ export default function Login() {
     return <Navigate to={from} replace />
   }
 
+  // S1.1 — client-side email format check. Cheaper than a roundtrip and
+  // the server's "Invalid login credentials" reply is the same regardless,
+  // so a malformed local-part wouldn't otherwise surface a useful error.
+  function emailFormatError(value: string): string | null {
+    const v = value.trim()
+    if (!v) return 'Email is required.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Please enter a valid email address.'
+    return null
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     setUnverifiedEmail(null)
+    const fmt = emailFormatError(email)
+    if (fmt) { setError(fmt); return }
+    if (!password) { setError('Password is required.'); return }
     setSubmitting(true)
     const { error: err } = await signIn(email, password)
     setSubmitting(false)
