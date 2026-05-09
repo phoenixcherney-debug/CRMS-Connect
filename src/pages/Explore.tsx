@@ -5,6 +5,7 @@ import {
   Heart, CalendarClock, ClipboardList, PlusSquare,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { initialsOf } from '../lib/initials'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Profile } from '../types'
 import { ROLE_LABELS } from '../types'
@@ -266,7 +267,7 @@ export default function Explore() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {mentors.slice(0, 4).map((person) => {
-              const initials = person.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+              const initials = initialsOf(person.full_name)
               return (
                 <Link
                   key={person.id}

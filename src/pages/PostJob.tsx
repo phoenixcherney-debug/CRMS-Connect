@@ -379,9 +379,14 @@ export default function PostJob() {
                 maxLength={200}
                 value={form.compensation}
                 onChange={(e) => set('compensation', e.target.value)}
-                placeholder="e.g. $22/hr · Unpaid (school credit) · Stipend $1,500"
+                placeholder="e.g. $22/hr"
                 className="field"
               />
+              {/* L-04 — examples were getting truncated mid-word ("Stiper...")
+                  in the placeholder; moved them to help text below. */}
+              <p className="text-xs text-ink-muted mt-1">
+                Examples: $22/hr · Unpaid (school credit) · Stipend $1,500.
+              </p>
             </div>
           </div>
 

@@ -9,6 +9,7 @@ import type { Profile, CareerHistory } from '../types'
 import { ROLE_LABELS, MENTOR_TYPE_LABELS, STUDENT_SEEKING_PUBLIC } from '../types'
 import Spinner from '../components/Spinner'
 import ReportUserButton from '../components/ReportUserButton'
+import { initialsOf } from '../lib/initials'
 
 interface AvailSlot {
   id: string
@@ -180,7 +181,7 @@ export default function PublicProfile() {
         ? '/mentors'
         : '/people'
 
-  const initials = person.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+  const initials = initialsOf(person.full_name)
   const isSelf = person.id === myProfile?.id
 
   // Display labels for sub-role fields

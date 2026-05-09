@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, MessageSquare, X, SlidersHorizontal, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { initialsOf } from '../lib/initials'
 import { useAuth } from '../contexts/AuthContext'
 import type { StudentPost } from '../types'
 import {
@@ -226,7 +227,7 @@ export default function StudentPosts() {
           {filtered.map((post) => {
             const student = post.profiles as { id?: string; full_name?: string; avatar_url?: string | null; grade?: string | null; share_grade_with_employers?: boolean; graduation_year?: number | null } | null
             const studentId = student?.id ?? post.student_id
-            const initials = student?.full_name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
+            const initials = initialsOf(student?.full_name)
             const seekingLabel = STUDENT_SEEKING_LABELS[post.seeking] ?? post.seeking
 
             return (

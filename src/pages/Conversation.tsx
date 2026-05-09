@@ -6,6 +6,7 @@ import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
+import { initialsOf } from '../lib/initials'
 import type { Message, Profile } from '../types'
 import { ROLE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
@@ -251,12 +252,7 @@ export default function Conversation() {
     }
   }
 
-  const initials = (otherProfile?.full_name ?? '?')
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  const initials = initialsOf(otherProfile?.full_name)
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col" style={{ flex: 1, minHeight: 0, height: 'calc(100vh - 8rem)' }}>

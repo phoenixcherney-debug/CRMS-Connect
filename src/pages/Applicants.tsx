@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { safeExternalHref } from '../lib/url'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
+import { initialsOf } from '../lib/initials'
 import { useToast } from '../components/ToastProvider'
 import type { Application, ApplicationStatus, Job, StudentSeeking, OpportunityType } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
@@ -295,7 +296,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
   const [confirming, setConfirming] = useState<'accepted' | 'rejected' | 'reverse' | null>(null)
   const isExpanded = expandedId === app.id
   const isUpdating = updatingId === app.id
-  const initials = applicant?.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
+  const initials = initialsOf(applicant?.full_name)
 
   return (
     <div className="bg-surface rounded-xl border border-border p-5" style={{ boxShadow: 'var(--shadow-card)' }}>

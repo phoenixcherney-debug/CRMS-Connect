@@ -275,8 +275,10 @@ body {
   transform: scale(0.98);
 }
 .btn-gold:disabled {
-  opacity: 0.55;
+  /* L-10 — drop opacity hard so disabled / enabled are visually obvious. */
+  opacity: 0.4;
   cursor: not-allowed;
+  filter: grayscale(0.3);
 }
 
 /* ── Green outline button ── */

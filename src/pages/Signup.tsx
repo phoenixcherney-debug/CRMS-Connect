@@ -245,7 +245,13 @@ export default function Signup() {
                 autoComplete="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value
+                  setEmail(next)
+                  // L-11 — validate on input once the field has been touched,
+                  // so the error clears the moment the value becomes valid.
+                  if (emailTouched) setEmailError(validateEmailForRole(next, role))
+                }}
                 onBlur={() => { setEmailTouched(true); setEmailError(validateEmailForRole(email, role)) }}
                 placeholder={role === 'student' ? 'you@crms.org' : 'you@example.com'}
                 className={`w-full px-3.5 py-2.5 rounded-lg border bg-surface text-ink text-sm

@@ -16,6 +16,7 @@ import { useToast } from '../components/ToastProvider'
 import { validateDisplayName } from '../lib/nameFilter'
 import { formatDisplayName } from '../lib/displayName'
 import { usePushNotifications } from '../hooks/usePushNotifications'
+import { initialsOf } from '../lib/initials'
 
 export default function Profile() {
   const { profile, user, refreshProfile, loading } = useAuth()
@@ -125,7 +126,7 @@ export default function Profile() {
     )
   }
 
-  const initials = profile.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+  const initials = initialsOf(profile.full_name)
 
   function handleCancel() {
     setFullName(profile!.full_name ?? '')
@@ -435,7 +436,13 @@ export default function Profile() {
                   <p className="text-sm text-ink-secondary leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
                 </div>
               ) : (
-                <p className="text-sm text-ink-muted italic">No bio yet — click Edit to add one.</p>
+                // L-09 — standardized empty-state phrasing across bio + career.
+                <p className="text-sm text-ink-muted italic">
+                  No bio yet —{' '}
+                  <button type="button" onClick={() => setEditing(true)} className="text-primary hover:underline not-italic font-medium">
+                    + Add bio
+                  </button>
+                </p>
               )}
 
               {/* Career History (view mode, employer/mentor only) */}
@@ -448,7 +455,14 @@ export default function Profile() {
                   {careerLoading ? (
                     <div className="flex justify-center py-4"><Spinner size="sm" /></div>
                   ) : careerHistory.length === 0 ? (
-                    <p className="text-sm text-ink-muted italic">No career history added yet — click Edit to add your experience.</p>
+                    // L-08/L-09 — inline action so the user doesn't have to
+                    // hunt for the Edit button at the top of the page.
+                    <p className="text-sm text-ink-muted italic">
+                      No career history yet —{' '}
+                      <button type="button" onClick={() => setEditing(true)} className="text-primary hover:underline not-italic font-medium">
+                        + Add experience
+                      </button>
+                    </p>
                   ) : (
                     <div className="space-y-2">
                       {careerHistory.map((entry) => (

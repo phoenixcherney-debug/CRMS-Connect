@@ -216,7 +216,7 @@ export default function JobDetail() {
       <div className="text-center py-20">
         <p className="text-ink-muted">This opportunity could not be found.</p>
         <Link to="/opportunities" className="mt-3 inline-block text-sm text-primary hover:text-primary-light">
-          ← Back to Jobs
+          ← Back to Opportunities
         </Link>
       </div>
     )

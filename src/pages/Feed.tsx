@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Briefcase, Bell, RefreshCw, MessageSquare, UserCheck, BookOpen } from 'lucide-react'
-import { format, formatDistanceToNow, parseISO, isPast } from 'date-fns'
+import { format, formatDistanceToNow, parseISO, isPast, differenceInDays } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Application, StudentPost } from '../types'
@@ -194,8 +194,37 @@ export default function Feed() {
           description="Activity will appear as the community grows."
         />
       ) : (
-        <div className="space-y-2">
-          {items.map((item) => {
+        // L-12 — group items by Today / This week / Older for parity with /notifications.
+        (() => {
+          const todayItems: typeof items = []
+          const weekItems: typeof items = []
+          const olderItems: typeof items = []
+          const now = new Date()
+          for (const it of items) {
+            const days = differenceInDays(now, parseISO(it.ts))
+            if (days <= 0) todayItems.push(it)
+            else if (days <= 7) weekItems.push(it)
+            else olderItems.push(it)
+          }
+          const sections = [
+            { label: 'Today',     items: todayItems },
+            { label: 'This week', items: weekItems  },
+            { label: 'Older',     items: olderItems },
+          ].filter((s) => s.items.length > 0)
+          return (
+            <div className="space-y-6">
+              {sections.map(({ label, items: sectionItems }) => (
+                <section key={label}>
+                  <h2 className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-2">{label}</h2>
+                  <div className="space-y-2">
+                    {sectionItems.map((item) => renderItem(item))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )
+
+          function renderItem(item: typeof items[number]) {
             // ── Job opportunity card ─────────────────────────────────────────
             if (item.kind === 'job') {
               // Always source the human-readable category from job_type so
@@ -329,8 +358,8 @@ export default function Feed() {
             }
 
             return null
-          })}
-        </div>
+          }
+        })()
       )}
     </div>
   )

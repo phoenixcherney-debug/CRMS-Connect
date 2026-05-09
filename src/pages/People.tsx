@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Search, MessageSquare, X, Heart, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { initialsOf } from '../lib/initials'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile } from '../types'
 import {
@@ -354,7 +355,7 @@ export default function People({ directory }: PeopleProps = {}) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((person) => {
-            const initials = person.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+            const initials = initialsOf(person.full_name)
             const isSelf = person.id === profile?.id
             const isEM = person.role === 'employer_mentor'
 
@@ -419,18 +420,25 @@ export default function People({ directory }: PeopleProps = {}) {
                   </div>
                 </div>
 
-                {person.bio ? (
-                  <div className="mt-3">
-                    <p className="text-xs text-ink-secondary line-clamp-2 leading-relaxed">
-                      {person.bio}
-                    </p>
-                    {person.bio.length > 120 && (
-                      <span className="text-xs text-primary font-medium mt-0.5 inline-block">
-                        Read more →
-                      </span>
-                    )}
-                  </div>
-                ) : null}
+                {/* L-05/L-06 — always reserve a fixed slot for the bio so
+                    cards in the same row line up; render "No bio yet."
+                    when the field is empty. */}
+                <div className="mt-3 min-h-[2.5rem]">
+                  {person.bio ? (
+                    <>
+                      <p className="text-xs text-ink-secondary line-clamp-2 leading-relaxed">
+                        {person.bio}
+                      </p>
+                      {person.bio.length > 120 && (
+                        <span className="text-xs text-primary font-medium mt-0.5 inline-block">
+                          Read more →
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-ink-muted italic">No bio yet.</p>
+                  )}
+                </div>
                 {/* Spacer pushes the Message button to the bottom when the
                     bio is short or absent, keeping cards visually aligned in
                     the same row (audit §20). */}

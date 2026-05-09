@@ -10,6 +10,7 @@ import { ROLE_LABELS } from '../types'
 import { useTheme } from '../contexts/ThemeContext'
 import { useUnreadCount } from '../hooks/useUnreadCount'
 import { useUnreadNotifications } from '../hooks/useUnreadNotifications'
+import { initialsOf } from '../lib/initials'
 import { usePendingMeetings } from '../hooks/usePendingMeetings'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
@@ -97,12 +98,7 @@ export default function Nav() {
     ] : []),
   ]
 
-  const initials = (profile?.full_name ?? '?')
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  const initials = initialsOf(profile?.full_name)
 
   async function handleSignOut() {
     setOpen(false)
