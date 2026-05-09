@@ -25,7 +25,8 @@ import { test, expect } from './fixtures'
 const ts = Date.now()
 const STUDENT  = { email: `e2e-xss-stu-${ts}@crms.org`,    password: 'TestPass123!', name: `XSS Student ${ts}` }
 const EMPLOYER = { email: `e2e-xss-emp-${ts}@example.com`, password: 'TestPass123!', name: `XSS Employer ${ts}` }
-const PAYLOAD  = `<img src=x onerror="window.__pwn=1">`
+// V-01 — exercise both the img/onerror trick AND a raw <script> tag.
+const PAYLOAD  = `<img src=x onerror="window.__pwn=1"><script>window.__pwn2=1</script>`
 
 test.describe.configure({ mode: 'serial' })
 
@@ -72,13 +73,19 @@ test('XSS payload in student post does not execute', async ({ browser }) => {
   // already-active EM, swap the signup steps for a sign-in.
   await emp.goto('/student-posts')
 
-  // Run on the same page context: assert window.__pwn was never set.
-  const pwned = await emp.evaluate(() => (window as unknown as { __pwn?: number }).__pwn)
-  expect(pwned, 'XSS payload must not execute').toBeFalsy()
+  // Run on the same page context: assert neither pwn marker was set.
+  const pwned = await emp.evaluate(() => {
+    const w = window as unknown as { __pwn?: number; __pwn2?: number }
+    return { onerror: w.__pwn, scriptTag: w.__pwn2 }
+  })
+  expect(pwned.onerror, 'img/onerror payload must not execute').toBeFalsy()
+  expect(pwned.scriptTag, '<script> tag must not execute').toBeFalsy()
 
-  // And no live <img> with the malicious src landed in the DOM.
+  // And no live <img src=x> or <script> with the payload landed in the DOM.
   const badImgCount = await emp.locator('img[src="x"]').count()
   expect(badImgCount, 'no img[src="x"] should be in the DOM').toBe(0)
+  const badScriptCount = await emp.locator('script:has-text("__pwn2")').count()
+  expect(badScriptCount, 'no <script> with the pwn payload should be in the DOM').toBe(0)
 
   await empCtx.close()
 })
