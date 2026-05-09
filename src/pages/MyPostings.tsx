@@ -146,26 +146,27 @@ export default function MyPostings() {
                   </div>
                 </div>
 
-                {/* Applicant status breakdown */}
-                {applicantCount > 0 && (
-                  <div className="sm:border-l sm:border-border sm:pl-5 flex sm:flex-col gap-2 flex-wrap">
-                    {(['pending', 'reviewed', 'accepted', 'rejected'] as const).map((s) => {
-                      const count = (job.applications ?? []).filter((a) => a.status === s).length
-                      if (count === 0) return null
-                      return (
-                        <div key={s} className="flex items-center gap-1.5">
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            s === 'accepted' ? 'bg-status-accepted-dot'
-                            : s === 'rejected' ? 'bg-status-rejected-dot'
-                            : s === 'reviewed' ? 'bg-status-reviewed-dot'
-                            : 'bg-status-pending-dot'
-                          }`} />
-                          <span className="text-xs text-ink-secondary capitalize">{s}: {count}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+                {/* H.1 — compact horizontal breakdown 'N new · N accepted ·
+                    N declined'. Reviewed counts roll into "new" since both
+                    states are pre-decision from the poster's POV. */}
+                {applicantCount > 0 && (() => {
+                  const apps = job.applications ?? []
+                  const newCount      = apps.filter((a) => a.status === 'pending' || a.status === 'reviewed').length
+                  const acceptedCount = apps.filter((a) => a.status === 'accepted').length
+                  const declinedCount = apps.filter((a) => a.status === 'rejected').length
+                  const segs: string[] = []
+                  if (newCount > 0)      segs.push(`${newCount} new`)
+                  if (acceptedCount > 0) segs.push(`${acceptedCount} accepted`)
+                  if (declinedCount > 0) segs.push(`${declinedCount} declined`)
+                  return (
+                    <div className="sm:border-l sm:border-border sm:pl-5 flex items-center text-xs text-ink-secondary">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-status-pending-dot" />
+                        {segs.join(' · ')}
+                      </span>
+                    </div>
+                  )
+                })()}
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">
