@@ -236,8 +236,8 @@ export default function Feed() {
               const isOwnApp = isStudent && item.app.applicant_id === profile?.id
               const link = isOwnApp ? '/applications' : `/opportunities/${job?.id}/applicants`
               const verb =
-                isOwnApp && item.app.status === 'accepted'  ? 'was accepted for'  :
-                isOwnApp && item.app.status === 'rejected'  ? 'was not selected for' :
+                isOwnApp && item.app.status === 'accepted'  ? 'were accepted for'  :
+                isOwnApp && item.app.status === 'rejected'  ? 'were not selected for' :
                 isOwnApp                                    ? 'applied to'        :
                 /* employer view */                           'applied to your opportunity'
               return (
