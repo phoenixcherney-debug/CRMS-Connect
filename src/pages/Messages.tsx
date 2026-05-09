@@ -27,6 +27,8 @@ export default function Messages() {
   const [searchResults, setSearchResults] = useState<Profile[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [creatingFor, setCreatingFor] = useState<string | null>(null)
+  // P2-38 — list-level search across the user's existing conversations.
+  const [listSearch, setListSearch] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
   async function load() {
@@ -189,6 +191,15 @@ export default function Messages() {
     setSearchResults([])
   }
 
+  // P2-38 — search conversations by participant name. Last-message
+  // content match was considered but is noisier than helpful at the
+  // sizes we have today.
+  const filteredConvs = conversations.filter((c) => {
+    if (!listSearch.trim()) return true
+    const q = listSearch.trim().toLowerCase()
+    return (c.otherProfile?.full_name ?? '').toLowerCase().includes(q)
+  })
+
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
@@ -206,6 +217,18 @@ export default function Messages() {
         </button>
       </div>
 
+      {!loading && conversations.length > 0 && (
+        <div className="mb-4">
+          <input
+            type="text"
+            value={listSearch}
+            onChange={(e) => setListSearch(e.target.value)}
+            placeholder="Search by name…"
+            className="w-full px-3.5 py-2 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+          />
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : conversations.length === 0 ? (
@@ -216,7 +239,7 @@ export default function Messages() {
         />
       ) : (
         <div className="bg-surface rounded-2xl border border-border divide-y divide-border overflow-hidden" style={{ boxShadow: 'var(--shadow-card)' }}>
-          {conversations.map((conv) => {
+          {filteredConvs.map((conv) => {
             if (!conv.otherProfile) return null
             const initials = conv.otherProfile.full_name
               .split(' ')

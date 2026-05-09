@@ -168,14 +168,54 @@ export default function MyApplications() {
     return () => { supabase.removeChannel(channel) }
   }, [profile?.id])
 
+  // P2-38 — basic list infra: search by job title / company, status
+  // filter, and the existing date sort is preserved. Pagination skipped
+  // (lists are small enough; a Load-more / window query can be added
+  // when we hit users with hundreds of apps).
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | ApplicationStatus>('all')
+  const filteredApplications = applications.filter((a) => {
+    if (statusFilter !== 'all' && a.status !== statusFilter) return false
+    if (!search.trim()) return true
+    const q = search.trim().toLowerCase()
+    const job = a.jobs
+    return (
+      (job?.title ?? '').toLowerCase().includes(q) ||
+      (job?.company ?? '').toLowerCase().includes(q)
+    )
+  })
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Applications</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
-          {loading ? 'Loading…' : `${applications.length} application${applications.length !== 1 ? 's' : ''}`}
+          {loading ? 'Loading…' : `${filteredApplications.length} of ${applications.length} application${applications.length !== 1 ? 's' : ''}`}
         </p>
       </div>
+
+      {/* P2-38 — search + status filter row. */}
+      {!loading && applications.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by title or company…"
+            className="flex-1 px-3.5 py-2 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | ApplicationStatus)}
+            className="px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+          >
+            <option value="all">All statuses</option>
+            <option value="pending">Submitted</option>
+            <option value="accepted">Accepted</option>
+            <option value="rejected">Not selected</option>
+          </select>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
@@ -201,7 +241,7 @@ export default function MyApplications() {
         </div>
       ) : (
         <div className="space-y-3">
-          {applications.map((app) => {
+          {filteredApplications.map((app) => {
             const job = app.jobs
             if (!job) return null
             const deadline = job.deadline ? parseISO(job.deadline) : null
