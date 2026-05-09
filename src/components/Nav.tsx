@@ -2,7 +2,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom'
 import {
   Compass, Rss, Briefcase, Calendar, Users, Building2, Bell, Mail,
   LogOut, User, PlusSquare, ClipboardList, FileText, CalendarClock,
-  Moon, Sun, Menu, X, BookOpen, CalendarCheck, Shield,
+  Moon, Sun, Menu, X, BookOpen, CalendarCheck, Shield, Bookmark,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -66,6 +66,7 @@ export default function Nav() {
 
   const SECONDARY_ITEMS = [
     { to: '/profile', label: 'Profile', icon: User },
+    { to: '/saved',   label: 'Saved',   icon: Bookmark },
     ...(isAdmin ? [
       { to: '/admin', label: 'Admin Panel', icon: Shield },
       { to: '/admin/pending-accounts', label: 'Pending Accounts', icon: Shield },

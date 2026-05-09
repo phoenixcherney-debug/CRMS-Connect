@@ -4,6 +4,7 @@ import {
   GraduationCap, Briefcase, Heart, Star, Wifi, Home, Globe,
 } from 'lucide-react'
 import { isPast, parseISO, format } from 'date-fns'
+import SaveJobButton from './SaveJobButton'
 import type { Job, JobType, LocationType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS } from '../types'
 
@@ -55,13 +56,19 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
 
   return (
     <div
-      className={`bg-surface rounded-xl border transition-shadow duration-200 flex flex-col overflow-hidden
+      className={`relative bg-surface rounded-xl border transition-shadow duration-200 flex flex-col overflow-hidden
         ${expired || !job.is_active ? 'border-border opacity-60' : 'border-border hover:shadow-md'}`}
       style={{
         boxShadow: 'var(--shadow-card)',
         borderLeft: expired || !job.is_active ? undefined : '3px solid var(--color-primary)',
       }}
     >
+      {/* P2-37 — bookmark button overlay. Absolute so it doesn't disrupt
+          the card's clickable Link region; the button itself stops
+          propagation in its onClick. */}
+      <div className="absolute top-2 right-2 z-10">
+        <SaveJobButton jobId={job.id} size={14} />
+      </div>
       <Link to={`/opportunities/${job.id}`} className="flex-1 p-5 flex flex-col gap-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">

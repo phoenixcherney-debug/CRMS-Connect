@@ -73,6 +73,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/student-posts': 'Student Posts',
   '/student-posts/mine': 'My Post',
   '/applications': 'Applications',
+  '/saved': 'Saved',
   '/availability': 'Availability',
   '/my-bookings': 'My Bookings',
   '/meetings': 'Meetings',
@@ -146,6 +147,7 @@ const About             = lazy(() => import('./pages/About'))
 const Privacy           = lazy(() => import('./pages/Privacy'))
 const NotFound          = lazy(() => import('./pages/NotFound'))
 const Contact           = lazy(() => import('./pages/Contact'))
+const SavedJobs         = lazy(() => import('./pages/SavedJobs'))
 const AwaitingApproval  = lazy(() => import('./pages/AwaitingApproval'))
 const PendingAccounts   = lazy(() => import('./pages/PendingAccounts'))
 const AdminReports      = lazy(() => import('./pages/AdminReports'))
@@ -264,6 +266,10 @@ export default function App() {
               <ProtectedRoute roles={['student']}>
                 <Layout><MyApplications /></Layout>
               </ProtectedRoute>
+            } />
+            {/* P2-37 — bookmarked opportunities. Open to any authed user. */}
+            <Route path="/saved" element={
+              <ProtectedRoute><Layout><SavedJobs /></Layout></ProtectedRoute>
             } />
             <Route path="/student-posts/mine" element={
               <ProtectedRoute roles={['student']}>
