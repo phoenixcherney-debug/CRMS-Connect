@@ -28,6 +28,7 @@ interface JobForm {
   start_date: string
   end_date: string
   expected_weekly_hours: string
+  compensation: string
 }
 
 const DEFAULT_FORM: JobForm = {
@@ -44,6 +45,7 @@ const DEFAULT_FORM: JobForm = {
   start_date: '',
   end_date: '',
   expected_weekly_hours: '',
+  compensation: '',
 }
 
 const SAVE_FAIL_MSG = 'Could not save the opportunity. Please try again.'
@@ -83,6 +85,7 @@ export default function PostJob() {
           start_date: data.start_date ?? '',
           end_date: data.end_date ?? '',
           expected_weekly_hours: data.expected_weekly_hours ?? '',
+          compensation: data.compensation ?? '',
         })
       }
       setLoading(false)
@@ -168,6 +171,7 @@ export default function PostJob() {
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       expected_weekly_hours: form.expected_weekly_hours || null,
+      compensation: form.compensation.trim() || null,
       // opportunity_type is no longer collected (consolidated with job_type),
       // but kept nullable in the schema so legacy rows still display.
       opportunity_type: null,
@@ -347,22 +351,38 @@ export default function PostJob() {
             </div>
           </div>
 
-          {/* Expected weekly hours */}
-          <div className="sm:max-w-[calc(50%-0.5rem)]">
-            <label className="block text-sm font-medium text-ink mb-1.5">
-              Expected weekly hours{' '}
-              <span className="text-ink-muted font-normal">(optional)</span>
-            </label>
-            <select
-              value={form.expected_weekly_hours}
-              onChange={(e) => set('expected_weekly_hours', e.target.value)}
-              className="field"
-            >
-              <option value="">Select expected hours…</option>
-              {EXPECTED_HOURS_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
+          {/* Row: Expected weekly hours + Compensation (P2-36). */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                Expected weekly hours{' '}
+                <span className="text-ink-muted font-normal">(optional)</span>
+              </label>
+              <select
+                value={form.expected_weekly_hours}
+                onChange={(e) => set('expected_weekly_hours', e.target.value)}
+                className="field"
+              >
+                <option value="">Select expected hours…</option>
+                {EXPECTED_HOURS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1.5">
+                Compensation{' '}
+                <span className="text-ink-muted font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                maxLength={200}
+                value={form.compensation}
+                onChange={(e) => set('compensation', e.target.value)}
+                placeholder="e.g. $22/hr · Unpaid (school credit) · Stipend $1,500"
+                className="field"
+              />
+            </div>
           </div>
 
           {/* Description */}

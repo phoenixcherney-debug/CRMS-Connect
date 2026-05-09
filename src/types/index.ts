@@ -86,6 +86,8 @@ export interface Job {
   deadline: string | null
   is_active: boolean
   expected_weekly_hours?: string | null
+  /** P2-36 — optional free-text compensation ("$22/hr", "Unpaid", …). */
+  compensation?: string | null
   opportunity_type?: OpportunityType | null
   opportunity_type_other?: string | null
   start_date?: string | null

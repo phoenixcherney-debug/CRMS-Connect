@@ -313,6 +313,12 @@ export default function JobDetail() {
                 ? <>Deadline: {format(deadline, 'MMMM d, yyyy')}{expired && <span className="text-error font-medium ml-1">(Passed)</span>}</>
                 : 'Rolling'}
             </span>
+            {/* P2-36 — compensation, when set. */}
+            {job.compensation && (
+              <span className="flex items-center gap-1.5">
+                <span className="text-ink-muted">$</span>{job.compensation}
+              </span>
+            )}
             {job.expected_weekly_hours && (
               <span className="flex items-center gap-1.5">
                 <Clock size={14} /> {job.expected_weekly_hours}
