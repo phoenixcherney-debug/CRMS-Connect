@@ -6,7 +6,7 @@ import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile, CareerHistory } from '../types'
-import { ROLE_LABELS, MENTOR_TYPE_LABELS, STUDENT_SEEKING_LABELS } from '../types'
+import { ROLE_LABELS, MENTOR_TYPE_LABELS, STUDENT_SEEKING_PUBLIC } from '../types'
 import Spinner from '../components/Spinner'
 import ReportUserButton from '../components/ReportUserButton'
 
@@ -187,9 +187,11 @@ export default function PublicProfile() {
   const mentorTypeLabel = person.mentor_type === 'other'
     ? (person.mentor_type_other || 'Other')
     : person.mentor_type ? MENTOR_TYPE_LABELS[person.mentor_type] : null
+  // P1-8 — use the spelled-out public form ("A job or internship and a
+  // mentor") instead of the raw "Both" enum.
   const studentSeekingLabel = person.student_seeking === 'other'
-    ? (person.student_seeking_other || 'Other')
-    : person.student_seeking ? STUDENT_SEEKING_LABELS[person.student_seeking] : null
+    ? (person.student_seeking_other || STUDENT_SEEKING_PUBLIC.other)
+    : person.student_seeking ? STUDENT_SEEKING_PUBLIC[person.student_seeking] : null
 
   return (
     <div className="max-w-xl mx-auto">

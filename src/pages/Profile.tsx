@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import {
   ROLE_LABELS, INDUSTRY_OPTIONS, WEEKLY_AVAILABILITY_OPTIONS, INTEREST_OPTIONS,
-  STUDENT_GRADES, MENTOR_TYPE_LABELS, STUDENT_SEEKING_LABELS,
+  STUDENT_GRADES, MENTOR_TYPE_LABELS, STUDENT_SEEKING_LABELS, STUDENT_SEEKING_PUBLIC,
 } from '../types'
 import type { CareerHistory, MentorType, StudentSeeking } from '../types'
 import Spinner from '../components/Spinner'
@@ -291,9 +291,11 @@ export default function Profile() {
   const mentorTypeLabel = profile.mentor_type === 'other'
     ? (profile.mentor_type_other || 'Other')
     : profile.mentor_type ? MENTOR_TYPE_LABELS[profile.mentor_type] : null
+  // P1-8 — use the spelled-out public phrasing for the own-profile
+  // display so it matches what other viewers see.
   const studentSeekingLabel = profile.student_seeking === 'other'
-    ? (profile.student_seeking_other || 'Other')
-    : profile.student_seeking ? STUDENT_SEEKING_LABELS[profile.student_seeking] : null
+    ? (profile.student_seeking_other || STUDENT_SEEKING_PUBLIC.other)
+    : profile.student_seeking ? STUDENT_SEEKING_PUBLIC[profile.student_seeking] : null
 
   return (
     <div className="max-w-xl mx-auto">

@@ -181,6 +181,16 @@ export const STUDENT_SEEKING_LABELS: Record<StudentSeeking, string> = {
   other: 'Something else',
 }
 
+/** P1-8 — public profile rendering uses the spelled-out form so "Looking
+ *  for: Both" stops being context-free. The short form above is for
+ *  buttons / chips where space is tight. */
+export const STUDENT_SEEKING_PUBLIC: Record<StudentSeeking, string> = {
+  job: 'A job or internship',
+  mentor: 'A mentor',
+  both: 'A job or internship and a mentor',
+  other: 'Something else (see bio)',
+}
+
 export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   pending: 'Pending',
   reviewed: 'Reviewed',
