@@ -42,10 +42,41 @@ export default function MeetingRequests() {
   const [requests, setRequests] = useState<MeetingRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [actioning, setActioning] = useState<string | null>(null)
+  // P1-10 — drives the branching empty-state copy.
+  const [openMentorCount, setOpenMentorCount] = useState<number | null>(null)
+  const [acceptedAppEmployer, setAcceptedAppEmployer] = useState<{ id: string; name: string } | null>(null)
 
   async function load(quiet = false) {
     if (!profile) return
     if (!quiet) setLoading(true)
+
+    // Open-mentor count (students only — affects which empty-state line shows).
+    if (profile.role === 'student') {
+      const { count } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'employer_mentor')
+        .eq('open_to_mentorship', true)
+        .is('banned_at', null)
+      setOpenMentorCount(count ?? 0)
+
+      // Most recent accepted application — used to surface "schedule a
+      // meeting with [Employer]" instead of bouncing the user to /mentors.
+      const { data: acceptedApp } = await supabase
+        .from('applications')
+        .select('jobs!applications_job_id_fkey(posted_by, profiles!jobs_posted_by_fkey(full_name))')
+        .eq('applicant_id', profile.id)
+        .eq('status', 'accepted')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const job = (acceptedApp as { jobs?: { posted_by?: string; profiles?: { full_name?: string } } } | null)?.jobs
+      if (job?.posted_by) {
+        setAcceptedAppEmployer({ id: job.posted_by, name: job.profiles?.full_name ?? 'the employer' })
+      } else {
+        setAcceptedAppEmployer(null)
+      }
+    }
 
     const { data } = await supabase
       .from('meeting_requests')
@@ -147,24 +178,38 @@ export default function MeetingRequests() {
             {outgoing.length === 0 ? (
               <div className="text-center py-10 bg-surface rounded-xl border border-border">
                 <User size={28} className="mx-auto text-ink-muted mb-2" />
-                <p className="text-sm text-ink-muted">
-                  You haven't sent any meeting requests.{' '}
-                  {/* Audit M7 — link to the role-specific directory now that
-                      /people is split into /students and /mentors. */}
-                  <Link
-                    to={profile?.role === 'student' ? '/mentors' : '/students'}
-                    className="text-primary hover:text-primary-light"
-                  >
-                    {profile?.role === 'student' ? 'Browse mentors' : 'Browse students'}
-                  </Link>{' '}
-                  to find someone to connect with.
-                </p>
-                {/* S10.4 — students who land here when no mentors are open
-                    were stuck. Surface a direct mailto so the trail doesn't
-                    dead-end at /mentors. */}
-                {profile?.role === 'student' && (
-                  <p className="text-xs text-ink-muted mt-2">
-                    Or <a href="mailto:registrar@crms.org" className="text-primary hover:text-primary-light">email the registrar</a> if no mentors are accepting right now.
+                {/* P1-10 — branch the copy on (a) whether the student has any
+                    accepted applications (best next step is the employer)
+                    and (b) whether mentors are accepting at all. */}
+                {profile?.role === 'student' ? (
+                  acceptedAppEmployer ? (
+                    <p className="text-sm text-ink-muted">
+                      Schedule a meeting with <strong className="text-ink">{acceptedAppEmployer.name}</strong> to discuss next steps.{' '}
+                      <Link to={`/people/${acceptedAppEmployer.id}`} className="text-primary hover:text-primary-light">
+                        Request meeting
+                      </Link>.
+                    </p>
+                  ) : openMentorCount === 0 ? (
+                    <p className="text-sm text-ink-muted">
+                      No mentors are currently accepting requests. If you're looking for someone specific,{' '}
+                      <a href="mailto:registrar@crms.org" className="text-primary hover:text-primary-light">email the registrar</a>.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-ink-muted">
+                      You haven't sent any meeting requests.{' '}
+                      <Link to="/mentors" className="text-primary hover:text-primary-light">
+                        Browse our {openMentorCount ?? ''} {(openMentorCount ?? 0) === 1 ? 'mentor' : 'mentors'}
+                      </Link>{' '}
+                      to find someone to connect with.
+                    </p>
+                  )
+                ) : (
+                  <p className="text-sm text-ink-muted">
+                    You haven't sent any meeting requests.{' '}
+                    <Link to="/students" className="text-primary hover:text-primary-light">
+                      Browse students
+                    </Link>{' '}
+                    to find someone to connect with.
                   </p>
                 )}
               </div>

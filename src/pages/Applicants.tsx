@@ -109,6 +109,8 @@ export default function Applicants() {
   async function updateStatus(appId: string, status: ApplicationStatus) {
     setUpdatingId(appId)
     setUpdateError(null)
+    const app = applications.find((a) => a.id === appId)
+    const previousStatus = app?.status
     const { error } = await supabase
       .from('applications')
       .update({ status })
@@ -124,9 +126,9 @@ export default function Applicants() {
       if      (status === 'accepted') toast('Application accepted.')
       else if (status === 'rejected') toast('Application declined.')
       else if (status === 'pending')  toast('Decision reversed.')
-      // Notify applicant of status update (best-effort)
-      const app = applications.find((a) => a.id === appId)
+
       const applicantId = (app?.profiles as { id?: string } | null)?.id
+      // Notify applicant of status update (best-effort)
       if (applicantId && job) {
         const STATUS_PUSH: Record<ApplicationStatus, string> = {
           pending:    'Your application has been submitted.',
@@ -142,8 +144,68 @@ export default function Applicants() {
           `/applications`
         )
       }
+
+      // P1-4 — auto-post a system message into the conversation when the
+      // employer accepts (or reverses) so both sides land in a thread with
+      // real context instead of an empty inbox.
+      if (applicantId && profile && (status === 'accepted' || (status === 'pending' && previousStatus === 'accepted'))) {
+        void postSystemMessage({
+          employerId: profile.id,
+          applicantId,
+          jobTitle: job?.title ?? 'this opportunity',
+          status,
+        })
+      }
     }
     setUpdatingId(null)
+  }
+
+  // P1-4 — finds (or creates) the conversation between employer + applicant
+  // and inserts a flagged "Application accepted by …" message. Best-effort:
+  // failures are swallowed (the status update already succeeded; the
+  // employer can DM manually if this glitches).
+  async function postSystemMessage({
+    employerId, applicantId, jobTitle, status,
+  }: {
+    employerId: string
+    applicantId: string
+    jobTitle: string
+    status: ApplicationStatus
+  }) {
+    try {
+      // Look up an existing conversation in either participant order.
+      const p1 = employerId < applicantId ? employerId : applicantId
+      const p2 = employerId < applicantId ? applicantId : employerId
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('participant_one', p1)
+        .eq('participant_two', p2)
+        .maybeSingle()
+      let conversationId = (existing as { id?: string } | null)?.id ?? null
+      if (!conversationId) {
+        const { data: created } = await supabase
+          .from('conversations')
+          .insert({ participant_one: p1, participant_two: p2 })
+          .select('id')
+          .single()
+        conversationId = (created as { id?: string } | null)?.id ?? null
+      }
+      if (!conversationId) return
+
+      const employerName = (profile?.full_name ?? 'The employer').trim()
+      const content = status === 'accepted'
+        ? `Application accepted by ${employerName} for "${jobTitle}". You can now coordinate next steps here.`
+        : `Application status reverted to Submitted by ${employerName} for "${jobTitle}".`
+      await supabase.from('messages').insert({
+        conversation_id: conversationId,
+        sender_id: employerId,
+        content,
+        is_system: true,
+      })
+    } catch (err) {
+      console.warn('[Applicants] postSystemMessage failed', err)
+    }
   }
 
   if (loading) {

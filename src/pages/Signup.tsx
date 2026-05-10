@@ -180,20 +180,31 @@ export default function Signup() {
                 Your role
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {ROLES.map((r) => (
-                  <button type="button"
-                    key={r}
-                    onClick={() => setRole(r)}
-                    className={`px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors text-center
-                      ${role === r
-                        ? 'border-primary text-primary'
-                        : 'border-border text-ink-secondary hover:border-border-strong hover:bg-primary-faint'
-                      }`}
-                    style={role === r ? { backgroundColor: 'var(--color-primary-muted)' } : {}}
-                  >
-                    {ROLE_LABELS[r]}
-                  </button>
-                ))}
+                {ROLES.map((r) => {
+                  const selected = role === r
+                  return (
+                    <button type="button"
+                      key={r}
+                      onClick={() => setRole(r)}
+                      aria-pressed={selected}
+                      // P0-3 — make the selected state unambiguous with a 2px
+                      // ring (independent of the base border color), bold
+                      // text, and a check glyph. Was: same border width as
+                      // the unselected button which left the toggle visually
+                      // unchanged in some themes.
+                      className={`relative px-3 py-2.5 rounded-lg border-2 text-sm font-semibold transition-colors text-center
+                        ${selected
+                          ? 'border-primary text-primary bg-primary-muted'
+                          : 'border-border text-ink-secondary hover:border-border-strong hover:bg-primary-faint'
+                        }`}
+                    >
+                      {selected && (
+                        <span aria-hidden="true" className="absolute top-1 right-1.5 text-primary text-xs">✓</span>
+                      )}
+                      {ROLE_LABELS[r]}
+                    </button>
+                  )
+                })}
               </div>
               <p className="mt-2 text-xs text-ink-muted leading-relaxed">
                 {ROLE_DESCRIPTIONS[role as 'student' | 'employer_mentor']}

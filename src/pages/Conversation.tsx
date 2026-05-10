@@ -327,6 +327,24 @@ export default function Conversation() {
               const showAvatar =
                 !isMine && (i === 0 || messages[i - 1].sender_id !== msg.sender_id)
 
+              // P1-4 — system messages (auto-posted on application accept /
+              // reverse) render centered + italic + neutral, no avatar /
+              // bubble, so they read as platform-issued context, not chat.
+              if (msg.is_system) {
+                return (
+                  <div key={msg.id} className="my-3 flex justify-center">
+                    <div className="max-w-[80%] text-center">
+                      <p className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-faint border border-primary-muted text-xs italic text-ink-secondary">
+                        {msg.content}
+                      </p>
+                      <p className="text-[10px] text-ink-muted mt-1">
+                        {formatMessageTime(msg.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                )
+              }
+
               return (
                 <div key={msg.id}>
                   {showDivider && (

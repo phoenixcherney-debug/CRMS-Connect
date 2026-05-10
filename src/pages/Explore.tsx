@@ -11,6 +11,7 @@ import type { Job, Profile } from '../types'
 import { ROLE_LABELS } from '../types'
 import JobCard from '../components/JobCard'
 import Spinner from '../components/Spinner'
+import MentorModeBanner from '../components/MentorModeBanner'
 import { isPast, parseISO } from 'date-fns'
 
 /** Audit task 17 — preserve the casing the user typed. We only trim
@@ -198,6 +199,8 @@ export default function Explore() {
           </form>
         </div>
       </div>
+
+      <MentorModeBanner />
 
       {/* Quick links — role-aware */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

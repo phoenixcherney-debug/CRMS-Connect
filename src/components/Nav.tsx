@@ -60,6 +60,10 @@ export default function Nav() {
     ] : []),
     ...(isEmployerMentor ? [
       { to: '/my-opportunities' as const, label: 'My Opportunities' as const, icon: ClipboardList },
+      // P1-7 — Student Posts (renamed "Students looking") is the highest-
+      // leverage inbound surface for E/M; promoted from the More menu to
+      // top-level so the path is one click instead of three.
+      { to: '/student-posts'    as const, label: 'Students looking' as const, icon: BookOpen },
     ] : []),
     directoryItem,
     ...BASE_NAV_TAIL, // Notifications, Messages
@@ -77,7 +81,6 @@ export default function Nav() {
     ] : []),
     ...(isEmployerMentor ? [
       { to: '/opportunities/new',  label: 'Post an Opportunity', icon: PlusSquare  },
-      { to: '/student-posts',      label: 'Student Posts',       icon: BookOpen    },
     ] : []),
     ...(isStudent ? [
       { to: '/student-posts/mine', label: 'My Post', icon: BookOpen },

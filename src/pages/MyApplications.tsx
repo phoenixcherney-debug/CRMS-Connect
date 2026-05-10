@@ -68,7 +68,7 @@ export default function MyApplications() {
       .from('applications')
       .select(`
         *,
-        jobs(id, title, company, location, job_type, deadline, is_active,
+        jobs(id, title, company, location, job_type, deadline, is_active, contact_email,
           profiles!jobs_posted_by_fkey(id, full_name))
       `)
       .eq('applicant_id', profile.id)
@@ -293,6 +293,21 @@ export default function MyApplications() {
                   <p className="mt-3 text-xs text-ink-secondary leading-relaxed line-clamp-2 italic">
                     "{app.cover_note}"
                   </p>
+
+                  {/* P1-5 — surface contact email after acceptance only.
+                      Privacy doc promises this and it lived nowhere in the
+                      UI before. */}
+                  {app.status === 'accepted' && (job as { contact_email?: string }).contact_email && (
+                    <p className="mt-2 text-xs text-ink-secondary">
+                      Contact:{' '}
+                      <a
+                        href={`mailto:${(job as { contact_email?: string }).contact_email}`}
+                        className="text-primary hover:text-primary-light font-medium underline break-all"
+                      >
+                        {(job as { contact_email?: string }).contact_email}
+                      </a>
+                    </p>
+                  )}
                 </div>
 
                 {/* Right side: status + links */}

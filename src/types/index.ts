@@ -140,6 +140,9 @@ export interface Message {
   sender_id: string
   content: string
   is_read: boolean
+  /** P1-4 — system-authored auto-messages (e.g. "Application accepted by …")
+   *  render with distinct styling. */
+  is_system?: boolean
   profiles?: Profile | null
 }
 

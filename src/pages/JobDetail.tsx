@@ -418,9 +418,9 @@ export default function JobDetail() {
               const iconClass = isRejected ? 'text-error' : isAccepted ? 'text-success' : 'text-primary'
               return (
                 <div className="space-y-3">
-                  <div className={`flex items-center gap-3 p-4 rounded-xl border ${bgClass}`}>
-                    <IconComponent size={20} className={`${iconClass} shrink-0`} />
-                    <div className="flex-1">
+                  <div className={`flex items-start gap-3 p-4 rounded-xl border ${bgClass}`}>
+                    <IconComponent size={20} className={`${iconClass} shrink-0 mt-0.5`} />
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-ink">
                         {isRejected ? 'Application not selected' : isAccepted ? 'Application accepted!' : 'Application submitted'}
                       </p>
@@ -430,6 +430,20 @@ export default function JobDetail() {
                           {s.label}
                         </span>
                       </div>
+                      {/* P1-5 — surface the employer's contact email after
+                          acceptance (and only after). Privacy doc promises
+                          this; previously it was nowhere in the UI. */}
+                      {isAccepted && job.contact_email && (
+                        <p className="text-xs text-ink-secondary mt-2">
+                          Contact:{' '}
+                          <a
+                            href={`mailto:${job.contact_email}`}
+                            className="text-primary hover:text-primary-light font-medium underline break-all"
+                          >
+                            {job.contact_email}
+                          </a>
+                        </p>
+                      )}
                     </div>
                     {status === 'pending' && (
                       <button type="button"

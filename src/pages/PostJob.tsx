@@ -224,6 +224,20 @@ export default function PostJob() {
       // doesn't fire on the post-save redirect.
       setSavedJustNow(true)
       toast(isEdit ? 'Saved.' : 'Opportunity published.')
+      // P1-8 — nudge employers to fill in the most-filtered fields. Toast
+      // only on the create path; for edits the user already saw the form.
+      if (!isEdit) {
+        const missing: string[] = []
+        if (!form.industry) missing.push('an industry')
+        if (!form.compensation.trim()) missing.push('compensation')
+        if (missing.length > 0) {
+          setTimeout(() => {
+            toast(
+              `Tip: posts with ${missing.join(' and ')} listed get more applications.`,
+            )
+          }, 600)
+        }
+      }
       navigate(isEdit ? `/opportunities/${id}` : '/my-opportunities')
     } catch (err) {
       setError(friendlyError(err, SAVE_FAIL_MSG))
