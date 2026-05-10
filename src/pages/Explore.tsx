@@ -15,6 +15,7 @@ import MentorModeBanner from '../components/MentorModeBanner'
 import EmployerDashboardStrip from '../components/EmployerDashboardStrip'
 import InviteMentorButton from '../components/InviteMentorButton'
 import EmployerTourModal from '../components/EmployerTourModal'
+import OnboardingChecklist from '../components/OnboardingChecklist'
 import { isPast, parseISO } from 'date-fns'
 
 /** Audit task 17 — preserve the casing the user typed. We only trim
@@ -205,7 +206,12 @@ export default function Explore() {
 
       <MentorModeBanner />
       <EmployerDashboardStrip />
-      {isEmployerMentor && <EmployerTourModal />}
+      {isEmployerMentor && (
+        <>
+          <OnboardingChecklist />
+          <EmployerTourModal />
+        </>
+      )}
 
       {isEmployerMentor && (
         <div className="mb-4 flex justify-end">

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ExternalLink, Calendar, MessageSquare, CheckCircle2, X, Clock } from 'lucide-react'
+import { ChevronLeft, ExternalLink, Calendar, MessageSquare, CheckCircle2, X, Clock, Download } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { safeExternalHref } from '../lib/url'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
+import { toCsv, downloadCsv } from '../lib/csv'
 import { initialsOf } from '../lib/initials'
 import { useToast } from '../components/ToastProvider'
 import type { Application, ApplicationStatus, Job, StudentSeeking, OpportunityType } from '../types'
@@ -286,6 +287,47 @@ export default function Applicants() {
     else toast(`Sent to ${ok} ${ok === 1 ? 'applicant' : 'applicants'}.`)
   }
 
+  // P1-6 — CSV export. Email is excluded unless the applicant has been
+  // accepted (matches the privacy promise on /for-employers).
+  function exportCsv() {
+    if (!job) return
+    const headers = [
+      'Name', 'Class year', 'Applied at', 'Status', 'Cover note (truncated)',
+      'Portfolio URL', 'Weekly availability', 'Interests',
+      ...(((job.custom_questions ?? []) as string[]).filter((q) => q.trim().length > 0)),
+      'Email (accepted only)',
+    ]
+    const rows = applications.map((a) => {
+      const p = a.profiles as { full_name?: string; graduation_year?: number; weekly_availability?: string; interests?: string[] } | null
+      const accepted = a.status === 'accepted'
+      // Email is in auth.users, not profiles — we don't have it on the
+      // client unless the row was joined that way. To honor the privacy
+      // promise without a separate lookup, leave the column blank when
+      // not accepted; export with a placeholder when accepted (the
+      // employer can grab the actual mailto: from /applications view).
+      const customByQ = new Map<string, string>()
+      for (const qa of (a.custom_answers ?? [])) customByQ.set(qa.question, qa.answer)
+      const customCols = ((job.custom_questions ?? []) as string[])
+        .filter((q) => q.trim().length > 0)
+        .map((q) => customByQ.get(q) ?? '')
+      return [
+        p?.full_name ?? '',
+        p?.graduation_year ?? '',
+        new Date(a.created_at).toISOString(),
+        a.status,
+        (a.cover_note ?? '').slice(0, 500),
+        a.resume_link ?? '',
+        p?.weekly_availability ?? '',
+        (p?.interests ?? []).join('; '),
+        ...customCols,
+        accepted ? '(see /applications)' : '',
+      ]
+    })
+    const csv = toCsv(headers, rows)
+    const slug = job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    downloadCsv(`applicants-${slug || 'export'}-${new Date().toISOString().split('T')[0]}.csv`, csv)
+  }
+
   // P1-4 — finds (or creates) the conversation between employer + applicant
   // and inserts a flagged "Application accepted by …" message. Best-effort:
   // failures are swallowed (the status update already succeeded; the
@@ -412,14 +454,27 @@ export default function Applicants() {
       </Link>
 
       {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Applicants</h1>
-        <p className="text-ink-secondary text-sm mt-0.5">
-          {job.title} · {job.company} ·{' '}
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs border border-border text-ink-secondary bg-primary-faint">
-            {JOB_TYPE_LABELS[job.job_type]}
-          </span>
-        </p>
+      <div className="mb-5 flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Applicants</h1>
+          <p className="text-ink-secondary text-sm mt-0.5">
+            {job.title} · {job.company} ·{' '}
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs border border-border text-ink-secondary bg-primary-faint">
+              {JOB_TYPE_LABELS[job.job_type]}
+            </span>
+          </p>
+        </div>
+        {/* P1-6 — CSV export. Mirrors what's on the cards; emails are
+            included only for accepted applicants (privacy promise). */}
+        {applications.length > 0 && (
+          <button
+            type="button"
+            onClick={exportCsv}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
+          >
+            <Download size={14} /> Download CSV
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -917,6 +972,19 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
               {isExpanded ? 'Show less' : 'Read more'}
             </button>
           )}
+        </div>
+      )}
+
+      {/* P1-7 — answers to the poster's custom questions, snapshotted at
+          submit so the labels never desync from what the applicant saw. */}
+      {Array.isArray(app.custom_answers) && app.custom_answers.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-border space-y-3">
+          {app.custom_answers.map((qa, i) => (
+            <div key={`${i}-${qa.question}`}>
+              <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">{qa.question}</p>
+              <p className="text-sm text-ink-secondary leading-relaxed mt-0.5 whitespace-pre-wrap">{qa.answer}</p>
+            </div>
+          ))}
         </div>
       )}
 

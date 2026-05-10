@@ -62,7 +62,7 @@ export default function People({ directory }: PeopleProps = {}) {
       // bylines or direct profile links. /students directory is unchanged.
       let q = supabase
         .from('profiles')
-        .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, interests, weekly_availability, mentor_type, student_seeking, grade, share_grade_with_employers, created_at')
+        .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, mentorship_paused_until, interests, weekly_availability, mentor_type, student_seeking, grade, share_grade_with_employers, created_at')
         .eq('role', targetRole)
         .order('full_name', { ascending: true })
       if (directory === 'mentors') q = q.eq('open_to_mentorship', true)
@@ -70,7 +70,16 @@ export default function People({ directory }: PeopleProps = {}) {
       if (error) {
         setFetchError(true)
       } else {
-        setPeople((data as Profile[]) ?? [])
+        // P1-10 — drop mentors whose pause-until is still in the future
+        // (server-side filter on a nullable date is awkward enough that
+        // post-filtering is cheaper).
+        const today = new Date().toISOString().split('T')[0]
+        const rows = ((data as Profile[]) ?? []).filter((p) => {
+          if (directory !== 'mentors') return true
+          const pause = (p.mentorship_paused_until as string | null | undefined)
+          return !pause || pause <= today
+        })
+        setPeople(rows)
       }
       setLoading(false)
     }

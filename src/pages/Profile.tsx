@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type React from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   CheckCircle2, AlertCircle, User, Pencil, X, Plus, Trash2, Briefcase, Heart, Upload,
 } from 'lucide-react'
@@ -34,6 +34,8 @@ export default function Profile() {
   const [industryOther, setIndustryOther]           = useState('')
   const [openToMentorship, setOpenToMentorship]     = useState(false)
   const [meetingRequestMode, setMeetingRequestMode] = useState<'flexible' | 'slots'>('flexible')
+  // P1-10 — empty string means "not paused".
+  const [mentorshipPausedUntil, setMentorshipPausedUntil] = useState('')
   const [interests, setInterests]                   = useState<string[]>([])
   const [weeklyAvailability, setWeeklyAvailability] = useState('')
 
@@ -84,6 +86,7 @@ export default function Profile() {
       setIndustryOther(isCustomIndustry ? savedIndustry : '')
       setOpenToMentorship(profile.open_to_mentorship ?? false)
       setMeetingRequestMode((profile.meeting_request_mode as 'flexible' | 'slots' | null | undefined) ?? 'flexible')
+      setMentorshipPausedUntil((profile.mentorship_paused_until as string | null | undefined) ?? '')
       setInterests(profile.interests ?? [])
       setWeeklyAvailability(profile.weekly_availability ?? '')
       setMentorType(profile.mentor_type ?? '')
@@ -243,6 +246,7 @@ export default function Profile() {
       updates.industry         = industry === 'Other' ? (industryOther.trim() || null) : (industry || null)
       updates.open_to_mentorship = openToMentorship
       updates.meeting_request_mode = meetingRequestMode
+      updates.mentorship_paused_until = mentorshipPausedUntil || null
       updates.mentor_type      = mentorType || null
       updates.mentor_type_other = mentorType === 'other' ? mentorTypeOther.trim() || null : null
     }
@@ -819,7 +823,22 @@ export default function Profile() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setOpenToMentorship(!openToMentorship)}
+                        onClick={() => {
+                          // P1-10 — toast + deep link the moment the toggle flips on,
+                          // so the mentor sees the proof their card landed.
+                          const next = !openToMentorship
+                          setOpenToMentorship(next)
+                          if (next) {
+                            toast(
+                              (
+                                <span>
+                                  You're now visible.{' '}
+                                  <Link to="/mentors" className="font-semibold underline">View your mentor card →</Link>
+                                </span>
+                              ) as unknown as string,
+                            )
+                          }
+                        }}
                         className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors
                           ${openToMentorship ? 'bg-primary' : 'bg-border-strong'}`}
                       >
@@ -827,6 +846,36 @@ export default function Profile() {
                           ${openToMentorship ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
+
+                    {/* P1-10 — pause-until: a mentor going on parental leave or
+                        a busy season can suspend without remembering to flip
+                        the toggle back on. Only visible when toggle is on. */}
+                    {openToMentorship && (
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-primary-faint">
+                        <label className="text-sm text-ink flex-1">
+                          <span className="font-medium">Pause until</span>
+                          <span className="block text-xs text-ink-muted mt-0.5">
+                            Optional. Hides you from /mentors until this date passes; the toggle stays on.
+                          </span>
+                        </label>
+                        <input
+                          type="date"
+                          value={mentorshipPausedUntil}
+                          min={new Date().toISOString().split('T')[0]}
+                          onChange={(e) => setMentorshipPausedUntil(e.target.value)}
+                          className="px-2.5 py-1.5 rounded-lg border border-border bg-surface text-ink text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        />
+                        {mentorshipPausedUntil && (
+                          <button
+                            type="button"
+                            onClick={() => setMentorshipPausedUntil('')}
+                            className="text-xs text-ink-muted hover:text-ink"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     {/* P2-14 — pick how students should propose meeting times. */}
                     {openToMentorship && (

@@ -233,7 +233,16 @@ export default function Employers() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-ink text-base">{employer.company}</p>
+                      {/* P1-2 — link to the dedicated company page. Stops
+                          click bubbling so the row's expand toggle doesn't
+                          also fire. */}
+                      <Link
+                        to={`/companies/${encodeURIComponent(employer.company.toLowerCase())}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-semibold text-ink text-base hover:text-primary transition-colors"
+                      >
+                        {employer.company}
+                      </Link>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-xs text-ink-muted">
                           {employer.jobs.length} total opportunit{employer.jobs.length !== 1 ? 'ies' : 'y'}

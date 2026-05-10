@@ -167,6 +167,7 @@ const AdminReports      = lazy(() => import('./pages/AdminReports'))
 const Landing           = lazy(() => import('./pages/Landing'))
 const ForMentors        = lazy(() => import('./pages/ForMentors'))
 const ForEmployers      = lazy(() => import('./pages/ForEmployers'))
+const Company           = lazy(() => import('./pages/Company'))
 
 export default function App() {
   return (
@@ -236,6 +237,12 @@ export default function App() {
             <Route path="/employers" element={
               <ProtectedRoute roles={['student']}>
                 <Layout><Employers /></Layout>
+              </ProtectedRoute>
+            } />
+            {/* P1-2 — public company page; reachable for any authenticated user. */}
+            <Route path="/companies/:id" element={
+              <ProtectedRoute>
+                <Layout><Company /></Layout>
               </ProtectedRoute>
             } />
 

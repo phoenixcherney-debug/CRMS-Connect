@@ -25,8 +25,9 @@ export default function MyPostings() {
   // H-04 — Close (deactivate) needs a confirm so it doesn't fire from a
   // misclick. We don't gate Reopen — that's recoverable.
   const [confirmCloseId, setConfirmCloseId] = useState<string | null>(null)
-  // P2-16 — 30-day view counts keyed by job_id.
-  const [viewStats, setViewStats] = useState<Record<string, number>>({})
+  // P2-16 / P1-5 — per-job stats keyed by job_id (views, saves,
+  // first-applicant timestamp).
+  const [viewStats, setViewStats] = useState<Record<string, { views: number; saves: number; firstApplicantAt: string | null }>>({})
 
   async function load() {
     if (!profile) return
@@ -40,13 +41,17 @@ export default function MyPostings() {
     setPostings(rows)
     setLoading(false)
 
-    // P2-16 — fan-out the view-count fetch in one RPC call.
+    // P2-16 / P1-5 — one RPC for views + saves + first-applicant.
     if (rows.length > 0) {
       const ids = rows.map((p) => p.id)
       const { data: stats } = await supabase.rpc('opportunity_view_stats', { job_ids: ids })
-      const next: Record<string, number> = {}
-      for (const r of (stats as { job_id: string; views_30d: number }[] | null) ?? []) {
-        next[r.job_id] = Number(r.views_30d) || 0
+      const next: typeof viewStats = {}
+      for (const r of (stats as { job_id: string; views_30d: number; save_count: number; first_applicant_at: string | null }[] | null) ?? []) {
+        next[r.job_id] = {
+          views: Number(r.views_30d) || 0,
+          saves: Number(r.save_count) || 0,
+          firstApplicantAt: r.first_applicant_at,
+        }
       }
       setViewStats(next)
     }
@@ -157,12 +162,21 @@ export default function MyPostings() {
                       <Users size={12} />
                       {applicantCount} {applicantCount === 1 ? 'applicant' : 'applicants'}
                     </span>
-                    {/* P2-16 — 30-day view count from opportunity_view_stats. */}
-                    {(viewStats[job.id] ?? 0) > 0 && (
-                      <span title="Page-views from authenticated students in the last 30 days. Your own visits are not counted.">
-                        {viewStats[job.id]} view{viewStats[job.id] === 1 ? '' : 's'} (30d)
-                      </span>
-                    )}
+                    {/* P2-16 / P1-5 — views + saves + time-to-first applicant. */}
+                    {(() => {
+                      const s = viewStats[job.id]
+                      if (!s) return null
+                      const segs: string[] = []
+                      if (s.views > 0) segs.push(`${s.views} view${s.views === 1 ? '' : 's'} (30d)`)
+                      if (s.saves > 0) segs.push(`${s.saves} save${s.saves === 1 ? '' : 's'}`)
+                      if (s.firstApplicantAt) {
+                        const ms = parseISO(s.firstApplicantAt).getTime() - parseISO(job.created_at).getTime()
+                        const days = Math.max(1, Math.round(ms / 86_400_000))
+                        const hours = Math.max(1, Math.round(ms / 3_600_000))
+                        segs.push(`first applicant in ${ms < 86_400_000 ? `${hours}h` : `${days}d`}`)
+                      }
+                      return segs.length > 0 ? <span>{segs.join(' · ')}</span> : null
+                    })()}
                   </div>
                 </div>
 

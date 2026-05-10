@@ -45,6 +45,9 @@ export default function JobDetail() {
   const [coverNote, setCoverNote] = useState('')
   const [coverNoteError, setCoverNoteError] = useState<string | null>(null)
   const [resumeLink, setResumeLink] = useState('')
+  // P1-7 — answers keyed by question text so the order matches what the
+  // employer set. Required iff the question is non-blank.
+  const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({})
   const [applyLoading, setApplyLoading] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
   const [applySuccess, setApplySuccess] = useState(false)
@@ -196,6 +199,20 @@ export default function JobDetail() {
       return
     }
 
+    // P1-7 — every non-blank custom question is required. Snapshot the
+    // question text alongside the answer so the row stays meaningful even
+    // if the poster later edits or reorders the questions.
+    const questions = (job.custom_questions ?? []).filter((q) => q.trim().length > 0)
+    const answers: { question: string; answer: string }[] = []
+    for (const q of questions) {
+      const a = (customAnswers[q] ?? '').trim()
+      if (!a) {
+        setApplyError(`Please answer: "${q}"`)
+        return
+      }
+      answers.push({ question: q, answer: a })
+    }
+
     setApplyError(null)
     setApplyLoading(true)
 
@@ -206,6 +223,7 @@ export default function JobDetail() {
         applicant_id: profile.id,
         cover_note: cleanedNote.clean,
         resume_link: safeResumeLink,
+        custom_answers: answers,
         status: 'pending',
       })
       .select()
@@ -582,6 +600,25 @@ export default function JobDetail() {
                     </p>
                   )}
                 </div>
+
+                {/* P1-7 — render the poster's custom questions, all required. */}
+                {(job.custom_questions ?? []).filter((q) => q.trim().length > 0).map((q, idx) => (
+                  <div key={`${idx}-${q}`}>
+                    <label className="block text-sm font-medium text-ink mb-1.5">
+                      {q} <span className="text-error">*</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      maxLength={2000}
+                      value={customAnswers[q] ?? ''}
+                      onChange={(e) => setCustomAnswers((prev) => ({ ...prev, [q]: e.target.value }))}
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                        placeholder:text-ink-placeholder resize-none
+                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    />
+                  </div>
+                ))}
+
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">
                     Resume / Portfolio link{' '}

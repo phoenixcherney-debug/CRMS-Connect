@@ -55,6 +55,10 @@ export interface Profile {
   account_status?: 'pending' | 'active' | 'disabled'
   /** P2-14 — for mentors with open_to_mentorship=true. */
   meeting_request_mode?: 'flexible' | 'slots' | null
+  /** P1-10 — when set to a future date, hides the mentor from /mentors
+   *  even though open_to_mentorship is true (for parental leave / busy
+   *  season). Past dates are no-ops. */
+  mentorship_paused_until?: string | null
   created_at: string
   banned_at?: string | null
 }
@@ -105,6 +109,8 @@ export interface Job {
   opportunity_type_other?: string | null
   start_date?: string | null
   end_date?: string | null
+  /** P1-7 — up to 3 free-text questions the applicant must answer. */
+  custom_questions?: string[] | null
   // Joined
   profiles?: Profile | null
 }
@@ -131,6 +137,10 @@ export interface Application {
   cover_note: string
   resume_link?: string | null
   status: ApplicationStatus
+  /** P1-7 — answers to opportunity.custom_questions, snapshotted at submit
+   *  so the applicant's record stays meaningful even if the poster later
+   *  edits or reorders the questions. */
+  custom_answers?: { question: string; answer: string }[] | null
   // Joined
   jobs?: Job | null
   profiles?: Profile | null

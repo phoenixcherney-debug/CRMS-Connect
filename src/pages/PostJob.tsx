@@ -30,6 +30,8 @@ interface JobForm {
   end_date: string
   expected_weekly_hours: string
   compensation: string
+  /** P1-7 — three slots, blank entries are filtered out at save time. */
+  custom_questions: [string, string, string]
 }
 
 const DEFAULT_FORM: JobForm = {
@@ -47,6 +49,7 @@ const DEFAULT_FORM: JobForm = {
   end_date: '',
   expected_weekly_hours: '',
   compensation: '',
+  custom_questions: ['', '', ''],
 }
 
 const SAVE_FAIL_MSG = 'Could not save the opportunity. Please try again.'
@@ -94,6 +97,10 @@ export default function PostJob() {
           end_date: data.end_date ?? '',
           expected_weekly_hours: data.expected_weekly_hours ?? '',
           compensation: data.compensation ?? '',
+          custom_questions: (() => {
+            const arr = (data.custom_questions ?? []) as string[]
+            return [arr[0] ?? '', arr[1] ?? '', arr[2] ?? ''] as [string, string, string]
+          })(),
         }
         setForm(next)
         initialFormRef.current = next
@@ -186,6 +193,8 @@ export default function PostJob() {
       end_date: form.end_date || null,
       expected_weekly_hours: form.expected_weekly_hours || null,
       compensation: form.compensation.trim() || null,
+      // P1-7 — drop blank slots; trigger rejects 0-length entries anyway.
+      custom_questions: form.custom_questions.map((q) => q.trim()).filter(Boolean),
       // opportunity_type is no longer collected (consolidated with job_type),
       // but kept nullable in the schema so legacy rows still display.
       opportunity_type: null,
@@ -541,6 +550,38 @@ export default function PostJob() {
             {fieldErrors.deadline && (
               <p id="deadline-error" role="alert" className="mt-1 text-xs text-error">{fieldErrors.deadline}</p>
             )}
+          </div>
+
+          {/* P1-7 — up to three custom questions for applicants. */}
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1.5">
+              Custom questions{' '}
+              <span className="text-ink-muted font-normal">(optional, max 3 · short text only)</span>
+            </label>
+            <p className="text-xs text-ink-muted mb-2">
+              Each applicant will be required to answer the questions you fill in. Leave blank to skip.
+            </p>
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <input
+                  key={i}
+                  type="text"
+                  maxLength={200}
+                  value={form.custom_questions[i] ?? ''}
+                  onChange={(e) => {
+                    const next: [string, string, string] = [...form.custom_questions]
+                    next[i] = e.target.value
+                    set('custom_questions', next)
+                  }}
+                  placeholder={[
+                    'e.g. What attracted you to this opportunity?',
+                    'e.g. What\'s your strongest relevant skill?',
+                    'e.g. Anything we should know that\'s not in your application?',
+                  ][i]}
+                  className="field"
+                />
+              ))}
+            </div>
           </div>
 
           {/* Submit */}
