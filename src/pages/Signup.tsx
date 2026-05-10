@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useAuth, validateEmailForRole } from '../contexts/AuthContext'
 import type { Role } from '../types'
@@ -20,6 +20,10 @@ const ROLE_DESCRIPTIONS: Record<'student' | 'employer_mentor', string> = {
 export default function Signup() {
   const { user, signUp, loading } = useAuth()
   const navigate = useNavigate()
+  // Phase 4.6 — invite attribution. Pass the inviter id through signUp so
+  // handle_new_user persists it on the profile row.
+  const [searchParams] = useSearchParams()
+  const invitedBy = searchParams.get('invited_by')
 
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -50,7 +54,7 @@ export default function Signup() {
     setFormError(null)
     setSubmitting(true)
 
-    const { error } = await signUp({ email, password, fullName, role })
+    const { error } = await signUp({ email, password, fullName, role, invitedBy })
     setSubmitting(false)
 
     if (error) {

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Briefcase, Users, ShieldCheck, FileText, Send } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
+import CommunityStats from '../components/CommunityStats'
 
 /**
  * P2-20 — public pitch page for prospective employers / posting partners.
@@ -48,6 +49,10 @@ export default function ForEmployers() {
             </Link>
           </div>
         </div>
+      </section>
+
+      <section className="px-6 sm:px-10 pt-8 max-w-3xl mx-auto w-full">
+        <CommunityStats />
       </section>
 
       <section className="px-6 sm:px-10 py-12 sm:py-16 max-w-3xl mx-auto w-full">

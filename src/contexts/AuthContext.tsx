@@ -31,6 +31,8 @@ interface AuthContextType {
     password: string
     fullName: string
     role: Role
+    /** Phase 4.6 — inviter UUID from `?invited_by=` query string. */
+    invitedBy?: string | null
   }) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -150,11 +152,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password,
     fullName,
     role,
+    invitedBy,
   }: {
     email: string
     password: string
     fullName: string
     role: Role
+    invitedBy?: string | null
   }): Promise<{ error: string | null }> {
     const clientError = validateEmailForRole(email, role)
     if (clientError) return { error: clientError }
@@ -172,11 +176,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const canonicalName = formatDisplayName(trimmedName)
 
     try {
+      // Phase 4.6 — only attach invited_by when it parses as a UUID. The
+      // DB trigger guards against junk too, but trimming here keeps the
+      // metadata payload honest.
+      const uuidish = invitedBy && /^[0-9a-f-]{36}$/i.test(invitedBy) ? invitedBy : undefined
       const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: {
-          data: { full_name: canonicalName, role },
+          data: {
+            full_name: canonicalName,
+            role,
+            ...(uuidish ? { invited_by: uuidish } : {}),
+          },
         },
       })
 

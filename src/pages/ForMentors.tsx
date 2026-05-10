@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowRight, ShieldCheck, Clock, MessageSquare, Heart, Calendar } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
+import CommunityStats from '../components/CommunityStats'
 import { supabase } from '../lib/supabase'
 
 /**
@@ -72,7 +73,7 @@ export default function ForMentors() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
-              to="/signup"
+              to={fromId ? `/signup?invited_by=${fromId}` : '/signup'}
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-white text-primary-dark font-semibold text-sm hover:bg-white/90 transition-colors"
             >
               Sign up as a mentor <ArrowRight size={15} />
@@ -85,6 +86,10 @@ export default function ForMentors() {
             </Link>
           </div>
         </div>
+      </section>
+
+      <section className="px-6 sm:px-10 pt-8 max-w-3xl mx-auto w-full">
+        <CommunityStats />
       </section>
 
       <section className="px-6 sm:px-10 py-12 sm:py-16 max-w-3xl mx-auto w-full">
@@ -168,7 +173,7 @@ export default function ForMentors() {
           Signup takes two minutes. Onboarding takes another two. After that you'll appear in the mentor directory and students can request meetings.
         </p>
         <Link
-          to="/signup"
+          to={fromId ? `/signup?invited_by=${fromId}` : '/signup'}
           className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg btn-gold text-sm"
         >
           Sign up as a mentor <ArrowRight size={14} />

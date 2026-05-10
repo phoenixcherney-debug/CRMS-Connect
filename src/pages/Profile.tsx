@@ -19,6 +19,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications'
 import { initialsOf } from '../lib/initials'
 import StudentSectionsEditor from '../components/StudentSectionsEditor'
 import ProfileCompleteness from '../components/ProfileCompleteness'
+import InviteSummary from '../components/InviteSummary'
 
 type ProjectRow = { title: string; url?: string; description?: string }
 type LinksMap = { github?: string; website?: string; linkedin?: string }
@@ -600,6 +601,9 @@ export default function Profile() {
                   <p className="text-sm text-success font-medium">Profile saved!</p>
                 </div>
               )}
+
+              {/* Phase 4.6 — invites that resulted in signups. */}
+              <InviteSummary />
 
               {/* P3-43 / P3-44 — change password & update email */}
               <AccountSecuritySection />
