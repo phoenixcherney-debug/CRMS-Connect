@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -60,6 +60,11 @@ export default function PostJob() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+  // P1-4 — `?from=<id>` prefills the form from a previous opportunity.
+  // Editing a real row still uses the path param; `from` is for create-
+  // mode only.
+  const [searchParams] = useSearchParams()
+  const fromId = !isEdit ? searchParams.get('from') : null
 
   const [form, setForm] = useState<JobForm>(DEFAULT_FORM)
   const [loading, setLoading] = useState(isEdit)
@@ -110,19 +115,55 @@ export default function PostJob() {
     load()
   }, [id, isEdit])
 
+  // P1-4 — prefill from `?from=<id>` for create mode. Date / deadline
+  // fields are intentionally left blank (the user almost certainly wants
+  // a different cycle).
+  useEffect(() => {
+    if (!fromId || isEdit) return
+    let cancelled = false
+    async function prefill() {
+      const { data } = await supabase.from('jobs').select('*').eq('id', fromId!).single()
+      if (cancelled || !data) return
+      const next: JobForm = {
+        title: data.title ?? '',
+        company: data.company ?? '',
+        location: data.location ?? '',
+        location_type: data.location_type ?? 'in-person',
+        industry: data.industry ?? '',
+        job_type: data.job_type,
+        description: data.description ?? '',
+        how_to_apply: data.how_to_apply ?? '',
+        contact_email: data.contact_email ?? '',
+        deadline: '',
+        start_date: '',
+        end_date: '',
+        expected_weekly_hours: data.expected_weekly_hours ?? '',
+        compensation: data.compensation ?? '',
+        custom_questions: (() => {
+          const arr = (data.custom_questions ?? []) as string[]
+          return [arr[0] ?? '', arr[1] ?? '', arr[2] ?? ''] as [string, string, string]
+        })(),
+      }
+      setForm(next)
+    }
+    prefill()
+    return () => { cancelled = true }
+  }, [fromId, isEdit])
+
   function set<K extends keyof JobForm>(key: K, value: JobForm[K]) {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    await submitForm({ asDraft: false })
+  }
+
+  async function submitForm({ asDraft }: { asDraft: boolean }) {
     if (!profile || submitting) return
     setError(null)
     setFieldErrors({})
 
-    // Trim and validate required fields up front. The browser's `required`
-    // attribute catches empty strings but not whitespace-only — strip first
-    // so " " is treated the same as "".
     const trim = (s: string) => s.trim()
     const title = trim(form.title)
     const company = trim(form.company)
@@ -132,22 +173,24 @@ export default function PostJob() {
     // long-term but this is the minimum viable normalization.
     const location = trim(form.location).replace(/\b\w/g, (c) => c.toUpperCase())
     const description = trim(form.description)
-    if (!title || !company || !location || !description) {
+    // P1-4 — drafts skip required-field validation. Publish still
+    // enforces it.
+    if (!asDraft && (!title || !company || !location || !description)) {
       setError('Please fill in all required fields (title, company, location, and description).')
       return
     }
 
-    // Date validation. Past-deadline guard only applies on create — editing
-    // an already-past posting shouldn't refuse to save unrelated edits.
+    // Date validation runs even on drafts — keeps bad dates from quietly
+    // landing in storage and surprising the poster on publish.
     const todayIso = new Date().toISOString().split('T')[0]
     const fe: Record<string, string> = {}
     if (form.end_date && form.start_date && form.end_date < form.start_date) {
       fe.end_date = 'End date must be on or after the start date.'
     }
-    if (!isEdit && form.deadline && form.deadline < todayIso) {
+    if (!isEdit && !asDraft && form.deadline && form.deadline < todayIso) {
       fe.deadline = 'Application deadline must be today or later.'
     }
-    if (!isEdit && form.start_date && form.start_date < todayIso) {
+    if (!isEdit && !asDraft && form.start_date && form.start_date < todayIso) {
       fe.start_date = 'Start date must be today or later.'
     }
     // S3.2 — deadline can't be after the role's end date.
@@ -164,8 +207,6 @@ export default function PostJob() {
     if (Object.keys(fe).length > 0) {
       setFieldErrors(fe)
       setError('Please fix the highlighted fields and try again.')
-      // Scroll the form's error banner into view so the user sees feedback
-      // even if their viewport was at the bottom of a long form.
       requestAnimationFrame(() => {
         document.getElementById('post-job-error-banner')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       })
@@ -174,10 +215,6 @@ export default function PostJob() {
 
     setSubmitting(true)
 
-    // Always send `how_to_apply` and `contact_email` as strings — the live DB
-    // currently has these as NOT NULL until migration 023 is applied. Empty
-    // string is accepted by the existing schema and is what the previous code
-    // wrote, so this works whether or not the migration has been run yet.
     const payload = {
       title,
       company,
@@ -200,7 +237,9 @@ export default function PostJob() {
       opportunity_type: null,
       opportunity_type_other: null,
       posted_by: profile.id,
-      is_active: true,
+      // P1-4 — drafts stay invisible until the poster publishes.
+      is_active: !asDraft,
+      is_draft: asDraft,
     }
 
     // Hard 20s timeout so the button never sits at "Publishing…" forever
@@ -233,7 +272,7 @@ export default function PostJob() {
       // S3.3 — flag clean before navigating so the beforeunload guard
       // doesn't fire on the post-save redirect.
       setSavedJustNow(true)
-      toast(isEdit ? 'Saved.' : 'Opportunity published.')
+      toast(asDraft ? 'Draft saved.' : isEdit ? 'Saved.' : 'Opportunity published.')
       // P1-8 — nudge employers to fill in the most-filtered fields. Toast
       // only on the create path; for edits the user already saw the form.
       if (!isEdit) {
@@ -596,6 +635,17 @@ export default function PostJob() {
                 ? isEdit ? 'Saving…' : 'Publishing…'
                 : isEdit ? 'Save changes' : 'Publish opportunity'
               }
+            </button>
+            {/* P1-4 — Save as draft. Skips required-field validation; the
+                row goes to /my-opportunities with a "Draft" pill. */}
+            <button
+              type="button"
+              onClick={() => submitForm({ asDraft: true })}
+              disabled={submitting}
+              className="px-5 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
+                hover:bg-primary-faint hover:text-ink transition-colors disabled:opacity-50"
+            >
+              Save as draft
             </button>
             {/* P2-21 — preview the form values as a student would see them. */}
             <button

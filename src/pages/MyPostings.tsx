@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Edit3, Trash2, Users, Eye, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Edit3, Trash2, Users, Eye, ToggleLeft, ToggleRight, RotateCcw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Application } from '../types'
@@ -143,13 +143,20 @@ export default function MyPostings() {
                     >
                       {job.title}
                     </Link>
-                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border
-                      ${expired || !job.is_active
-                        ? 'bg-border/40 text-ink-muted border-border'
-                        : 'bg-primary-muted text-primary border-primary-muted'
-                      }`}>
-                      {expired || !job.is_active ? 'Closed' : JOB_TYPE_LABELS[job.job_type]}
-                    </span>
+                    {/* P1-4 — Draft pill takes precedence over Closed. */}
+                    {(job as { is_draft?: boolean }).is_draft ? (
+                      <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border bg-status-pending-bg text-status-pending-text border-status-pending-border">
+                        Draft
+                      </span>
+                    ) : (
+                      <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border
+                        ${expired || !job.is_active
+                          ? 'bg-border/40 text-ink-muted border-border'
+                          : 'bg-primary-muted text-primary border-primary-muted'
+                        }`}>
+                        {expired || !job.is_active ? 'Closed' : JOB_TYPE_LABELS[job.job_type]}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-ink-secondary">{job.company} · {job.location}</p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
@@ -237,6 +244,19 @@ export default function MyPostings() {
                   >
                     <Edit3 size={14} /> Edit
                   </Link>
+                  {/* P1-4 — Repost as new on closed/expired non-draft rows.
+                      Navigates to the create form prefilled from this row;
+                      date fields are intentionally cleared. */}
+                  {!(job as { is_draft?: boolean }).is_draft && (expired || !job.is_active) && (
+                    <Link
+                      to={`/opportunities/new?from=${job.id}`}
+                      title="Open a new posting prefilled from this one"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border
+                        text-sm text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
+                    >
+                      <RotateCcw size={14} /> Repost as new
+                    </Link>
+                  )}
                   <button type="button"
                     onClick={() => { setConfirmDeleteId(job.id); setDeleteError(null) }}
                     aria-label="Delete opportunity (permanently remove)"

@@ -30,11 +30,13 @@ const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string;
 import Spinner from '../components/Spinner'
 import ConfirmDialog from '../components/ConfirmDialog'
 import SaveJobButton from '../components/SaveJobButton'
+import { useToast } from '../components/ToastProvider'
 
 export default function JobDetail() {
   const { id } = useParams<{ id: string }>()
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
 
   const [job, setJob] = useState<Job | null>(null)
   const [loading, setLoading] = useState(true)
@@ -45,6 +47,10 @@ export default function JobDetail() {
   const [coverNote, setCoverNote] = useState('')
   const [coverNoteError, setCoverNoteError] = useState<string | null>(null)
   const [resumeLink, setResumeLink] = useState('')
+  // P1-8 — optional PDF upload. Validated to PDF + 5 MB before submit;
+  // server CHECK + bucket MIME allow-list back it up.
+  const [resumeFile, setResumeFile] = useState<File | null>(null)
+  const [resumeFileError, setResumeFileError] = useState<string | null>(null)
   // P1-7 — answers keyed by question text so the order matches what the
   // employer set. Required iff the question is non-blank.
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({})
@@ -213,6 +219,20 @@ export default function JobDetail() {
       answers.push({ question: q, answer: a })
     }
 
+    // P1-8 — validate the file up front. Server-side: bucket has a 5MB
+    // cap and PDF-only MIME allow-list; column has a `\.pdf$` CHECK.
+    if (resumeFile) {
+      if (resumeFile.size > 5 * 1024 * 1024) {
+        setResumeFileError('Resume PDF must be 5 MB or less.')
+        return
+      }
+      if (resumeFile.type !== 'application/pdf' && !/\.pdf$/i.test(resumeFile.name)) {
+        setResumeFileError('Resume must be a PDF.')
+        return
+      }
+    }
+    setResumeFileError(null)
+
     setApplyError(null)
     setApplyLoading(true)
 
@@ -229,8 +249,8 @@ export default function JobDetail() {
       .select()
       .single()
 
-    setApplyLoading(false)
     if (error) {
+      setApplyLoading(false)
       if (error.code === '23505') {
         setApplyError('You have already applied to this position.')
       } else {
@@ -239,7 +259,34 @@ export default function JobDetail() {
       return
     }
 
-    setMyApplication(data as Application)
+    const created = data as Application
+    // P1-8 — upload the PDF and patch resume_path. RLS on storage.objects
+    // requires the row to exist + be owned by the applicant, so this has
+    // to come after the INSERT above. Failures are toast-only — the
+    // application itself already landed.
+    if (resumeFile) {
+      const safeName = resumeFile.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80)
+      const path = `resumes/${created.id}/${safeName.endsWith('.pdf') ? safeName : safeName + '.pdf'}`
+      const { error: upErr } = await supabase.storage
+        .from('resumes')
+        .upload(path, resumeFile, { contentType: 'application/pdf', upsert: true })
+      if (upErr) {
+        toast('Application submitted, but the resume upload failed. Re-upload from your application later.', { kind: 'error' })
+      } else {
+        const { error: updErr } = await supabase
+          .from('applications')
+          .update({ resume_path: path })
+          .eq('id', created.id)
+        if (updErr) {
+          toast('Resume uploaded but not linked. Try again from your application.', { kind: 'error' })
+        } else {
+          created.resume_path = path
+        }
+      }
+    }
+
+    setApplyLoading(false)
+    setMyApplication(created)
     setApplySuccess(true)
     setApplying(false)
 
@@ -640,6 +687,40 @@ export default function JobDetail() {
                         transition-colors"
                     />
                   </div>
+                </div>
+
+                {/* P1-8 — optional PDF upload. Only the post owner can read
+                    it after accepting; applicants can re-upload from their
+                    own application. */}
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">
+                    Resume PDF{' '}
+                    <span className="text-ink-muted font-normal">(optional · 5 MB max)</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null
+                      setResumeFileError(null)
+                      if (f && f.size > 5 * 1024 * 1024) {
+                        setResumeFileError('Resume PDF must be 5 MB or less.')
+                        e.target.value = ''
+                        setResumeFile(null)
+                        return
+                      }
+                      setResumeFile(f)
+                    }}
+                    className="block w-full text-sm text-ink-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-border file:text-sm file:font-medium file:bg-primary-faint file:text-primary hover:file:bg-primary-muted"
+                  />
+                  {resumeFileError && (
+                    <p role="alert" className="mt-1 text-xs text-error">{resumeFileError}</p>
+                  )}
+                  {resumeFile && !resumeFileError && (
+                    <p className="mt-1 text-xs text-ink-muted">
+                      Selected: {resumeFile.name} ({(resumeFile.size / 1024).toFixed(0)} KB)
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-3 pt-1">
                   {/* P2-32 — confirmation now happens in a modal (see

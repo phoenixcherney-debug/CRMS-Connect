@@ -812,11 +812,28 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
               </span>
               {(() => {
                 const safeHref = safeExternalHref(app.resume_link)
-                if (safeHref) {
+                const hasPdf = !!app.resume_path
+                const isAccepted = app.status === 'accepted'
+                if (safeHref || hasPdf) {
                   return (
-                    <a href={safeHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:text-primary-light">
-                      <ExternalLink size={11} /> Resume/Portfolio
-                    </a>
+                    <span className="flex items-center gap-3">
+                      {safeHref && (
+                        <a href={safeHref} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:text-primary-light">
+                          <ExternalLink size={11} /> Portfolio link
+                        </a>
+                      )}
+                      {/* P1-8 — PDF visible only after accept (storage RLS
+                          rejects the read otherwise). Pre-accept we still
+                          surface the existence so the poster knows there's
+                          a resume waiting. */}
+                      {hasPdf && (isAccepted ? (
+                        <ResumePdfLink path={app.resume_path!} />
+                      ) : (
+                        <span className="flex items-center gap-1 text-ink-muted" title="Visible after you accept this applicant.">
+                          Resume PDF on file
+                        </span>
+                      ))}
+                    </span>
                   )
                 }
                 return (
@@ -1107,5 +1124,34 @@ function PrivateNote({ jobId, applicantId, authorId }: {
         </button>
       </div>
     </div>
+  )
+}
+
+// P1-8 — fetch a fresh signed URL for a resume PDF on click. We don't
+// pre-fetch on render because the URL is short-lived (5 min) and most
+// posters won't open every applicant's resume.
+function ResumePdfLink({ path }: { path: string }) {
+  const [busy, setBusy] = useState(false)
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true)
+        const { data, error } = await supabase
+          .storage
+          .from('resumes')
+          .createSignedUrl(path, 60 * 5)
+        setBusy(false)
+        if (error || !data?.signedUrl) {
+          alert('Could not open the resume. Try refreshing or asking the applicant to re-upload.')
+          return
+        }
+        window.open(data.signedUrl, '_blank', 'noopener')
+      }}
+      className="flex items-center gap-1 text-primary hover:text-primary-light disabled:opacity-50"
+    >
+      <ExternalLink size={11} /> {busy ? 'Opening…' : 'Resume PDF'}
+    </button>
   )
 }

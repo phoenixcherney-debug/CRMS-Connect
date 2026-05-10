@@ -111,6 +111,8 @@ export interface Job {
   end_date?: string | null
   /** P1-7 — up to 3 free-text questions the applicant must answer. */
   custom_questions?: string[] | null
+  /** P1-4 — drafts skip not-blank checks; never show in directory. */
+  is_draft?: boolean
   // Joined
   profiles?: Profile | null
 }
@@ -136,6 +138,10 @@ export interface Application {
   applicant_id: string
   cover_note: string
   resume_link?: string | null
+  /** P1-8 — storage path under the `resumes` bucket
+   *  (`resumes/<application_id>/<filename>.pdf`). Only the applicant +
+   *  the post owner with status='accepted' can read via storage RLS. */
+  resume_path?: string | null
   status: ApplicationStatus
   /** P1-7 — answers to opportunity.custom_questions, snapshotted at submit
    *  so the applicant's record stays meaningful even if the poster later
