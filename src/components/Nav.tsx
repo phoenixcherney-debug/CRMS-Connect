@@ -2,7 +2,7 @@ import { NavLink, Link, useNavigate } from 'react-router-dom'
 import {
   Compass, Rss, Briefcase, Calendar, Users, Building2, Bell, Mail,
   LogOut, User, PlusSquare, ClipboardList, FileText, CalendarClock,
-  Moon, Sun, Menu, X, BookOpen, CalendarCheck, Shield, Bookmark,
+  Moon, Sun, Menu, X, BookOpen, CalendarCheck, Shield, Bookmark, Heart,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -89,6 +89,8 @@ export default function Nav() {
     // can request meetings for); hide the menu item for students.
     ...(isEmployerMentor ? [
       { to: '/availability' as const, label: 'Availability' as const, icon: CalendarClock },
+      // Phase 2.4 — mentor shortlist.
+      { to: '/shortlist' as const, label: 'Shortlist' as const, icon: Heart },
     ] : []),
     { to: '/meetings', label: 'Meetings', icon: CalendarCheck },
     { to: '/activity', label: 'Activity', icon: Rss      },

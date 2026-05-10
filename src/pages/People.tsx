@@ -6,6 +6,7 @@ import { initialsOf } from '../lib/initials'
 import { pluralize } from '../lib/pluralize'
 import { disambiguateNames } from '../lib/disambiguateNames'
 import ReportUserButton from '../components/ReportUserButton'
+import ShortlistButton from '../components/ShortlistButton'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile } from '../types'
 import {
@@ -559,6 +560,9 @@ export default function People({ directory }: PeopleProps = {}) {
                       <MessageSquare size={13} />
                       {creatingFor === person.id ? 'Opening…' : 'Message'}
                     </button>
+                    {person.role === 'student' && (
+                      <ShortlistButton studentId={person.id} className="px-2 py-2" />
+                    )}
                     <ReportUserButton targetId={person.id} targetName={person.full_name} />
                   </div>
                 )}

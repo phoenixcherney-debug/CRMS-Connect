@@ -86,6 +86,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/student-posts/mine': 'My Post',
   '/applications': 'Applications',
   '/saved': 'Saved',
+  '/shortlist': 'Shortlist',
   '/availability': 'Availability',
   '/my-bookings': 'My Bookings',
   '/meetings': 'Meetings',
@@ -170,6 +171,7 @@ const ForMentors        = lazy(() => import('./pages/ForMentors'))
 const ForEmployers      = lazy(() => import('./pages/ForEmployers'))
 const Company           = lazy(() => import('./pages/Company'))
 const NotificationSettings = lazy(() => import('./pages/NotificationSettings'))
+const Shortlist            = lazy(() => import('./pages/Shortlist'))
 
 export default function App() {
   return (
@@ -349,6 +351,10 @@ export default function App() {
             {/* P1-12 — push notification preferences. */}
             <Route path="/settings/notifications" element={
               <ProtectedRoute><Layout><NotificationSettings /></Layout></ProtectedRoute>
+            } />
+            {/* Phase 2.4 — mentor shortlist (employer/mentor only — page redirects others). */}
+            <Route path="/shortlist" element={
+              <ProtectedRoute><Layout><Shortlist /></Layout></ProtectedRoute>
             } />
             <Route path="/people/:id" element={
               <ProtectedRoute><Layout><PublicProfile /></Layout></ProtectedRoute>

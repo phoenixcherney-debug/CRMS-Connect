@@ -9,6 +9,7 @@ import type { Profile, CareerHistory } from '../types'
 import { ROLE_LABELS, MENTOR_TYPE_LABELS, STUDENT_SEEKING_PUBLIC } from '../types'
 import Spinner from '../components/Spinner'
 import ReportUserButton from '../components/ReportUserButton'
+import ShortlistButton from '../components/ShortlistButton'
 import { initialsOf } from '../lib/initials'
 
 interface AvailSlot {
@@ -620,15 +621,20 @@ export default function PublicProfile() {
                 signed in can DM anyone except themselves. */}
             {!isSelf && (
               <>
-                <button type="button"
-                  onClick={openConversation}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-                    border border-border text-sm font-medium text-ink-secondary
-                    hover:bg-primary-faint hover:text-ink transition-colors"
-                >
-                  <MessageSquare size={15} />
-                  Message {person.full_name.trim() || 'this person'}
-                </button>
+                <div className="flex gap-2 items-stretch">
+                  <button type="button"
+                    onClick={openConversation}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
+                      border border-border text-sm font-medium text-ink-secondary
+                      hover:bg-primary-faint hover:text-ink transition-colors"
+                  >
+                    <MessageSquare size={15} />
+                    Message {person.full_name.trim() || 'this person'}
+                  </button>
+                  {person.role === 'student' && (
+                    <ShortlistButton studentId={person.id} size={16} className="px-3 py-2.5" />
+                  )}
+                </div>
                 {/* SEC-003 — flag a problematic profile to school staff. */}
                 <div className="flex justify-center">
                   <ReportUserButton targetId={person.id} targetName={person.full_name} />
