@@ -18,6 +18,7 @@ import { formatDisplayName } from '../lib/displayName'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { initialsOf } from '../lib/initials'
 import StudentSectionsEditor from '../components/StudentSectionsEditor'
+import ProfileCompleteness from '../components/ProfileCompleteness'
 
 type ProjectRow = { title: string; url?: string; description?: string }
 type LinksMap = { github?: string; website?: string; linkedin?: string }
@@ -623,6 +624,12 @@ export default function Profile() {
                   {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </p>
               </div>
+
+              {profile.role === 'student' && (
+                <div className="mb-5">
+                  <ProfileCompleteness profile={profile} variant="inline" />
+                </div>
+              )}
 
               <form onSubmit={handleSave} className="space-y-4">
                 {/* Full name */}
