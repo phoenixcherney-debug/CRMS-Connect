@@ -240,7 +240,8 @@ export default function Conversation() {
         otherProfile.id,
         `New message from ${profile.full_name}`,
         text.length > 100 ? `${text.slice(0, 100)}…` : text,
-        `/messages/${id}`
+        `/messages/${id}`,
+        'message',
       )
     }
   }

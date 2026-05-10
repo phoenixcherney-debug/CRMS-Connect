@@ -190,7 +190,8 @@ export default function Applicants() {
           applicantId,
           `Application update: ${job.title}`,
           STATUS_PUSH[status],
-          `/applications`
+          `/applications`,
+          'application_status',
         )
       }
 

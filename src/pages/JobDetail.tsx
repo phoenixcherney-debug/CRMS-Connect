@@ -296,7 +296,8 @@ export default function JobDetail() {
         job.posted_by,
         `New applicant for ${job.title}`,
         `${profile.full_name} just applied.`,
-        `/opportunities/${job.id}/applicants`
+        `/opportunities/${job.id}/applicants`,
+        'application_in',
       )
     }
   }

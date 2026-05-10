@@ -92,6 +92,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/messages': 'Messages',
   '/profile': 'Profile',
   '/profile/edit': 'Edit profile',
+  '/settings/notifications': 'Notification preferences',
   '/banned': 'Account suspended',
   '/admin': 'Admin Panel',
   '/admin/reports': 'Reports',
@@ -168,6 +169,7 @@ const Landing           = lazy(() => import('./pages/Landing'))
 const ForMentors        = lazy(() => import('./pages/ForMentors'))
 const ForEmployers      = lazy(() => import('./pages/ForEmployers'))
 const Company           = lazy(() => import('./pages/Company'))
+const NotificationSettings = lazy(() => import('./pages/NotificationSettings'))
 
 export default function App() {
   return (
@@ -343,6 +345,10 @@ export default function App() {
                 matches /profile/edit. */}
             <Route path="/profile/edit" element={
               <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>
+            } />
+            {/* P1-12 — push notification preferences. */}
+            <Route path="/settings/notifications" element={
+              <ProtectedRoute><Layout><NotificationSettings /></Layout></ProtectedRoute>
             } />
             <Route path="/people/:id" element={
               <ProtectedRoute><Layout><PublicProfile /></Layout></ProtectedRoute>

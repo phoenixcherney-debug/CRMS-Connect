@@ -59,6 +59,8 @@ export interface Profile {
    *  even though open_to_mentorship is true (for parental leave / busy
    *  season). Past dates are no-ops. */
   mentorship_paused_until?: string | null
+  /** P1-12 — per-category push toggles. Missing keys default to "send". */
+  notification_preferences?: Record<string, boolean> | null
   created_at: string
   banned_at?: string | null
 }

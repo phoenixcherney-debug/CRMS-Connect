@@ -33,6 +33,8 @@ interface PushPayload {
   title: string
   body: string
   url?: string
+  /** P1-12 — gate the send on profiles.notification_preferences.<event>. */
+  event?: string
 }
 
 serve(async (req: Request) => {
@@ -71,7 +73,7 @@ serve(async (req: Request) => {
     }
 
     const payload: PushPayload = await req.json()
-    const { user_id, title, body, url } = payload
+    const { user_id, title, body, url, event } = payload
     if (!user_id || !title || !body) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
@@ -84,6 +86,22 @@ serve(async (req: Request) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
+
+    // P1-12 — honor the recipient's per-category prefs. Missing keys
+    // default to "send" (true). Only an explicit `false` skips delivery.
+    if (event) {
+      const { data: profile } = await adminClient
+        .from('profiles')
+        .select('notification_preferences')
+        .eq('id', user_id)
+        .maybeSingle()
+      const prefs = (profile as { notification_preferences?: Record<string, boolean> } | null)?.notification_preferences ?? {}
+      if (prefs[event] === false) {
+        return new Response(JSON.stringify({ sent: 0, skipped: 'pref-off' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
 
     const { data: subs, error: subError } = await adminClient
       .from('push_subscriptions')

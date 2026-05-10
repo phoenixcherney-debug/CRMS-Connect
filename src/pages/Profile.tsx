@@ -529,6 +529,16 @@ export default function Profile() {
                 </div>
               )}
 
+              {/* P1-12 — per-category preferences live on /settings/notifications. */}
+              {permission !== 'unsupported' && permission !== 'loading' && (
+                <Link
+                  to="/settings/notifications"
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  Customize what triggers a push →
+                </Link>
+              )}
+
               {saveSuccess && (
                 <div className="flex items-center gap-2 rounded-lg bg-success-bg border border-status-accepted-border px-4 py-3">
                   <CheckCircle2 size={16} className="text-success" />
