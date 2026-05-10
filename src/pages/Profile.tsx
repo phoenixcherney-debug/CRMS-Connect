@@ -33,6 +33,7 @@ export default function Profile() {
   const [industry, setIndustry]                     = useState('')
   const [industryOther, setIndustryOther]           = useState('')
   const [openToMentorship, setOpenToMentorship]     = useState(false)
+  const [meetingRequestMode, setMeetingRequestMode] = useState<'flexible' | 'slots'>('flexible')
   const [interests, setInterests]                   = useState<string[]>([])
   const [weeklyAvailability, setWeeklyAvailability] = useState('')
 
@@ -82,6 +83,7 @@ export default function Profile() {
       setIndustry(isCustomIndustry ? 'Other' : savedIndustry)
       setIndustryOther(isCustomIndustry ? savedIndustry : '')
       setOpenToMentorship(profile.open_to_mentorship ?? false)
+      setMeetingRequestMode((profile.meeting_request_mode as 'flexible' | 'slots' | null | undefined) ?? 'flexible')
       setInterests(profile.interests ?? [])
       setWeeklyAvailability(profile.weekly_availability ?? '')
       setMentorType(profile.mentor_type ?? '')
@@ -240,6 +242,7 @@ export default function Profile() {
       updates.company          = company.trim() || null
       updates.industry         = industry === 'Other' ? (industryOther.trim() || null) : (industry || null)
       updates.open_to_mentorship = openToMentorship
+      updates.meeting_request_mode = meetingRequestMode
       updates.mentor_type      = mentorType || null
       updates.mentor_type_other = mentorType === 'other' ? mentorTypeOther.trim() || null : null
     }
@@ -824,6 +827,31 @@ export default function Profile() {
                           ${openToMentorship ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                     </div>
+
+                    {/* P2-14 — pick how students should propose meeting times. */}
+                    {openToMentorship && (
+                      <div className="p-3 rounded-lg border border-border bg-primary-faint space-y-2">
+                        <p className="text-sm font-medium text-ink">How would you like to be contacted?</p>
+                        {[
+                          { value: 'flexible', label: 'Anytime — students can propose a time', sub: 'No calendar required. They pick a date+time and you accept or counter.' },
+                          { value: 'slots',    label: 'Only during my listed availability slots', sub: 'You publish slots on the Availability page; students pick one.' },
+                        ].map((opt) => (
+                          <label key={opt.value} className="flex items-start gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="meeting_request_mode"
+                              checked={meetingRequestMode === opt.value}
+                              onChange={() => setMeetingRequestMode(opt.value as 'flexible' | 'slots')}
+                              className="mt-1 text-primary focus:ring-primary/30"
+                            />
+                            <span className="text-sm">
+                              <span className="font-medium text-ink">{opt.label}</span>
+                              <span className="block text-xs text-ink-muted mt-0.5">{opt.sub}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
                   </>
                 )}
 

@@ -52,7 +52,7 @@ export default function PublicProfile() {
           .from('profiles')
           .select(`
             id, full_name, role, graduation_year, bio, avatar_url, company, industry,
-            open_to_mentorship, created_at, interests, weekly_availability,
+            open_to_mentorship, meeting_request_mode, created_at, interests, weekly_availability,
             grade, share_grade_with_employers, mentor_type, mentor_type_other,
             student_seeking, student_seeking_other
           `)
@@ -258,9 +258,18 @@ export default function PublicProfile() {
                   </span>
                 )}
                 {isEM && person.open_to_mentorship && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-success-bg text-success text-xs font-medium">
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-success-bg text-success text-xs font-medium"
+                    title={
+                      ((person.meeting_request_mode as 'flexible' | 'slots' | null | undefined) ?? 'flexible') === 'flexible'
+                        ? 'Flexible scheduling — students propose a time'
+                        : 'Picks from posted availability slots'
+                    }
+                  >
                     <Heart size={11} />
-                    Open to mentorship
+                    {((person.meeting_request_mode as 'flexible' | 'slots' | null | undefined) ?? 'flexible') === 'flexible'
+                      ? 'Open to mentorship · flexible'
+                      : 'Open to mentorship'}
                   </span>
                 )}
               </div>
@@ -367,12 +376,51 @@ export default function PublicProfile() {
               </div>
             )}
 
-            {/* Available slots + meeting request (EM only, viewed by student).
-                Audit task 9 — hide the section entirely when the mentor has
-                no published slots so the student isn't dead-ended at "No
-                upcoming availability posted." (Message <name> stays as the
-                fallback path.) */}
-            {isEM && !isSelf && myProfile?.role === 'student' && person.open_to_mentorship && (slots.length > 0 || meetingSuccess) && (
+            {/* P2-14 — meeting request UI varies by the mentor's contact
+                preference. 'flexible' (default) shows a free-form date+time
+                picker; 'slots' shows the published-slot list (legacy
+                behavior). Hidden when the mentor isn't open to mentorship. */}
+            {(() => {
+              if (!(isEM && !isSelf && myProfile?.role === 'student' && person.open_to_mentorship)) return null
+              const mode = (person.meeting_request_mode as 'flexible' | 'slots' | null | undefined) ?? 'flexible'
+              if (mode === 'flexible') return null /* rendered below */
+              if (mode === 'slots' && slots.length === 0 && !meetingSuccess) return null
+              return null
+            })()}
+            {isEM && !isSelf && myProfile?.role === 'student' && person.open_to_mentorship && (
+              ((person.meeting_request_mode as 'flexible' | 'slots' | null | undefined) ?? 'flexible') === 'flexible'
+            ) ? (
+              <div>
+                <p className="text-sm font-medium text-ink mb-2 flex items-center gap-1.5">
+                  <Calendar size={14} className="text-ink-muted" />
+                  Request a meeting
+                </p>
+                {meetingSuccess ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-success-bg border border-status-accepted-border px-4 py-3">
+                    <Send size={14} className="text-success shrink-0" />
+                    <p className="text-sm text-success font-medium">Meeting request sent!</p>
+                  </div>
+                ) : (
+                  <FlexibleMeetingForm
+                    onSubmit={async ({ date, start, end, note }) => {
+                      if (!myProfile || !person) return { error: 'Sign in to send a request.' }
+                      const { error } = await supabase.from('meeting_requests').insert({
+                        requester_id: myProfile.id,
+                        recipient_id: person.id,
+                        slot_id: null,
+                        requested_date: date,
+                        requested_start_time: start,
+                        requested_end_time: end,
+                        note: note || null,
+                      })
+                      if (error) return { error: 'Failed to send request. Please try again.' }
+                      setMeetingSuccess(true)
+                      return { error: null }
+                    }}
+                  />
+                )}
+              </div>
+            ) : isEM && !isSelf && myProfile?.role === 'student' && person.open_to_mentorship && (slots.length > 0 || meetingSuccess) && (
               <div>
                 <p className="text-sm font-medium text-ink mb-2 flex items-center gap-1.5">
                   <Calendar size={14} className="text-ink-muted" />
@@ -496,5 +544,87 @@ export default function PublicProfile() {
         </div>
       </div>
     </div>
+  )
+}
+
+// P2-14 — free-form meeting request form for mentors in 'flexible' mode.
+function FlexibleMeetingForm({
+  onSubmit,
+}: {
+  onSubmit: (vals: { date: string; start: string; end: string; note: string }) => Promise<{ error: string | null }>
+}) {
+  const [date,  setDate]  = useState('')
+  const [start, setStart] = useState('')
+  const [end,   setEnd]   = useState('')
+  const [note,  setNote]  = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const todayIso = new Date().toISOString().split('T')[0]
+
+  async function handle(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (!date || !start || !end) { setError('Pick a date, start, and end time.'); return }
+    if (start >= end) { setError('End time must be after start.'); return }
+    if (date < todayIso) { setError('Pick a date today or later.'); return }
+    setSubmitting(true)
+    const res = await onSubmit({ date, start, end, note: note.trim() })
+    setSubmitting(false)
+    if (res.error) setError(res.error)
+  }
+
+  return (
+    <form onSubmit={handle} className="space-y-3 p-3 rounded-lg border border-border bg-primary-faint">
+      <p className="text-xs text-ink-muted">
+        Propose a date and time. The mentor can accept, decline, or counter.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div>
+          <label className="block text-xs font-medium text-ink mb-1">Date</label>
+          <input
+            type="date"
+            value={date}
+            min={todayIso}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-ink mb-1">Start</label>
+          <input
+            type="time"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-ink mb-1">End</label>
+          <input
+            type="time"
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-ink mb-1">
+          Note <span className="text-ink-muted font-normal">(optional)</span>
+        </label>
+        <textarea
+          rows={2}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="What would you like to discuss?"
+          className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        />
+      </div>
+      {error && <p className="text-xs text-error">{error}</p>}
+      <button type="submit" disabled={submitting} className="btn-gold text-sm px-4 py-2">
+        {submitting ? <Spinner size="sm" className="border-white/30 border-t-white" /> : <Send size={13} />}
+        {submitting ? 'Sending…' : 'Send request'}
+      </button>
+    </form>
   )
 }

@@ -25,6 +25,8 @@ export default function MyPostings() {
   // H-04 — Close (deactivate) needs a confirm so it doesn't fire from a
   // misclick. We don't gate Reopen — that's recoverable.
   const [confirmCloseId, setConfirmCloseId] = useState<string | null>(null)
+  // P2-16 — 30-day view counts keyed by job_id.
+  const [viewStats, setViewStats] = useState<Record<string, number>>({})
 
   async function load() {
     if (!profile) return
@@ -34,8 +36,20 @@ export default function MyPostings() {
       .select('*, applications(id, status, applicant_id)')
       .eq('posted_by', profile.id)
       .order('created_at', { ascending: false })
-    setPostings((data as PostingWithApplicants[]) ?? [])
+    const rows = (data as PostingWithApplicants[]) ?? []
+    setPostings(rows)
     setLoading(false)
+
+    // P2-16 — fan-out the view-count fetch in one RPC call.
+    if (rows.length > 0) {
+      const ids = rows.map((p) => p.id)
+      const { data: stats } = await supabase.rpc('opportunity_view_stats', { job_ids: ids })
+      const next: Record<string, number> = {}
+      for (const r of (stats as { job_id: string; views_30d: number }[] | null) ?? []) {
+        next[r.job_id] = Number(r.views_30d) || 0
+      }
+      setViewStats(next)
+    }
   }
 
   useEffect(() => { load() }, [profile?.id])
@@ -143,6 +157,12 @@ export default function MyPostings() {
                       <Users size={12} />
                       {applicantCount} {applicantCount === 1 ? 'applicant' : 'applicants'}
                     </span>
+                    {/* P2-16 — 30-day view count from opportunity_view_stats. */}
+                    {(viewStats[job.id] ?? 0) > 0 && (
+                      <span title="Page-views from authenticated students in the last 30 days. Your own visits are not counted.">
+                        {viewStats[job.id]} view{viewStats[job.id] === 1 ? '' : 's'} (30d)
+                      </span>
+                    )}
                   </div>
                 </div>
 

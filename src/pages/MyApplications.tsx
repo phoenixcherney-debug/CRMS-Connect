@@ -41,6 +41,32 @@ const STATUS_CONFIG: Record<
     classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border',
     dot: 'bg-status-pending-dot',
   },
+  // P2-18 — intermediate states post-acceptance.
+  interview_scheduled: {
+    label: 'Interview scheduled',
+    classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border',
+    dot: 'bg-status-pending-dot',
+  },
+  offer_sent: {
+    label: 'Offer sent',
+    classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border',
+    dot: 'bg-status-accepted-dot',
+  },
+  started: {
+    label: 'Started',
+    classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border',
+    dot: 'bg-status-accepted-dot',
+  },
+  completed: {
+    label: 'Completed',
+    classes: 'bg-border text-ink-secondary border-border',
+    dot: 'bg-status-reviewed-dot',
+  },
+  withdrawn_by_employer: {
+    label: 'Withdrawn',
+    classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border',
+    dot: 'bg-status-rejected-dot',
+  },
 }
 
 export default function MyApplications() {

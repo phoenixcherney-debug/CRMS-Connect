@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ExternalLink, Calendar, MessageSquare, CheckCircle2, X, Clock } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -43,14 +43,46 @@ function isCompatibleApplicant(job: Job, applicant: ApplicantProfile | null): bo
   return false
 }
 
-const DECIDED_CONFIG: Record<'accepted' | 'rejected', { label: string; classes: string; dot: string }> = {
+// P2-18 — accepted / rejected got intermediate siblings. The pill style
+// is shared across the accepted-family states; only the label changes.
+const INTERMEDIATE_STATUSES: ApplicationStatus[] = [
+  'interview_scheduled', 'offer_sent', 'started', 'completed', 'withdrawn_by_employer',
+]
+const DECIDED_LABEL: Partial<Record<ApplicationStatus, string>> = {
+  accepted: 'Accepted',
+  rejected: 'Not selected',
+  interview_scheduled: 'Interview scheduled',
+  offer_sent: 'Offer sent',
+  started: 'Started',
+  completed: 'Completed',
+  withdrawn_by_employer: 'Withdrawn',
+}
+const DECIDED_CONFIG: Partial<Record<ApplicationStatus, { classes: string; dot: string }>> = {
   accepted: {
-    label: 'Accepted',
     classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border',
     dot: 'bg-status-accepted-dot',
   },
   rejected: {
-    label: 'Not selected',
+    classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border',
+    dot: 'bg-status-rejected-dot',
+  },
+  interview_scheduled: {
+    classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border',
+    dot: 'bg-status-pending-dot',
+  },
+  offer_sent: {
+    classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border',
+    dot: 'bg-status-accepted-dot',
+  },
+  started: {
+    classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border',
+    dot: 'bg-status-accepted-dot',
+  },
+  completed: {
+    classes: 'bg-border text-ink-secondary border-border',
+    dot: 'bg-status-reviewed-dot',
+  },
+  withdrawn_by_employer: {
     classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border',
     dot: 'bg-status-rejected-dot',
   },
@@ -67,6 +99,10 @@ export default function Applicants() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  // P2-17 filter state — applied client-side over the already-loaded list.
+  const [filterClassYear,   setFilterClassYear]   = useState('')
+  const [filterAvailability, setFilterAvailability] = useState('')
+  const [filterInterest,    setFilterInterest]    = useState('')
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   // NAV-008 — default to whichever tab has rows. We'll re-pin once
@@ -131,11 +167,16 @@ export default function Applicants() {
       // Notify applicant of status update (best-effort)
       if (applicantId && job) {
         const STATUS_PUSH: Record<ApplicationStatus, string> = {
-          pending:    'Your application has been submitted.',
-          reviewed:   'Your application has been submitted.',
-          waitlisted: 'Your application has been submitted.',
-          accepted:   'Your application was accepted!',
-          rejected:   'Your application was not selected.',
+          pending:               'Your application has been submitted.',
+          reviewed:              'Your application has been submitted.',
+          waitlisted:            'Your application has been submitted.',
+          accepted:              'Your application was accepted!',
+          rejected:              'Your application was not selected.',
+          interview_scheduled:   'An interview has been scheduled for your application.',
+          offer_sent:            'You\'ve received an offer — check the conversation.',
+          started:               'Your engagement has started — welcome aboard.',
+          completed:             'Marked as completed. Thanks for participating!',
+          withdrawn_by_employer: 'The role has been withdrawn by the employer.',
         }
         sendPushToUser(
           applicantId,
@@ -229,7 +270,10 @@ export default function Applicants() {
   const compatible  = allPending.filter((a) => isCompatibleApplicant(job, a.profiles as ApplicantProfile | null))
   const incompatible = allPending.filter((a) => !isCompatibleApplicant(job, a.profiles as ApplicantProfile | null))
 
-  const decided  = applications.filter((a) => a.status === 'accepted' || a.status === 'rejected')
+  // P2-18 — Decided tab also collects all the intermediate post-decision states.
+  const decided  = applications.filter((a) =>
+    a.status === 'accepted' || a.status === 'rejected' || INTERMEDIATE_STATUSES.includes(a.status)
+  )
 
   const inbox = allPending
   const tabApps = activeTab === 'inbox' ? inbox : decided
@@ -247,6 +291,30 @@ export default function Applicants() {
     { key: 'inbox',   label: 'New',     count: inbox.length   },
     { key: 'decided', label: 'Decided', count: decided.length },
   ]
+
+  // P2-17 — derive filter option lists from the applicants we actually have,
+  // so dropdowns don't surface buckets that would render zero rows.
+  const allClassYears = Array.from(new Set(
+    applications.map((a) => (a.profiles as { graduation_year?: number | null } | null)?.graduation_year).filter((y): y is number => !!y)
+  )).sort((a, b) => b - a)
+  const allAvailability = Array.from(new Set(
+    applications.map((a) => (a.profiles as { weekly_availability?: string | null } | null)?.weekly_availability).filter((v): v is string => !!v)
+  )).sort()
+  const allInterests = Array.from(new Set(
+    applications.flatMap((a) => (a.profiles as { interests?: string[] | null } | null)?.interests ?? [])
+  )).sort()
+
+  function applicantPasses(app: Application): boolean {
+    const p = app.profiles as { graduation_year?: number | null; weekly_availability?: string | null; interests?: string[] | null } | null
+    if (filterClassYear && p?.graduation_year !== Number(filterClassYear)) return false
+    if (filterAvailability && p?.weekly_availability !== filterAvailability) return false
+    if (filterInterest && !((p?.interests ?? []).includes(filterInterest))) return false
+    return true
+  }
+  const filteredTabApps = tabApps.filter(applicantPasses)
+  const filteredCompatible = compatible.filter(applicantPasses)
+  const filteredIncompatible = incompatible.filter(applicantPasses)
+  const hasActiveFilter = !!(filterClassYear || filterAvailability || filterInterest)
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -304,33 +372,80 @@ export default function Applicants() {
         </div>
       )}
 
+      {/* P2-17 — filter row. Hidden when nothing's loaded yet. */}
+      {applications.length > 0 && (allClassYears.length > 0 || allAvailability.length > 0 || allInterests.length > 0) && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {allClassYears.length > 0 && (
+            <select
+              value={filterClassYear}
+              onChange={(e) => setFilterClassYear(e.target.value)}
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-border bg-surface text-ink-secondary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">All class years</option>
+              {allClassYears.map((y) => <option key={y} value={String(y)}>Class of {y}</option>)}
+            </select>
+          )}
+          {allAvailability.length > 0 && (
+            <select
+              value={filterAvailability}
+              onChange={(e) => setFilterAvailability(e.target.value)}
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-border bg-surface text-ink-secondary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">All availability</option>
+              {allAvailability.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          )}
+          {allInterests.length > 0 && (
+            <select
+              value={filterInterest}
+              onChange={(e) => setFilterInterest(e.target.value)}
+              className="text-xs px-2.5 py-1.5 rounded-lg border border-border bg-surface text-ink-secondary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">All interests</option>
+              {allInterests.map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          )}
+          {hasActiveFilter && (
+            <button
+              type="button"
+              onClick={() => { setFilterClassYear(''); setFilterAvailability(''); setFilterInterest('') }}
+              className="text-xs text-primary hover:text-primary-light font-medium px-2"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Applicant list */}
-      {tabApps.length === 0 ? (
+      {filteredTabApps.length === 0 ? (
         <div className="text-center py-20 bg-surface rounded-2xl border border-border">
           <p className="text-ink-muted">
-            {activeTab === 'inbox' ? 'No new applicants.' : 'No decisions made yet.'}
+            {hasActiveFilter
+              ? 'No applicants match your filters.'
+              : activeTab === 'inbox' ? 'No new applicants.' : 'No decisions made yet.'}
           </p>
         </div>
       ) : activeTab === 'inbox' ? (
         /* Inbox: compatible applicants first, then "Other applicants" dimmed */
         <div className="space-y-6">
-          {compatible.length > 0 && (
+          {filteredCompatible.length > 0 && (
             <div className="space-y-4">
-              {compatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} />)}
+              {filteredCompatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} />)}
             </div>
           )}
-          {incompatible.length > 0 && (
+          {filteredIncompatible.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Other applicants</p>
               <div className="space-y-4 opacity-60">
-                {incompatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} />)}
+                {filteredIncompatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} />)}
               </div>
             </div>
           )}
         </div>
       ) : (
         <div className="space-y-4">
-          {tabApps.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} />)}
+          {filteredTabApps.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} />)}
         </div>
       )}
     </div>
@@ -504,12 +619,36 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
             </div>
           )}
 
-          {activeTab === 'decided' && (app.status === 'accepted' || app.status === 'rejected') && (
+          {activeTab === 'decided' && (app.status === 'accepted' || app.status === 'rejected' || INTERMEDIATE_STATUSES.includes(app.status)) && (
             <>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${DECIDED_CONFIG[app.status].classes}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${DECIDED_CONFIG[app.status].dot}`} />
-                {DECIDED_CONFIG[app.status].label}
-              </span>
+              {(() => {
+                const cfg = DECIDED_CONFIG[app.status] ?? DECIDED_CONFIG.accepted!
+                return (
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${cfg.classes}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                    {DECIDED_LABEL[app.status] ?? app.status}
+                  </span>
+                )
+              })()}
+              {/* P2-18 — flip between intermediate states without going
+                  through Reverse → re-Accept. Only available on accepted-
+                  branch rows; rejected branch keeps the simple Reverse. */}
+              {app.status !== 'rejected' && (
+                <select
+                  value={app.status}
+                  onChange={(e) => updateStatus(app.id, e.target.value as ApplicationStatus)}
+                  disabled={isUpdating}
+                  aria-label="Change status"
+                  className="text-[11px] px-2 py-1 rounded-md border border-border bg-surface text-ink-secondary hover:bg-primary-faint disabled:opacity-50"
+                >
+                  <option value="accepted">Accepted</option>
+                  <option value="interview_scheduled">Interview scheduled</option>
+                  <option value="offer_sent">Offer sent</option>
+                  <option value="started">Started</option>
+                  <option value="completed">Completed</option>
+                  <option value="withdrawn_by_employer">Withdrawn by employer</option>
+                </select>
+              )}
               {/* Audit task 6 — Reverse decision now goes through the shared
                   ConfirmDialog so the affordance reads consistently with
                   Delete and other destructive flows. */}
@@ -550,6 +689,125 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
           )}
         </div>
       )}
+
+      {/* P2-17 — private note for the employer (only visible to them). */}
+      {profile && applicant?.id && (
+        <PrivateNote jobId={app.job_id} applicantId={applicant.id} authorId={profile.id} />
+      )}
+    </div>
+  )
+}
+
+// ─── PrivateNote ──────────────────────────────────────────────────────────────
+// P2-17 — single text area per (job, applicant, author). Saves on blur or
+// Cmd/Ctrl-Enter. Hidden behind a small "Add a private note" toggle so the
+// card doesn't visually balloon for applicants the employer hasn't bothered
+// to annotate yet.
+function PrivateNote({ jobId, applicantId, authorId }: {
+  jobId: string; applicantId: string; authorId: string
+}) {
+  const [body, setBody] = useState('')
+  const [loaded, setLoaded] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+  const initialBodyRef = useRef('')
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase
+        .from('applicant_notes')
+        .select('body, updated_at')
+        .eq('job_id', jobId)
+        .eq('applicant_id', applicantId)
+        .eq('author_id', authorId)
+        .maybeSingle()
+      if (cancelled) return
+      const note = (data as { body: string; updated_at: string } | null) ?? null
+      if (note) {
+        setBody(note.body)
+        initialBodyRef.current = note.body
+        setSavedAt(note.updated_at)
+        setOpen(true)
+      }
+      setLoaded(true)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [jobId, applicantId, authorId])
+
+  async function save() {
+    if (body === initialBodyRef.current) return
+    setSaving(true)
+    setError(null)
+    if (!body.trim()) {
+      // Empty body = delete the row so the unique constraint doesn't pin
+      // a stale entry.
+      const { error: delErr } = await supabase
+        .from('applicant_notes')
+        .delete()
+        .eq('job_id', jobId)
+        .eq('applicant_id', applicantId)
+        .eq('author_id', authorId)
+      setSaving(false)
+      if (delErr) { setError('Could not save note.'); return }
+      initialBodyRef.current = ''
+      setSavedAt(new Date().toISOString())
+      return
+    }
+    const { data, error: upErr } = await supabase
+      .from('applicant_notes')
+      .upsert(
+        { job_id: jobId, applicant_id: applicantId, author_id: authorId, body, updated_at: new Date().toISOString() },
+        { onConflict: 'job_id,applicant_id,author_id' }
+      )
+      .select('updated_at')
+      .single()
+    setSaving(false)
+    if (upErr) { setError('Could not save note.'); return }
+    initialBodyRef.current = body
+    setSavedAt((data as { updated_at?: string } | null)?.updated_at ?? new Date().toISOString())
+  }
+
+  if (!loaded) return null
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-3 text-xs text-ink-muted hover:text-ink underline"
+      >
+        + Add a private note
+      </button>
+    )
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t border-border">
+      <p className="text-xs font-medium text-ink mb-1">Private note <span className="text-ink-muted font-normal">(only you can see)</span></p>
+      <textarea
+        rows={2}
+        maxLength={4000}
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' && (e.metaKey || e.ctrlKey))) { e.preventDefault(); void save() }
+        }}
+        placeholder="e.g. needs follow-up, references pending, second interview 5/14"
+        className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-xs placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
+      />
+      <div className="flex items-center justify-between mt-1">
+        <p className="text-[11px] text-ink-muted">
+          {saving ? 'Saving…' : error ? <span className="text-error">{error}</span> : savedAt ? `Saved ${new Date(savedAt).toLocaleString()}` : 'Auto-saves on blur or ⌘/Ctrl+Enter.'}
+        </p>
+        <button type="button" onClick={() => setOpen(false)} className="text-[11px] text-ink-muted hover:text-ink">
+          Hide
+        </button>
+      </div>
     </div>
   )
 }

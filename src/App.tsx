@@ -159,6 +159,8 @@ const Contact           = lazy(() => import('./pages/Contact'))
 const SavedJobs         = lazy(() => import('./pages/SavedJobs'))
 const AdminReports      = lazy(() => import('./pages/AdminReports'))
 const Landing           = lazy(() => import('./pages/Landing'))
+const ForMentors        = lazy(() => import('./pages/ForMentors'))
+const ForEmployers      = lazy(() => import('./pages/ForEmployers'))
 
 export default function App() {
   return (
@@ -185,6 +187,9 @@ export default function App() {
             <Route path="/about"          element={<Layout><About /></Layout>} />
             <Route path="/privacy"        element={<Layout><Privacy /></Layout>} />
             <Route path="/contact"        element={<Layout><Contact /></Layout>} />
+            {/* P2-20 — public pitch pages, no Layout/Nav (signed-out friendly). */}
+            <Route path="/for-mentors"    element={<ForMentors />} />
+            <Route path="/for-employers"  element={<ForEmployers />} />
 
             {/* ── Onboarding (auth required, onboarding check skipped) ── */}
             <Route

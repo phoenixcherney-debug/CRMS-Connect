@@ -20,6 +20,12 @@ const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string;
   accepted:   { label: 'Accepted',    classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
   rejected:   { label: 'Not selected', classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border', dot: 'bg-status-rejected-dot' },
   waitlisted: { label: 'Submitted',   classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
+  // P2-18 — intermediate hiring states.
+  interview_scheduled:   { label: 'Interview scheduled', classes: 'bg-status-pending-bg text-status-pending-text border-status-pending-border', dot: 'bg-status-pending-dot' },
+  offer_sent:            { label: 'Offer sent',          classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
+  started:               { label: 'Started',             classes: 'bg-status-accepted-bg text-status-accepted-text border-status-accepted-border', dot: 'bg-status-accepted-dot' },
+  completed:             { label: 'Completed',           classes: 'bg-border text-ink-secondary border-border', dot: 'bg-status-reviewed-dot' },
+  withdrawn_by_employer: { label: 'Withdrawn',           classes: 'bg-status-rejected-bg text-status-rejected-text border-status-rejected-border', dot: 'bg-status-rejected-dot' },
 }
 import Spinner from '../components/Spinner'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -83,6 +89,38 @@ export default function JobDetail() {
     if (job?.title) document.title = `${job.title} · CRMS Connect`
     return () => { document.title = 'CRMS Connect' }
   }, [job?.title])
+
+  // P2-16 — log a view event when an authenticated non-owner lands on the
+  // page. RLS rejects self-views so the employer's own reloads aren't
+  // counted; we still skip the round-trip when we know it would 4xx.
+  useEffect(() => {
+    if (!job?.id || !profile?.id || profile.id === job.posted_by) return
+    const source: 'explore' | 'opportunities' | 'student-posts' | 'feed' | 'direct' | 'saved' | 'employer' | 'notification' =
+      (() => {
+        const ref = document.referrer
+        try {
+          if (!ref) return 'direct'
+          const path = new URL(ref).pathname
+          if (path === '/explore') return 'explore'
+          if (path.startsWith('/opportunities')) return 'opportunities'
+          if (path.startsWith('/student-posts')) return 'student-posts'
+          if (path.startsWith('/activity') || path.startsWith('/feed')) return 'feed'
+          if (path.startsWith('/saved')) return 'saved'
+          if (path.startsWith('/employers')) return 'employer'
+          if (path.startsWith('/notifications')) return 'notification'
+        } catch { /* ignore */ }
+        return 'direct'
+      })()
+    void supabase.from('opportunity_views').insert({
+      job_id: job.id,
+      viewer_id: profile.id,
+      source,
+    })
+    // Intentionally fire-and-forget — perf irrelevant, and RLS swallows
+    // the rare race where viewer === owner.
+    // Only log once per page load; deps keyed to job/profile id so a
+    // refresh re-logs (matches industry "view = pageload" convention).
+  }, [job?.id, job?.posted_by, profile?.id])
 
   async function startConversation() {
     if (!job?.posted_by || !profile) return

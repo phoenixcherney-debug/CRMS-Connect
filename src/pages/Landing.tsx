@@ -58,6 +58,14 @@ export default function Landing() {
             Sign in
           </Link>
         </div>
+        {/* P2-20 — secondary CTA targeting alumni / local employers, who
+            otherwise have no signal that the platform is for them too. */}
+        <p className="text-white/70 text-sm mt-6">
+          Are you a CRMS alum or local employer?{' '}
+          <Link to="/for-mentors" className="text-white font-semibold hover:underline">Become a mentor →</Link>
+          <span className="text-white/40"> · </span>
+          <Link to="/for-employers" className="text-white font-semibold hover:underline">Post opportunities →</Link>
+        </p>
       </section>
 
       {/* Feature blurbs */}
@@ -96,7 +104,9 @@ export default function Landing() {
       {/* Footer links */}
       <footer className="px-6 sm:px-10 py-8 mt-auto border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-muted">
         <p>© Colorado Rocky Mountain School</p>
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap justify-center">
+          <Link to="/for-mentors" className="hover:text-ink">For Mentors</Link>
+          <Link to="/for-employers" className="hover:text-ink">For Employers</Link>
           <Link to="/about" className="hover:text-ink">About</Link>
           <Link to="/privacy" className="hover:text-ink">Privacy</Link>
           <Link to="/contact" className="hover:text-ink">Contact</Link>

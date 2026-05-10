@@ -11,7 +11,18 @@ export type JobType =
   | 'shadow'
   | 'other'
 export type LocationType = 'remote' | 'in-person' | 'hybrid'
-export type ApplicationStatus = 'pending' | 'reviewed' | 'accepted' | 'rejected' | 'waitlisted'
+export type ApplicationStatus =
+  | 'pending'
+  | 'reviewed'
+  | 'accepted'
+  | 'rejected'
+  | 'waitlisted'
+  // P2-18 — intermediate hiring states (migration 052).
+  | 'interview_scheduled'
+  | 'offer_sent'
+  | 'started'
+  | 'completed'
+  | 'withdrawn_by_employer'
 export type MentorType = 'employer' | 'mentor' | 'both' | 'other'
 export type StudentSeeking = 'job' | 'mentor' | 'both' | 'other'
 export type OpportunityType = 'job_internship' | 'mentorship' | 'volunteer' | 'shadow' | 'other'
@@ -42,6 +53,8 @@ export interface Profile {
   share_grade_with_employers?: boolean
   /** SEC-001 — staff-approval gate for employer/mentor signups. */
   account_status?: 'pending' | 'active' | 'disabled'
+  /** P2-14 — for mentors with open_to_mentorship=true. */
+  meeting_request_mode?: 'flexible' | 'slots' | null
   created_at: string
   banned_at?: string | null
 }
@@ -202,6 +215,12 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   accepted: 'Accepted',
   rejected: 'Rejected',
   waitlisted: 'Waitlisted',
+  // P2-18 — intermediate hiring states.
+  interview_scheduled: 'Interview scheduled',
+  offer_sent: 'Offer sent',
+  started: 'Started',
+  completed: 'Completed',
+  withdrawn_by_employer: 'Withdrawn',
 }
 
 export const WEEKLY_AVAILABILITY_OPTIONS = [
