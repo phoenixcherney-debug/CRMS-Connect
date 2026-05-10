@@ -51,6 +51,9 @@ export default function JobDetail() {
   // server CHECK + bucket MIME allow-list back it up.
   const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [resumeFileError, setResumeFileError] = useState<string | null>(null)
+  // Phase 2.1 — when the student has a saved default resume, the apply form
+  // reuses it unless they choose to upload a one-off file.
+  const [useDefaultResume, setUseDefaultResume] = useState(true)
   // P1-7 — answers keyed by question text so the order matches what the
   // employer set. Required iff the question is non-blank.
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({})
@@ -245,6 +248,12 @@ export default function JobDetail() {
         resume_link: safeResumeLink,
         custom_answers: answers,
         status: 'pending',
+        // Phase 2.1 — snapshot the default resume path when the student
+        // hasn't picked a one-off file. Storage RLS already lets the poster
+        // read it once the application is accepted.
+        resume_path: (!resumeFile && useDefaultResume && profile.default_resume_path)
+          ? profile.default_resume_path
+          : null,
       })
       .select()
       .single()
@@ -690,37 +699,61 @@ export default function JobDetail() {
                   </div>
                 </div>
 
-                {/* P1-8 — optional PDF upload. Only the post owner can read
-                    it after accepting; applicants can re-upload from their
-                    own application. */}
+                {/* P1-8 + Phase 2.1 — defaults to the student's saved
+                    default resume when present. "Change" reveals the
+                    per-application upload. */}
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">
                     Resume PDF{' '}
                     <span className="text-ink-muted font-normal">(optional · 5 MB max)</span>
                   </label>
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0] ?? null
-                      setResumeFileError(null)
-                      if (f && f.size > 5 * 1024 * 1024) {
-                        setResumeFileError('Resume PDF must be 5 MB or less.')
-                        e.target.value = ''
-                        setResumeFile(null)
-                        return
-                      }
-                      setResumeFile(f)
-                    }}
-                    className="block w-full text-sm text-ink-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-border file:text-sm file:font-medium file:bg-primary-faint file:text-primary hover:file:bg-primary-muted"
-                  />
-                  {resumeFileError && (
-                    <p role="alert" className="mt-1 text-xs text-error">{resumeFileError}</p>
-                  )}
-                  {resumeFile && !resumeFileError && (
-                    <p className="mt-1 text-xs text-ink-muted">
-                      Selected: {resumeFile.name} ({(resumeFile.size / 1024).toFixed(0)} KB)
-                    </p>
+                  {profile?.default_resume_path && useDefaultResume ? (
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-primary-faint text-sm">
+                      <span className="text-ink-secondary">Using your default resume</span>
+                      <button
+                        type="button"
+                        onClick={() => setUseDefaultResume(false)}
+                        className="text-xs font-medium text-primary hover:text-primary-light"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0] ?? null
+                          setResumeFileError(null)
+                          if (f && f.size > 5 * 1024 * 1024) {
+                            setResumeFileError('Resume PDF must be 5 MB or less.')
+                            e.target.value = ''
+                            setResumeFile(null)
+                            return
+                          }
+                          setResumeFile(f)
+                        }}
+                        className="block w-full text-sm text-ink-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border file:border-border file:text-sm file:font-medium file:bg-primary-faint file:text-primary hover:file:bg-primary-muted"
+                      />
+                      {resumeFileError && (
+                        <p role="alert" className="mt-1 text-xs text-error">{resumeFileError}</p>
+                      )}
+                      {resumeFile && !resumeFileError && (
+                        <p className="mt-1 text-xs text-ink-muted">
+                          Selected: {resumeFile.name} ({(resumeFile.size / 1024).toFixed(0)} KB)
+                        </p>
+                      )}
+                      {profile?.default_resume_path && (
+                        <button
+                          type="button"
+                          onClick={() => { setUseDefaultResume(true); setResumeFile(null); setResumeFileError(null) }}
+                          className="mt-1 text-xs font-medium text-primary hover:text-primary-light"
+                        >
+                          ← Use my default resume instead
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="flex gap-3 pt-1">

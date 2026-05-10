@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type React from 'react'
 import { useParams, Link, useNavigate, Navigate } from 'react-router-dom'
-import { ChevronLeft, MessageSquare, User, Briefcase, Heart, Calendar, Clock, Send } from 'lucide-react'
+import { ChevronLeft, MessageSquare, User, Briefcase, Heart, Calendar, Clock, Send, Github, Globe, Linkedin, ExternalLink, FileText } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -37,6 +37,9 @@ export default function PublicProfile() {
   const [meetingSubmitting, setMeetingSubmitting] = useState(false)
   const [meetingSuccess, setMeetingSuccess] = useState(false)
   const [meetingError, setMeetingError] = useState<string | null>(null)
+  // Phase 2.1 — signed URL for the student's default resume PDF, only for
+  // viewers permitted by storage RLS (owner / poster of accepted application).
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null)
 
   const isEM = person?.role === 'employer_mentor'
 
@@ -54,7 +57,8 @@ export default function PublicProfile() {
             id, full_name, role, graduation_year, bio, avatar_url, company, industry,
             open_to_mentorship, meeting_request_mode, created_at, interests, weekly_availability,
             grade, share_grade_with_employers, mentor_type, mentor_type_other,
-            student_seeking, student_seeking_other
+            student_seeking, student_seeking_other,
+            skills, projects, links, default_resume_path
           `)
           .eq('id', id)
           .single(),
@@ -89,6 +93,20 @@ export default function PublicProfile() {
       document.title = `${person.full_name} · CRMS Connect`
     }
   }, [person?.full_name])
+
+  // Phase 2.1 — fetch a signed URL only when the viewer is allowed to read
+  // the resume (storage RLS will reject otherwise; we just don't render).
+  useEffect(() => {
+    if (!person?.default_resume_path) { setResumeUrl(null); return }
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase.storage
+        .from('resumes')
+        .createSignedUrl(person.default_resume_path!, 60 * 10)
+      if (!cancelled) setResumeUrl(data?.signedUrl ?? null)
+    })()
+    return () => { cancelled = true }
+  }, [person?.default_resume_path])
 
   async function openConversation() {
     if (!myProfile || !person) return
@@ -352,6 +370,103 @@ export default function PublicProfile() {
               </div>
             ) : (
               <p className="text-sm text-ink-muted italic">This user hasn't added a bio yet.</p>
+            )}
+
+            {/* Phase 2.1 — student sections. Each block hides when empty
+                (brief: "When unpopulated, the section is hidden, not shown empty"). */}
+            {person.role === 'student' && person.skills && person.skills.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-ink mb-1.5">Skills</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {person.skills.map((s, i) => (
+                    <span key={s + i} className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary-muted text-primary text-xs font-medium">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {person.role === 'student' && person.projects && person.projects.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-ink mb-1.5">Projects</p>
+                <div className="space-y-2">
+                  {person.projects.map((p, i) => (
+                    <div key={i} className="p-3 rounded-lg border border-border bg-primary-faint text-sm">
+                      <p className="font-medium text-ink flex items-center gap-1.5">
+                        {p.title}
+                        {p.url && (
+                          <a
+                            href={p.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:text-primary-light inline-flex items-center"
+                            aria-label="Open project link"
+                          >
+                            <ExternalLink size={12} />
+                          </a>
+                        )}
+                      </p>
+                      {p.description && (
+                        <p className="text-ink-secondary text-xs mt-1 leading-relaxed">{p.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {person.role === 'student' && person.links && Object.values(person.links).some(Boolean) && (
+              <div>
+                <p className="text-sm font-medium text-ink mb-1.5">Links</p>
+                <div className="flex flex-wrap gap-3 text-xs">
+                  {person.links.github && (
+                    <a
+                      href={person.links.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-ink-secondary hover:text-primary"
+                    >
+                      <Github size={12} /> GitHub
+                    </a>
+                  )}
+                  {person.links.website && (
+                    <a
+                      href={person.links.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-ink-secondary hover:text-primary"
+                    >
+                      <Globe size={12} /> Site
+                    </a>
+                  )}
+                  {person.links.linkedin && (
+                    <a
+                      href={person.links.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-ink-secondary hover:text-primary"
+                    >
+                      <Linkedin size={12} /> LinkedIn
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Resume link only shows when the viewer can actually read it. */}
+            {person.role === 'student' && person.default_resume_path && resumeUrl && (
+              <div>
+                <p className="text-sm font-medium text-ink mb-1.5">Resume</p>
+                <a
+                  href={resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary-light font-medium"
+                >
+                  <FileText size={13} /> View resume (PDF)
+                </a>
+              </div>
             )}
 
             {/* Career History (employer/mentor only) */}

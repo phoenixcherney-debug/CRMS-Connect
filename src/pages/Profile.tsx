@@ -17,6 +17,10 @@ import { validateDisplayName } from '../lib/nameFilter'
 import { formatDisplayName } from '../lib/displayName'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { initialsOf } from '../lib/initials'
+import StudentSectionsEditor from '../components/StudentSectionsEditor'
+
+type ProjectRow = { title: string; url?: string; description?: string }
+type LinksMap = { github?: string; website?: string; linkedin?: string }
 
 export default function Profile() {
   const { profile, user, refreshProfile, loading } = useAuth()
@@ -46,6 +50,12 @@ export default function Profile() {
   const [studentSeekingOther, setStudentSeekingOther] = useState('')
   const [grade, setGrade]                         = useState('')
   const [shareGradeWithEmployers, setShareGradeWithEmployers] = useState(false)
+
+  // Phase 2.1 — student profile sections.
+  const [skills, setSkills]                       = useState<string[]>([])
+  const [projects, setProjects]                   = useState<ProjectRow[]>([])
+  const [links, setLinks]                         = useState<LinksMap>({})
+  const [defaultResume, setDefaultResume]         = useState<{ path: string | null; pending: File | null }>({ path: null, pending: null })
 
   // Career history
   const [careerHistory, setCareerHistory] = useState<CareerHistory[]>([])
@@ -95,6 +105,10 @@ export default function Profile() {
       setStudentSeekingOther(profile.student_seeking_other ?? '')
       setGrade(profile.grade ?? '')
       setShareGradeWithEmployers(profile.share_grade_with_employers ?? false)
+      setSkills(profile.skills ?? [])
+      setProjects((profile.projects ?? []) as ProjectRow[])
+      setLinks((profile.links ?? {}) as LinksMap)
+      setDefaultResume({ path: profile.default_resume_path ?? null, pending: null })
     }
   }, [profile?.id])
 
@@ -152,6 +166,10 @@ export default function Profile() {
     setStudentSeekingOther(profile!.student_seeking_other ?? '')
     setGrade(profile!.grade ?? '')
     setShareGradeWithEmployers(profile!.share_grade_with_employers ?? false)
+    setSkills(profile!.skills ?? [])
+    setProjects((profile!.projects ?? []) as ProjectRow[])
+    setLinks((profile!.links ?? {}) as LinksMap)
+    setDefaultResume({ path: profile!.default_resume_path ?? null, pending: null })
     setSaveError(null)
     setEditing(false)
   }
@@ -258,6 +276,38 @@ export default function Profile() {
       updates.student_seeking_other = studentSeeking === 'other' ? studentSeekingOther.trim() || null : null
       updates.grade               = grade || null
       updates.share_grade_with_employers = shareGradeWithEmployers
+      // Phase 2.1 — structured sections.
+      updates.skills = skills
+      updates.projects = projects.filter((p) => p.title.trim()).map((p) => ({
+        title: p.title.trim(),
+        ...(p.url?.trim() ? { url: p.url.trim() } : {}),
+        ...(p.description?.trim() ? { description: p.description.trim() } : {}),
+      }))
+      const trimmedLinks: LinksMap = {}
+      ;(['github', 'website', 'linkedin'] as const).forEach((k) => {
+        const v = links[k]?.trim()
+        if (v) trimmedLinks[k] = v
+      })
+      updates.links = trimmedLinks
+
+      // Upload pending PDF (if any) before writing the profile row.
+      if (defaultResume.pending) {
+        const file = defaultResume.pending
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const path = `profile/${profile!.id}/${Date.now()}_${safeName}`
+        const { error: upErr } = await supabase.storage
+          .from('resumes')
+          .upload(path, file, { upsert: false, contentType: 'application/pdf' })
+        if (upErr) {
+          setSaving(false)
+          setSaveError('Could not upload the resume. Please try again.')
+          return
+        }
+        updates.default_resume_path = path
+      } else if (defaultResume.path === null) {
+        // User cleared the resume.
+        updates.default_resume_path = null
+      }
     }
 
     const { error } = await supabase.from('profiles').update(updates).eq('id', profile!.id)
@@ -725,6 +775,18 @@ export default function Profile() {
                         })}
                       </div>
                     </div>
+
+                    {/* Phase 2.1 — skills, projects, links, default resume. */}
+                    <StudentSectionsEditor
+                      skills={skills}
+                      setSkills={setSkills}
+                      projects={projects}
+                      setProjects={setProjects}
+                      links={links}
+                      setLinks={setLinks}
+                      defaultResume={defaultResume}
+                      setDefaultResume={setDefaultResume}
+                    />
                   </>
                 )}
 

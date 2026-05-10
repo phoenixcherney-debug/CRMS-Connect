@@ -65,6 +65,11 @@ export interface Profile {
    *  interstitial. Server-stored so it's once-per-account, not
    *  once-per-device. */
   seen_mentor_visibility_card?: boolean | null
+  /** Phase 2.1 — student structured profile sections. */
+  skills?: string[] | null
+  projects?: { title: string; url?: string; description?: string }[] | null
+  links?: { github?: string; website?: string; linkedin?: string } | null
+  default_resume_path?: string | null
   created_at: string
   banned_at?: string | null
 }
