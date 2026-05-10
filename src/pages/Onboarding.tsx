@@ -192,6 +192,30 @@ export default function Onboarding() {
       setSaveError('Failed to save your profile. Please try again.')
       return
     }
+    // Phase 5.6 — seed the first Career History entry from the company
+    // they just supplied so the alum/mentor profile isn't visually empty
+    // on day one. Best-effort: any failure here just means they fill it
+    // in later on /profile/edit.
+    if (isEmployerMentor && company.trim()) {
+      const { data: existing } = await supabase
+        .from('career_history')
+        .select('id')
+        .eq('profile_id', profile!.id)
+        .limit(1)
+      if (!existing || existing.length === 0) {
+        const startYr = new Date().getFullYear()
+        await supabase
+          .from('career_history')
+          .insert({
+            profile_id: profile!.id,
+            company: company.trim(),
+            title: mentorType === 'mentor' ? 'Mentor' : 'Current role',
+            start_year: startYr,
+            end_year: null,
+            is_current: true,
+          })
+      }
+    }
     await refreshProfile()
     // Both roles land on /explore so they see the welcome dashboard (stats,
     // quick actions, curated previews) before being dropped into the full

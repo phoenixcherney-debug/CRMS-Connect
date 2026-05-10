@@ -160,7 +160,7 @@ export default function Explore() {
           </h1>
           <p className="text-white/65 mb-7 text-base max-w-lg">
             {isEmployerMentor
-              ? 'Share opportunities, mentor students, and stay connected with the CRMS community.'
+              ? 'Students are looking — post an opportunity, accept a meeting, or just stay visible.'
               : 'Discover opportunities and connect with employers and mentors in the CRMS community.'}
           </p>
 

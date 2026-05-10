@@ -107,7 +107,7 @@ export default function Landing() {
         <div className="flex gap-4 flex-wrap justify-center">
           <Link to="/for-mentors" className="hover:text-ink">For Mentors</Link>
           <Link to="/for-employers" className="hover:text-ink">For Employers</Link>
-          <Link to="/about" className="hover:text-ink">About</Link>
+          <Link to="/about" className="hover:text-ink">Why CRMS Connect?</Link>
           <Link to="/privacy" className="hover:text-ink">Privacy</Link>
           <Link to="/contact" className="hover:text-ink">Contact</Link>
         </div>

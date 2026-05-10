@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type React from 'react'
 import { useParams, Link, useNavigate, Navigate } from 'react-router-dom'
-import { ChevronLeft, MessageSquare, User, Briefcase, Heart, Calendar, Clock, Send, Github, Globe, Linkedin, ExternalLink, FileText } from 'lucide-react'
+import { ChevronLeft, MessageSquare, User, Briefcase, Heart, Calendar, Clock, Send, Github, Globe, Linkedin, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -276,6 +276,20 @@ export default function PublicProfile() {
                 {person.grade && (isSelf || person.share_grade_with_employers) && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-border text-ink-secondary text-xs font-medium">
                     {person.grade}
+                  </span>
+                )}
+                {/* Phase 5.7 — verified-alum chip. Shown for E/M accounts
+                    with a recorded graduation year. The "verified" framing
+                    relies on email-domain gating already in place — only
+                    real CRMS staff can mark themselves alum via the signup
+                    code path. */}
+                {isEM && person.graduation_year && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent-muted text-accent-dark text-xs font-medium"
+                    title="Confirmed CRMS alum"
+                    style={{ backgroundColor: 'var(--color-accent-faint, var(--color-primary-faint))' }}
+                  >
+                    <ShieldCheck size={11} /> CRMS '{String(person.graduation_year).slice(-2)}
                   </span>
                 )}
                 {isEM && person.open_to_mentorship && (
