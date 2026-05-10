@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import Spinner from '../components/Spinner'
+import EmptyState from '../components/EmptyState'
 import { initialsOf } from '../lib/initials'
 import type { Profile } from '../types'
 
@@ -107,22 +108,13 @@ export default function Shortlist() {
       </div>
 
       {rows.length === 0 ? (
-        <div
-          className="bg-surface rounded-2xl border border-border p-8 text-center"
-          style={{ boxShadow: 'var(--shadow-card)' }}
-        >
-          <Heart size={32} className="text-ink-muted mx-auto mb-3" />
-          <p className="text-ink font-medium mb-1">No shortlisted students yet</p>
-          <p className="text-sm text-ink-secondary mb-4">
-            Tap the heart on a student's profile or directory card to add them here.
-          </p>
-          <Link
-            to="/students"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg btn-gold"
-          >
-            Browse students
-          </Link>
-        </div>
+        <EmptyState
+          icon={Heart}
+          title="No shortlisted students yet"
+          description="Tap the heart on a student's profile or directory card to add them here."
+          ctaLabel="Browse students"
+          ctaTo="/students"
+        />
       ) : (
         <div className="space-y-3">
           {rows.map((row) => {

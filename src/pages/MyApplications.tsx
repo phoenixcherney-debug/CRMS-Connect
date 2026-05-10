@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ExternalLink, MapPin, Calendar, Trash2, MessageSquare, RotateCcw } from 'lucide-react'
+import { ExternalLink, MapPin, Calendar, Trash2, MessageSquare, RotateCcw, FileText } from 'lucide-react'
+import EmptyState from '../components/EmptyState'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { safeExternalHref } from '../lib/url'
@@ -265,15 +266,13 @@ export default function MyApplications() {
           </button>
         </div>
       ) : applications.length === 0 ? (
-        <div className="text-center py-20 bg-surface rounded-2xl border border-border">
-          <p className="text-ink-muted mb-3">You haven't applied to any opportunities yet.</p>
-          <Link
-            to="/opportunities"
-            className="btn-gold"
-          >
-            Browse opportunities →
-          </Link>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="You haven't applied to any opportunities yet."
+          description="When you submit applications, you'll see their status here."
+          ctaLabel="Browse opportunities"
+          ctaTo="/opportunities"
+        />
       ) : (
         <div className="space-y-3">
           {filteredApplications.map((app) => {
