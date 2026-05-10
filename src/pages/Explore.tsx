@@ -61,9 +61,9 @@ export default function Explore() {
           .from('jobs')
           .select('*', { count: 'exact', head: true })
           .eq('is_active', true),
-        // H-06 — the Members count must also exclude unverified accounts.
-        // Routed through a SECURITY DEFINER function so we can join
-        // auth.users.email_confirmed_at, which RLS doesn't expose.
+        // Members count via SECURITY DEFINER RPC so we can apply
+        // the same admin / banned / pending-status filters the
+        // directory pages use without round-tripping a HEAD COUNT.
         supabase.rpc('directory_member_count'),
         // Pull every active job's `company` so we can count distinct companies
         // across the whole community, not just the 4-row sample we render.

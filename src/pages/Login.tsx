@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type React from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, ArrowLeft, RefreshCw } from 'lucide-react'
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { friendlyError } from '../lib/errors'
@@ -31,7 +31,6 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   // C.3 — initial mode comes from the URL so /login/reset renders the
@@ -55,10 +54,7 @@ export default function Login() {
   const [resetError, setResetError] = useState<string | null>(null)
   const [logoError, setLogoError] = useState(false)
 
-  const [resending, setResending] = useState(false)
-  const [resent, setResent] = useState(false)
-
-  if (!loading && user?.email_confirmed_at) {
+  if (!loading && user) {
     return <Navigate to={from} replace />
   }
 
@@ -75,28 +71,17 @@ export default function Login() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    setUnverifiedEmail(null)
     const fmt = emailFormatError(email)
     if (fmt) { setError(fmt); return }
     if (!password) { setError('Password is required.'); return }
     setSubmitting(true)
     const { error: err } = await signIn(email, password)
     setSubmitting(false)
-    if (err === 'unverified') {
-      setUnverifiedEmail(email)
-    } else if (err) {
+    if (err) {
       setError(err)
-    } else {
-      navigate(from, { replace: true })
+      return
     }
-  }
-
-  async function handleResend() {
-    if (!unverifiedEmail) return
-    setResending(true)
-    const { error: err } = await supabase.auth.resend({ type: 'signup', email: unverifiedEmail })
-    setResending(false)
-    if (!err) setResent(true)
+    navigate(from, { replace: true })
   }
 
   async function handleForgotSubmit(e: React.FormEvent) {
@@ -118,7 +103,6 @@ export default function Login() {
     // S1.3 — entering reset mode also clears the previous sign-in error so
     // it doesn't ghost-echo behind the reset form.
     setError(null)
-    setUnverifiedEmail(null)
     setForgotMode(true)
   }
 
@@ -196,7 +180,6 @@ export default function Login() {
                   // typed their email, no need to wipe it).
                   setForgotMode(false)
                   setError(null)
-                  setUnverifiedEmail(null)
                   setPassword('')
                   setResetSent(false)
                   setResetError(null)
@@ -253,28 +236,6 @@ export default function Login() {
                 <div className="mb-5 rounded-lg px-4 py-3 text-sm border" style={{ backgroundColor: 'var(--color-primary-muted)', borderColor: 'var(--color-primary)' }}>
                   <p className="font-semibold text-ink mb-0.5">Your session has timed out</p>
                   <p className="text-ink-secondary text-xs">Please sign in again to continue.</p>
-                </div>
-              )}
-
-              {/* Unverified email notice */}
-              {unverifiedEmail && (
-                <div className="mb-5 rounded-lg px-4 py-4 text-sm border" style={{ backgroundColor: 'var(--color-primary-muted)', borderColor: 'var(--color-primary)' }}>
-                  <p className="font-semibold text-ink mb-1">Please verify your email before logging in.</p>
-                  <p className="text-ink-secondary text-xs mb-3">
-                    Check your inbox for a confirmation link sent to <strong>{unverifiedEmail}</strong>.
-                  </p>
-                  {resent ? (
-                    <p className="text-xs font-medium" style={{ color: 'var(--color-success)' }}>Verification email resent! Check your inbox.</p>
-                  ) : (
-                    <button type="button"
-                      onClick={handleResend}
-                      disabled={resending}
-                      className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-light"
-                    >
-                      {resending ? <Spinner size="sm" /> : <RefreshCw size={12} />}
-                      {resending ? 'Resending…' : 'Resend verification email'}
-                    </button>
-                  )}
                 </div>
               )}
 

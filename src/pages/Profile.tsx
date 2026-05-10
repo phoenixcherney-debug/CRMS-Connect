@@ -1034,12 +1034,11 @@ export default function Profile() {
 
 // ─── Account & security section ──────────────────────────────────────────────
 // P3-43: change password (current password re-entry, then supabase.auth.updateUser).
-// P3-44: update email (new email + supabase.auth.updateUser sends a verification
-// link to the new address; the change only takes effect after the user clicks it).
+// (P3-44 update-email flow was removed — Supabase's email-change path
+//  inherently uses verification links, which we no longer rely on.)
 function AccountSecuritySection() {
   const { user } = useAuth()
   const [openPwd, setOpenPwd]     = useState(false)
-  const [openEmail, setOpenEmail] = useState(false)
 
   // Password change state
   const [currentPwd, setCurrentPwd] = useState('')
@@ -1048,12 +1047,6 @@ function AccountSecuritySection() {
   const [pwdSaving, setPwdSaving]   = useState(false)
   const [pwdError, setPwdError]     = useState<string | null>(null)
   const [pwdSuccess, setPwdSuccess] = useState(false)
-
-  // Email change state
-  const [newEmail, setNewEmail]       = useState('')
-  const [emailSaving, setEmailSaving] = useState(false)
-  const [emailError, setEmailError]   = useState<string | null>(null)
-  const [emailSent, setEmailSent]     = useState(false)
 
   if (!user) return null
   const currentEmail = user.email ?? ''
@@ -1095,30 +1088,6 @@ function AccountSecuritySection() {
     setCurrentPwd('')
     setNewPwd('')
     setConfirmPwd('')
-  }
-
-  async function handleChangeEmail(e: React.FormEvent) {
-    e.preventDefault()
-    setEmailError(null)
-    setEmailSent(false)
-    const trimmed = newEmail.trim()
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setEmailError('Enter a valid email address.')
-      return
-    }
-    if (trimmed.toLowerCase() === currentEmail.toLowerCase()) {
-      setEmailError('That is already your current email.')
-      return
-    }
-    setEmailSaving(true)
-    const { error } = await supabase.auth.updateUser({ email: trimmed })
-    setEmailSaving(false)
-    if (error) {
-      setEmailError(error.message)
-      return
-    }
-    setEmailSent(true)
-    setNewEmail('')
   }
 
   return (
@@ -1196,65 +1165,6 @@ function AccountSecuritySection() {
         )}
       </div>
 
-      {/* Update email */}
-      <div>
-        {!openEmail ? (
-          <button
-            type="button"
-            onClick={() => { setOpenEmail(true); setEmailError(null); setEmailSent(false) }}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            Update email…
-          </button>
-        ) : (
-          <form onSubmit={handleChangeEmail} className="p-4 rounded-lg border border-border bg-primary-faint space-y-3">
-            <p className="text-sm font-medium text-ink">Update email</p>
-            <p className="text-xs text-ink-muted">
-              Current: <span className="font-medium text-ink">{currentEmail}</span>
-            </p>
-            <input
-              type="email"
-              autoComplete="email"
-              placeholder="New email address"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-              required
-            />
-            <p className="text-xs text-ink-muted">
-              We'll send a verification link to the new address. Your email won't change until you click it.
-            </p>
-            {emailError && <p className="text-xs text-error">{emailError}</p>}
-            {emailSent && (
-              <p className="text-xs text-success">
-                Verification link sent. Check the new address to complete the change.
-              </p>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={emailSaving || !newEmail.trim()}
-                className="btn-gold px-4 py-2"
-              >
-                {emailSaving && <Spinner size="sm" className="border-white/30 border-t-white" />}
-                {emailSaving ? 'Sending…' : 'Send verification'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpenEmail(false)
-                  setNewEmail('')
-                  setEmailError(null); setEmailSent(false)
-                }}
-                disabled={emailSaving}
-                className="px-4 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
     </div>
   )
 }

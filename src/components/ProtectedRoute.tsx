@@ -36,11 +36,6 @@ export default function ProtectedRoute({ children, roles, skipOnboarding, skipAp
     return <Navigate to={`/login${qs}`} state={{ from: location }} replace />
   }
 
-  // Logged in but email not verified
-  if (!user.email_confirmed_at) {
-    return <Navigate to="/verify-email" state={{ email: user.email }} replace />
-  }
-
   // Banned user — redirect to suspension page (check before onboarding/role)
   if (profile?.banned_at && location.pathname !== '/banned') {
     return <Navigate to="/banned" replace />

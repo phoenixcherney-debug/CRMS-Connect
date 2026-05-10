@@ -35,7 +35,7 @@ function StudentPostsByRole({ DirectoryComponent }: { DirectoryComponent: React.
 function HomeRouter() {
   const { user, loading } = useAuth()
   if (loading) return null
-  if (user?.email_confirmed_at) return <Navigate to="/explore" replace />
+  if (user) return <Navigate to="/explore" replace />
   return <Landing />
 }
 
@@ -70,7 +70,6 @@ const ROUTE_TITLES: Record<string, string> = {
   '/login': 'Sign in',
   '/signup': 'Create account',
   '/reset-password': 'Reset password',
-  '/verify-email': 'Verify email',
   '/onboarding': 'Welcome',
   '/explore': 'Explore',
   '/activity': 'Activity',
@@ -137,7 +136,6 @@ const Notifications     = lazy(() => import('./pages/Notifications'))
 const Login             = lazy(() => import('./pages/Login'))
 const Signup            = lazy(() => import('./pages/Signup'))
 const ResetPassword     = lazy(() => import('./pages/ResetPassword'))
-const VerifyEmail       = lazy(() => import('./pages/VerifyEmail'))
 const Onboarding        = lazy(() => import('./pages/Onboarding'))
 const JobDetail         = lazy(() => import('./pages/JobDetail'))
 const PostJob           = lazy(() => import('./pages/PostJob'))
@@ -188,7 +186,6 @@ export default function App() {
             <Route path="/login/reset"    element={<Login />} />
             <Route path="/signup"         element={<Signup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/verify-email"   element={<VerifyEmail />} />
             <Route path="/about"          element={<Layout><About /></Layout>} />
             <Route path="/privacy"        element={<Layout><Privacy /></Layout>} />
             <Route path="/contact"        element={<Layout><Contact /></Layout>} />

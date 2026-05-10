@@ -66,9 +66,6 @@ export function friendlyError(err: unknown, fallback = 'Something went wrong. Pl
   if (lower.includes('invalid login credentials')) {
     return 'Incorrect email or password.'
   }
-  if (lower.includes('email not confirmed')) {
-    return 'Please confirm your email before signing in. Check your inbox for the verification link.'
-  }
   if (lower.includes('rate limit') || lower.includes('too many')) {
     return 'Too many attempts. Please wait a minute and try again.'
   }

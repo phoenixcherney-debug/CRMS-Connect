@@ -31,7 +31,7 @@ interface AuthContextType {
     password: string
     fullName: string
     role: Role
-  }) => Promise<{ error: string | null; needsVerification?: boolean }>
+  }) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -155,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     password: string
     fullName: string
     role: Role
-  }): Promise<{ error: string | null; needsVerification?: boolean }> {
+  }): Promise<{ error: string | null }> {
     const clientError = validateEmailForRole(email, role)
     if (clientError) return { error: clientError }
 
@@ -172,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const canonicalName = formatDisplayName(trimmedName)
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: {
@@ -181,9 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (error) return { error: friendlyError(error) }
-
-      const needsVerification = !data.session
-      return { error: null, needsVerification }
+      return { error: null }
     } catch (err) {
       return { error: friendlyError(err) }
     }
@@ -200,9 +198,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       })
       if (error) {
-        if (error.message.includes('Email not confirmed')) {
-          return { error: 'unverified' }
-        }
         if (error.message.includes('Invalid login credentials')) {
           return { error: 'Incorrect email or password.' }
         }

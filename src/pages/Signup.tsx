@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle } from 'lucide-react'
 import { useAuth, validateEmailForRole } from '../contexts/AuthContext'
 import type { Role } from '../types'
 import { ROLE_LABELS } from '../types'
@@ -32,7 +32,6 @@ export default function Signup() {
   const [emailTouched, setEmailTouched] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
   const [logoError, setLogoError] = useState(false)
 
   // Re-validate when role changes after field was already touched
@@ -40,9 +39,8 @@ export default function Signup() {
     if (emailTouched) setEmailError(validateEmailForRole(email, role))
   }, [role])
 
-  if (!loading && user?.email_confirmed_at) {
-    // Audit F-051 — already-signed-in users hitting /signup land on the
-    // welcome dashboard, not the job board.
+  if (!loading && user) {
+    // Already-signed-in users hitting /signup land on the welcome dashboard.
     return <Navigate to="/explore" replace />
   }
 
@@ -52,49 +50,14 @@ export default function Signup() {
     setFormError(null)
     setSubmitting(true)
 
-    const { error, needsVerification } = await signUp({ email, password, fullName, role })
+    const { error } = await signUp({ email, password, fullName, role })
     setSubmitting(false)
 
     if (error) {
       setFormError(error)
-    } else if (needsVerification) {
-      setSuccess(true)
-    } else {
-      navigate('/onboarding', { replace: true })
+      return
     }
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ backgroundColor: 'var(--color-background)' }}>
-        <div
-          className="w-full max-w-sm bg-surface rounded-2xl border border-border p-8 text-center"
-          style={{ boxShadow: 'var(--shadow-modal)' }}
-        >
-          <div
-            className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
-            style={{ backgroundColor: 'var(--color-success-bg)' }}
-          >
-            <CheckCircle2 size={28} style={{ color: 'var(--color-success)' }} />
-          </div>
-          <h2 className="text-xl font-bold text-ink mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
-            Check your inbox
-          </h2>
-          <p className="text-sm text-ink-secondary leading-relaxed">
-            We sent a verification link to{' '}
-            <strong className="text-ink">{email}</strong>. Click the link to
-            activate your CRMS Connect account.
-          </p>
-          <Link
-            to="/login"
-            className="mt-6 inline-block text-sm font-bold hover:underline"
-            style={{ color: 'var(--color-primary)' }}
-          >
-            Back to sign in →
-          </Link>
-        </div>
-      </div>
-    )
+    navigate('/onboarding', { replace: true })
   }
 
   // P3-40 — stronger password rule. Length AND at least one of each:
