@@ -11,7 +11,7 @@ import { sendPushToUser } from '../lib/sendPush'
 import { friendlyError } from '../lib/errors'
 import { validateExternalUrl, safeExternalHref } from '../lib/url'
 import { sanitizeUserText } from '../lib/sanitize'
-import type { Job, Application, ApplicationStatus } from '../types'
+import type { Job, Application, ApplicationStatus, CustomQuestion } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, ROLE_LABELS } from '../types'
 
 const STATUS_CONFIG: Record<ApplicationStatus, { label: string; classes: string; dot: string }> = {
@@ -70,6 +70,22 @@ export default function JobDetail() {
 
   const isStudent = profile?.role === 'student'
   const isPoster = job?.posted_by === profile?.id
+
+  // Phase 3.6 — read typed questions when present, fall back to the legacy
+  // string[] shape so old posts still render. (Migration 069 backfilled the
+  // legacy rows, so this matters mainly for in-flight clients.)
+  function resolveQuestions(j: Job | null): CustomQuestion[] {
+    if (!j) return []
+    const v2 = j.custom_questions_v2
+    if (Array.isArray(v2) && v2.length > 0) return v2
+    const legacy = j.custom_questions
+    if (Array.isArray(legacy)) {
+      return legacy
+        .filter((s) => typeof s === 'string' && s.trim())
+        .map((text) => ({ text: text!, type: 'short_text' as const, required: true }))
+    }
+    return []
+  }
 
   useEffect(() => {
     async function load() {
@@ -208,18 +224,19 @@ export default function JobDetail() {
       return
     }
 
-    // P1-7 — every non-blank custom question is required. Snapshot the
-    // question text alongside the answer so the row stays meaningful even
-    // if the poster later edits or reorders the questions.
-    const questions = (job.custom_questions ?? []).filter((q) => q.trim().length > 0)
+    // Phase 3.6 — typed questions: validate required-ness per the
+    // poster's spec. We still snapshot the question text alongside each
+    // answer so the row stays meaningful if the poster later edits the
+    // questions.
+    const questions = resolveQuestions(job)
     const answers: { question: string; answer: string }[] = []
     for (const q of questions) {
-      const a = (customAnswers[q] ?? '').trim()
-      if (!a) {
-        setApplyError(`Please answer: "${q}"`)
+      const a = (customAnswers[q.text] ?? '').trim()
+      if (!a && q.required) {
+        setApplyError(`Please answer: "${q.text}"`)
         return
       }
-      answers.push({ question: q, answer: a })
+      if (a) answers.push({ question: q.text, answer: a })
     }
 
     // P1-8 — validate the file up front. Server-side: bucket has a 5MB
@@ -658,21 +675,45 @@ export default function JobDetail() {
                   )}
                 </div>
 
-                {/* P1-7 — render the poster's custom questions, all required. */}
-                {(job.custom_questions ?? []).filter((q) => q.trim().length > 0).map((q, idx) => (
-                  <div key={`${idx}-${q}`}>
+                {/* Phase 3.6 — render typed questions. Required ones show a *. */}
+                {resolveQuestions(job).map((q, idx) => (
+                  <div key={`${idx}-${q.text}`}>
                     <label className="block text-sm font-medium text-ink mb-1.5">
-                      {q} <span className="text-error">*</span>
+                      {q.text} {q.required && <span className="text-error">*</span>}
                     </label>
-                    <textarea
-                      rows={2}
-                      maxLength={2000}
-                      value={customAnswers[q] ?? ''}
-                      onChange={(e) => setCustomAnswers((prev) => ({ ...prev, [q]: e.target.value }))}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                        placeholder:text-ink-placeholder resize-none
-                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                    />
+                    {q.type === 'long_text' ? (
+                      <textarea
+                        rows={4}
+                        maxLength={2000}
+                        value={customAnswers[q.text] ?? ''}
+                        onChange={(e) => setCustomAnswers((prev) => ({ ...prev, [q.text]: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                      />
+                    ) : q.type === 'single_select' ? (
+                      <div className="space-y-1.5">
+                        {(q.options ?? []).map((opt, oi) => (
+                          <label key={oi} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border cursor-pointer hover:bg-primary-faint text-sm">
+                            <input
+                              type="radio"
+                              name={`q-${idx}`}
+                              value={opt}
+                              checked={customAnswers[q.text] === opt}
+                              onChange={() => setCustomAnswers((prev) => ({ ...prev, [q.text]: opt }))}
+                              className="text-primary focus:ring-primary/30"
+                            />
+                            <span className="text-ink">{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        maxLength={500}
+                        value={customAnswers[q.text] ?? ''}
+                        onChange={(e) => setCustomAnswers((prev) => ({ ...prev, [q.text]: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                      />
+                    )}
                   </div>
                 ))}
 

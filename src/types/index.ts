@@ -98,6 +98,15 @@ export interface AvailabilitySlot {
   created_at: string
 }
 
+/** Phase 3.6 — typed custom application question. */
+export type CustomQuestionType = 'short_text' | 'long_text' | 'single_select'
+export interface CustomQuestion {
+  text: string
+  type: CustomQuestionType
+  required: boolean
+  options?: string[]
+}
+
 export interface Job {
   id: string
   created_at: string
@@ -120,8 +129,12 @@ export interface Job {
   opportunity_type_other?: string | null
   start_date?: string | null
   end_date?: string | null
-  /** P1-7 — up to 3 free-text questions the applicant must answer. */
+  /** P1-7 — legacy free-text questions (read-only after migration 069
+   *  backfilled them into custom_questions_v2). New code reads v2. */
   custom_questions?: string[] | null
+  /** Phase 3.6 — typed questions (≤5). Read this on the client; writes
+   *  go here, not to the legacy column. */
+  custom_questions_v2?: CustomQuestion[] | null
   /** P1-4 — drafts skip not-blank checks; never show in directory. */
   is_draft?: boolean
   // Joined

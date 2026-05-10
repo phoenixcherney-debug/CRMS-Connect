@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/ToastProvider'
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard'
-import type { JobType, LocationType } from '../types'
+import type { JobType, LocationType, CustomQuestion, CustomQuestionType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
 import { friendlyError } from '../lib/errors'
@@ -30,8 +30,45 @@ interface JobForm {
   end_date: string
   expected_weekly_hours: string
   compensation: string
-  /** P1-7 — three slots, blank entries are filtered out at save time. */
-  custom_questions: [string, string, string]
+  /** Phase 3.6 — typed custom questions (≤5). Drafts of blank entries
+   *  are filtered out at save time. */
+  custom_questions: CustomQuestion[]
+}
+
+const MAX_QUESTIONS = 5
+
+function emptyQuestion(): CustomQuestion {
+  return { text: '', type: 'short_text', required: true }
+}
+
+function normalizeQuestion(q: Partial<CustomQuestion>): CustomQuestion {
+  const type: CustomQuestionType =
+    q.type === 'long_text' || q.type === 'single_select' || q.type === 'short_text'
+      ? q.type
+      : 'short_text'
+  const out: CustomQuestion = {
+    text: typeof q.text === 'string' ? q.text : '',
+    type,
+    required: typeof q.required === 'boolean' ? q.required : true,
+  }
+  if (type === 'single_select') {
+    out.options = Array.isArray(q.options) ? q.options.map((o) => String(o)) : ['', '']
+  }
+  return out
+}
+
+function readCustomQuestions(row: { custom_questions_v2?: unknown; custom_questions?: unknown }): CustomQuestion[] {
+  const v2 = row.custom_questions_v2
+  if (Array.isArray(v2) && v2.length > 0) {
+    return v2.map((q) => normalizeQuestion(q as Partial<CustomQuestion>))
+  }
+  const legacy = row.custom_questions
+  if (Array.isArray(legacy)) {
+    return (legacy as string[])
+      .filter((s) => typeof s === 'string' && s.trim())
+      .map((text) => ({ text, type: 'short_text' as CustomQuestionType, required: true }))
+  }
+  return []
 }
 
 const DEFAULT_FORM: JobForm = {
@@ -49,7 +86,7 @@ const DEFAULT_FORM: JobForm = {
   end_date: '',
   expected_weekly_hours: '',
   compensation: '',
-  custom_questions: ['', '', ''],
+  custom_questions: [],
 }
 
 const SAVE_FAIL_MSG = 'Could not save the opportunity. Please try again.'
@@ -102,10 +139,7 @@ export default function PostJob() {
           end_date: data.end_date ?? '',
           expected_weekly_hours: data.expected_weekly_hours ?? '',
           compensation: data.compensation ?? '',
-          custom_questions: (() => {
-            const arr = (data.custom_questions ?? []) as string[]
-            return [arr[0] ?? '', arr[1] ?? '', arr[2] ?? ''] as [string, string, string]
-          })(),
+          custom_questions: readCustomQuestions(data),
         }
         setForm(next)
         initialFormRef.current = next
@@ -139,10 +173,7 @@ export default function PostJob() {
         end_date: '',
         expected_weekly_hours: data.expected_weekly_hours ?? '',
         compensation: data.compensation ?? '',
-        custom_questions: (() => {
-          const arr = (data.custom_questions ?? []) as string[]
-          return [arr[0] ?? '', arr[1] ?? '', arr[2] ?? ''] as [string, string, string]
-        })(),
+        custom_questions: readCustomQuestions(data),
       }
       setForm(next)
     }
@@ -230,8 +261,31 @@ export default function PostJob() {
       end_date: form.end_date || null,
       expected_weekly_hours: form.expected_weekly_hours || null,
       compensation: form.compensation.trim() || null,
-      // P1-7 — drop blank slots; trigger rejects 0-length entries anyway.
-      custom_questions: form.custom_questions.map((q) => q.trim()).filter(Boolean),
+      // Phase 3.6 — clean the typed-question list before send: drop blanks,
+      // trim text, and normalize option arrays. The DB trigger backstops
+      // anything we miss here.
+      custom_questions_v2: form.custom_questions
+        .map((q) => {
+          const text = q.text.trim()
+          const base: CustomQuestion = { text, type: q.type, required: !!q.required }
+          if (q.type === 'single_select') {
+            base.options = (q.options ?? [])
+              .map((o) => o.trim())
+              .filter(Boolean)
+          }
+          return base
+        })
+        .filter((q) =>
+          q.text.length > 0
+          && (q.type !== 'single_select' || (q.options && q.options.length >= 2))
+        ),
+      // Legacy column kept for one more cycle so older clients still render
+      // something during the rollout. Schema migration 069 already backfilled
+      // existing rows; we just mirror the question text here.
+      custom_questions: form.custom_questions
+        .filter((q) => q.text.trim())
+        .map((q) => q.text.trim())
+        .slice(0, 5),
       // opportunity_type is no longer collected (consolidated with job_type),
       // but kept nullable in the schema so legacy rows still display.
       opportunity_type: null,
@@ -591,36 +645,150 @@ export default function PostJob() {
             )}
           </div>
 
-          {/* P1-7 — up to three custom questions for applicants. */}
+          {/* Phase 3.6 — typed custom questions (≤5). Each has a type
+              (short / long / single-select), a required flag, and (for
+              single-select) a 2–8 entry option list. */}
           <div>
             <label className="block text-sm font-medium text-ink mb-1.5">
               Custom questions{' '}
-              <span className="text-ink-muted font-normal">(optional, max 3 · short text only)</span>
+              <span className="text-ink-muted font-normal">(optional · max {MAX_QUESTIONS})</span>
             </label>
             <p className="text-xs text-ink-muted mb-2">
-              Each applicant will be required to answer the questions you fill in. Leave blank to skip.
+              Pick a type, mark it required if it's a deal-breaker, and applicants will see it on the apply form.
             </p>
-            <div className="space-y-2">
-              {[0, 1, 2].map((i) => (
-                <input
-                  key={i}
-                  type="text"
-                  maxLength={200}
-                  value={form.custom_questions[i] ?? ''}
-                  onChange={(e) => {
-                    const next: [string, string, string] = [...form.custom_questions]
-                    next[i] = e.target.value
-                    set('custom_questions', next)
-                  }}
-                  placeholder={[
-                    'e.g. What attracted you to this opportunity?',
-                    'e.g. What\'s your strongest relevant skill?',
-                    'e.g. Anything we should know that\'s not in your application?',
-                  ][i]}
-                  className="field"
-                />
+            <div className="space-y-3">
+              {form.custom_questions.map((q, i) => (
+                <div key={i} className="p-3 rounded-lg border border-border bg-primary-faint space-y-2">
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="text"
+                      maxLength={200}
+                      value={q.text}
+                      onChange={(e) => {
+                        const next = form.custom_questions.slice()
+                        next[i] = { ...q, text: e.target.value }
+                        set('custom_questions', next)
+                      }}
+                      placeholder="e.g. What attracted you to this opportunity?"
+                      className="field flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        set(
+                          'custom_questions',
+                          form.custom_questions.filter((_, idx) => idx !== i),
+                        )
+                      }}
+                      className="text-ink-muted hover:text-error p-2"
+                      aria-label="Remove question"
+                      title="Remove question"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-ink-muted">Type:</span>
+                      <select
+                        value={q.type}
+                        onChange={(e) => {
+                          const newType = e.target.value as CustomQuestionType
+                          const next = form.custom_questions.slice()
+                          const updated: CustomQuestion = { ...q, type: newType }
+                          if (newType === 'single_select' && (!q.options || q.options.length < 2)) {
+                            updated.options = ['', '']
+                          } else if (newType !== 'single_select') {
+                            delete updated.options
+                          }
+                          next[i] = updated
+                          set('custom_questions', next)
+                        }}
+                        className="px-2 py-1 rounded-md border border-border bg-surface text-ink text-xs"
+                      >
+                        <option value="short_text">Short text</option>
+                        <option value="long_text">Long text</option>
+                        <option value="single_select">Single select</option>
+                      </select>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={q.required}
+                        onChange={(e) => {
+                          const next = form.custom_questions.slice()
+                          next[i] = { ...q, required: e.target.checked }
+                          set('custom_questions', next)
+                        }}
+                        className="rounded border-border text-primary focus:ring-primary/30"
+                      />
+                      Required
+                    </label>
+                  </div>
+                  {q.type === 'single_select' && (
+                    <div className="space-y-1.5 pl-2 border-l-2 border-border">
+                      <p className="text-[11px] text-ink-muted">Options (2–8, ≤80 chars each)</p>
+                      {(q.options ?? []).map((opt, oi) => (
+                        <div key={oi} className="flex gap-1.5">
+                          <input
+                            type="text"
+                            maxLength={80}
+                            value={opt}
+                            onChange={(e) => {
+                              const next = form.custom_questions.slice()
+                              const options = (next[i].options ?? []).slice()
+                              options[oi] = e.target.value
+                              next[i] = { ...q, options }
+                              set('custom_questions', next)
+                            }}
+                            placeholder={`Option ${oi + 1}`}
+                            className="field text-xs flex-1"
+                          />
+                          {(q.options ?? []).length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = form.custom_questions.slice()
+                                const options = (next[i].options ?? []).filter((_, idx) => idx !== oi)
+                                next[i] = { ...q, options }
+                                set('custom_questions', next)
+                              }}
+                              className="text-ink-muted hover:text-error px-1.5"
+                              aria-label="Remove option"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      {(q.options ?? []).length < 8 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = form.custom_questions.slice()
+                            const options = [...(next[i].options ?? []), '']
+                            next[i] = { ...q, options }
+                            set('custom_questions', next)
+                          }}
+                          className="text-xs font-medium text-primary hover:text-primary-light"
+                        >
+                          + Add option
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
+            {form.custom_questions.length < MAX_QUESTIONS && (
+              <button
+                type="button"
+                onClick={() => set('custom_questions', [...form.custom_questions, emptyQuestion()])}
+                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-light"
+              >
+                + Add question
+              </button>
+            )}
           </div>
 
           {/* Submit */}
