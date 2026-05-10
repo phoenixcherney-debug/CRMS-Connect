@@ -68,6 +68,7 @@ export default function PostJob() {
   const [savedJustNow, setSavedJustNow] = useState(false)
   const dirty = !savedJustNow && JSON.stringify(form) !== JSON.stringify(initialFormRef.current)
   useUnsavedChangesGuard(dirty)
+  const [showPreview, setShowPreview] = useState(false)
   // Per-field errors so the user sees feedback at the field, not only in the
   // banner at the top of a long form (audit HIGH-5: silent submit on bad dates).
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -543,7 +544,7 @@ export default function PostJob() {
           </div>
 
           {/* Submit */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-2 flex-wrap">
             <button
               type="submit"
               disabled={submitting}
@@ -554,6 +555,17 @@ export default function PostJob() {
                 ? isEdit ? 'Saving…' : 'Publishing…'
                 : isEdit ? 'Save changes' : 'Publish opportunity'
               }
+            </button>
+            {/* P2-21 — preview the form values as a student would see them. */}
+            <button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              disabled={!form.title.trim() || !form.company.trim()}
+              title="See what students will see"
+              className="px-5 py-2.5 rounded-lg border border-border text-sm text-ink-secondary
+                hover:bg-primary-faint hover:text-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Preview
             </button>
             <Link
               to={isEdit ? `/opportunities/${id}` : '/my-opportunities'}
@@ -569,6 +581,17 @@ export default function PostJob() {
           </div>
         </form>
       </div>
+
+      {/* P2-21 — preview modal. Renders the form values in roughly the
+          shape the public detail page uses, so the poster can sanity-
+          check copy before publish. */}
+      {showPreview && (
+        <PostPreview
+          form={form}
+          posterName={profile?.full_name ?? 'You'}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
 
       {/* Global field styles via <style> injection */}
       <style>{`
@@ -592,6 +615,105 @@ export default function PostJob() {
           box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
         }
       `}</style>
+    </div>
+  )
+}
+
+// ─── PostPreview ────────────────────────────────────────────────────────────
+// P2-21 — render the in-progress form values inside a modal that mirrors
+// the student-facing detail layout. Intentionally a separate component so
+// the live form state is the source of truth (re-renders on close/reopen).
+function PostPreview({
+  form, posterName, onClose,
+}: {
+  form: JobForm
+  posterName: string
+  onClose: () => void
+}) {
+  const typeLabel = JOB_TYPE_LABELS[form.job_type]
+  const locationLabel = LOCATION_TYPE_LABELS[form.location_type]
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 px-4 py-8 overflow-y-auto">
+      <div
+        className="bg-surface rounded-2xl border border-border max-w-3xl w-full overflow-hidden"
+        style={{ boxShadow: 'var(--shadow-modal)' }}
+      >
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-primary-faint">
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Preview — what students will see</p>
+          <button type="button" onClick={onClose} className="text-xs text-ink-secondary hover:text-ink">Close ×</button>
+        </div>
+        <div className="p-6 sm:p-8">
+          <div className="flex flex-wrap gap-2 mb-3">
+            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
+              {typeLabel}
+            </span>
+            {form.location_type && (
+              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
+                {locationLabel}
+              </span>
+            )}
+            {form.industry && (
+              <span className="inline-flex items-center px-2 py-1 rounded-md text-xs border bg-surface border-border text-ink-secondary">
+                {form.industry}
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>
+            {form.title || <span className="text-ink-muted italic">(title pending)</span>}
+          </h1>
+          <p className="text-ink-secondary mt-1">
+            {form.company || <span className="text-ink-muted italic">(company pending)</span>}
+            {form.location ? <> · {form.location}</> : null}
+          </p>
+          <p className="text-xs text-ink-muted mt-1">Posted by {posterName}</p>
+
+          <div className="mt-6 grid sm:grid-cols-2 gap-3 text-sm">
+            {form.compensation && (
+              <div className="p-3 rounded-lg bg-primary-faint border border-border">
+                <p className="text-xs text-ink-muted mb-0.5">Compensation</p>
+                <p className="text-ink">{form.compensation}</p>
+              </div>
+            )}
+            {form.expected_weekly_hours && (
+              <div className="p-3 rounded-lg bg-primary-faint border border-border">
+                <p className="text-xs text-ink-muted mb-0.5">Expected hours</p>
+                <p className="text-ink">{form.expected_weekly_hours}</p>
+              </div>
+            )}
+            {(form.start_date || form.end_date) && (
+              <div className="p-3 rounded-lg bg-primary-faint border border-border">
+                <p className="text-xs text-ink-muted mb-0.5">Dates</p>
+                <p className="text-ink">{form.start_date || '?'}{(form.start_date || form.end_date) ? ' – ' : ''}{form.end_date || '?'}</p>
+              </div>
+            )}
+            {form.deadline && (
+              <div className="p-3 rounded-lg bg-primary-faint border border-border">
+                <p className="text-xs text-ink-muted mb-0.5">Apply by</p>
+                <p className="text-ink">{form.deadline}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">About this opportunity</p>
+            <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">
+              {form.description || <span className="text-ink-muted italic">(description pending)</span>}
+            </p>
+          </div>
+
+          {form.how_to_apply && (
+            <div className="mt-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted mb-2">How to apply</p>
+              <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">{form.how_to_apply}</p>
+            </div>
+          )}
+        </div>
+        <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint">
+            Back to edit
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

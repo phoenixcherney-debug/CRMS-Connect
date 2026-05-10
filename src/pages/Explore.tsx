@@ -12,6 +12,9 @@ import { ROLE_LABELS } from '../types'
 import JobCard from '../components/JobCard'
 import Spinner from '../components/Spinner'
 import MentorModeBanner from '../components/MentorModeBanner'
+import EmployerDashboardStrip from '../components/EmployerDashboardStrip'
+import InviteMentorButton from '../components/InviteMentorButton'
+import EmployerTourModal from '../components/EmployerTourModal'
 import { isPast, parseISO } from 'date-fns'
 
 /** Audit task 17 — preserve the casing the user typed. We only trim
@@ -201,6 +204,14 @@ export default function Explore() {
       </div>
 
       <MentorModeBanner />
+      <EmployerDashboardStrip />
+      {isEmployerMentor && <EmployerTourModal />}
+
+      {isEmployerMentor && (
+        <div className="mb-4 flex justify-end">
+          <InviteMentorButton />
+        </div>
+      )}
 
       {/* Quick links — role-aware */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

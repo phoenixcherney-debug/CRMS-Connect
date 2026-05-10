@@ -42,6 +42,11 @@ export default function Onboarding() {
   const [industryOther, setIndustryOther] = useState('')
   const [mentorType, setMentorType] = useState<MentorType | ''>('')
   const [mentorTypeOther, setMentorTypeOther] = useState('')
+  // P2-12 — open-to-mentorship + alum class year captured during E/M
+  // onboarding so students see mentor data accurately on day one rather
+  // than hoping mentors remember to flip it on later.
+  const [openToMentorship, setOpenToMentorship] = useState(false)
+  const [alumGradYear, setAlumGradYear] = useState('')
   const [studentSeeking, setStudentSeeking] = useState<StudentSeeking | ''>('')
   const [studentSeekingOther, setStudentSeekingOther] = useState('')
   const [interests, setInterests] = useState<string[]>([])
@@ -173,6 +178,10 @@ export default function Onboarding() {
       updates.industry = industry === 'Other' ? (industryOther.trim() || null) : (industry || null)
       updates.mentor_type = mentorType || null
       updates.mentor_type_other = mentorType === 'other' ? mentorTypeOther.trim() || null : null
+      // P2-12 — capture mentorship + alum-year intent at onboarding.
+      updates.open_to_mentorship = openToMentorship
+      const ay = parseInt(alumGradYear, 10)
+      if (!isNaN(ay) && ay >= 1900 && ay <= 2100) updates.graduation_year = ay
     }
 
     const { error } = await supabase.from('profiles').update(updates).eq('id', profile!.id)
@@ -185,6 +194,11 @@ export default function Onboarding() {
     // Both roles land on /explore so they see the welcome dashboard (stats,
     // quick actions, curated previews) before being dropped into the full
     // job board (audit §15).
+    // P2-13 — tell /explore to mount the post-onboarding tour exactly once.
+    // The tour itself reads + clears this key.
+    if (isEmployerMentor) {
+      try { localStorage.setItem('crms.onboarding.show_em_tour', '1') } catch { /* ignore */ }
+    }
     navigate('/explore', { replace: true })
   }
 
@@ -468,6 +482,42 @@ export default function Onboarding() {
                     </div>
                   )}
                 </div>
+
+                {/* P2-12 — alum class year + mentorship intent. Both
+                    optional; defaults are off / blank so a non-alum
+                    employer just leaves them. */}
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">
+                    Class year <span className="text-ink-muted font-normal">(if you're a CRMS alum)</span>
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1900}
+                    max={2100}
+                    value={alumGradYear}
+                    onChange={(e) => setAlumGradYear(e.target.value)}
+                    placeholder="e.g. 2010"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                      placeholder:text-ink-placeholder
+                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                  />
+                </div>
+
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-border bg-primary-faint cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={openToMentorship}
+                    onChange={(e) => setOpenToMentorship(e.target.checked)}
+                    className="mt-0.5 rounded border-border text-primary focus:ring-primary/30"
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium text-ink">Open to mentoring students</span>
+                    <span className="block text-xs text-ink-muted mt-0.5">
+                      You'll appear in /mentors and students can request meetings. You can flip this in your profile any time.
+                    </span>
+                  </span>
+                </label>
               </>
             )}
 
