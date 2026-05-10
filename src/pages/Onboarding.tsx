@@ -45,7 +45,9 @@ export default function Onboarding() {
   // P2-12 — open-to-mentorship + alum class year captured during E/M
   // onboarding so students see mentor data accurately on day one rather
   // than hoping mentors remember to flip it on later.
-  const [openToMentorship, setOpenToMentorship] = useState(false)
+  // P0-4 — default ON for new E/M signups so the directory shows them
+  // immediately. Profile-edit can flip it back off any time.
+  const [openToMentorship, setOpenToMentorship] = useState(true)
   const [alumGradYear, setAlumGradYear] = useState('')
   const [studentSeeking, setStudentSeeking] = useState<StudentSeeking | ''>('')
   const [studentSeekingOther, setStudentSeekingOther] = useState('')
@@ -514,7 +516,7 @@ export default function Onboarding() {
                   <span className="text-sm">
                     <span className="font-medium text-ink">Open to mentoring students</span>
                     <span className="block text-xs text-ink-muted mt-0.5">
-                      You'll appear in /mentors and students can request meetings. You can flip this in your profile any time.
+                      On by default. When on, you appear in /mentors and students can request meetings. Flip it off any time in your profile.
                     </span>
                   </span>
                 </label>

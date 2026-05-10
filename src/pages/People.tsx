@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { initialsOf } from '../lib/initials'
 import { pluralize } from '../lib/pluralize'
 import { disambiguateNames } from '../lib/disambiguateNames'
+import ReportUserButton from '../components/ReportUserButton'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile } from '../types'
 import {
@@ -484,19 +485,25 @@ export default function People({ directory }: PeopleProps = {}) {
                     the same row (audit §20). */}
                 <div className="flex-1" />
 
-                {/* P0-1 — same-role DMs blocked. */}
-                {!isSelf && (profile?.role === 'admin' || person.role !== profile?.role) && (
-                  <button type="button"
-                    onClick={(e) => { e.stopPropagation(); openConversation(person.id) }}
-                    disabled={creatingFor === person.id}
-                    className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
-                      border border-border text-xs font-medium text-ink-secondary
-                      hover:bg-primary-faint hover:text-ink
-                      disabled:opacity-50 transition-colors"
-                  >
-                    <MessageSquare size={13} />
-                    {creatingFor === person.id ? 'Opening…' : 'Message'}
-                  </button>
+                {/* P0-6 — same-role DM block was removed (migration 057
+                    dropped the trigger). Anyone non-self can be messaged.
+                    P0-8 — Report mounts directly on the directory card so
+                    flagging doesn't require navigating to the full profile. */}
+                {!isSelf && (
+                  <div className="mt-3 flex gap-2 items-stretch" onClick={(e) => e.stopPropagation()}>
+                    <button type="button"
+                      onClick={(e) => { e.stopPropagation(); openConversation(person.id) }}
+                      disabled={creatingFor === person.id}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                        border border-border text-xs font-medium text-ink-secondary
+                        hover:bg-primary-faint hover:text-ink
+                        disabled:opacity-50 transition-colors"
+                    >
+                      <MessageSquare size={13} />
+                      {creatingFor === person.id ? 'Opening…' : 'Message'}
+                    </button>
+                    <ReportUserButton targetId={person.id} targetName={person.full_name} />
+                  </div>
                 )}
               </div>
             )

@@ -229,8 +229,30 @@ export default function Login() {
             </>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>Welcome back</h1>
-              <p className="text-ink-muted text-sm mb-7">Sign in to your CRMS Connect account.</p>
+              {/* P0-3 — when a logged-out visitor was bounced here from a
+                  protected URL, "Welcome back" is the wrong tone — many of
+                  them are first-timers landing on a school-shared link.
+                  The presence of ?next= is a reliable redirected-from
+                  signal (ProtectedRoute always sets it). */}
+              {(() => {
+                const wasRedirected = new URLSearchParams(location.search).has('next')
+                return wasRedirected ? (
+                  <>
+                    <h1 className="text-2xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>Sign in to continue</h1>
+                    <p className="text-ink-muted text-sm mb-3">
+                      You'll need an account to view that page.{' '}
+                      <Link to="/signup" className="text-primary hover:text-primary-light font-medium underline">
+                        Create one →
+                      </Link>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h1 className="text-2xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>Welcome back</h1>
+                    <p className="text-ink-muted text-sm mb-7">Sign in to your CRMS Connect account.</p>
+                  </>
+                )
+              })()}
 
               {bootstrapTimedOut && (
                 <div className="mb-5 rounded-lg px-4 py-3 text-sm border" style={{ backgroundColor: 'var(--color-primary-muted)', borderColor: 'var(--color-primary)' }}>

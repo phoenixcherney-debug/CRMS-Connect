@@ -76,7 +76,7 @@ export default function ForMentors() {
             {
               icon: MessageSquare,
               title: 'Direct messaging',
-              body: 'Same-role DMs are blocked, so no spam from peers. Conversations are inside the platform — no inbox flood.',
+              body: 'Conversations live inside the platform — no inbox flood. Students reach you through their applications or meeting requests, not cold outreach.',
             },
             {
               icon: Clock,

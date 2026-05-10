@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin } from 'lucide-react'
+import { Mail, MapPin } from 'lucide-react'
 
 /**
  * P0-2 — the footer links to /contact on every page; this used to 404
@@ -24,12 +24,6 @@ export default function Contact() {
           <Mail size={14} className="text-ink-muted" />
           <a className="text-primary hover:text-primary-light underline" href="mailto:registrar@crms.org?subject=CRMS%20Connect">
             registrar@crms.org
-          </a>
-        </li>
-        <li className="flex items-center gap-2">
-          <Phone size={14} className="text-ink-muted" />
-          <a className="text-primary hover:text-primary-light underline" href="tel:+19709634215">
-            (970) 963-2562
           </a>
         </li>
         <li className="flex items-center gap-2">

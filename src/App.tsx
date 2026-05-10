@@ -98,6 +98,12 @@ const ROUTE_TITLES: Record<string, string> = {
   '/about': 'About',
   '/privacy': 'Privacy',
   '/contact': 'Contact',
+  // P0-2 — these routes existed but weren't in the title map, so the
+  // fallback "Page not found · CRMS Connect" was rendering even though
+  // the routes resolve correctly. Wrong-tab title broke link-share
+  // previews and SEO.
+  '/for-mentors': 'For Mentors',
+  '/for-employers': 'For Employers',
 }
 
 function DocumentTitle() {
