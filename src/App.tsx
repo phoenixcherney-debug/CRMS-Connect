@@ -28,6 +28,17 @@ function StudentPostsByRole({ DirectoryComponent }: { DirectoryComponent: React.
   return <DirectoryComponent />
 }
 
+/** Route at `/`. Signed-out users see the public landing page; signed-in
+ *  users are bounced to /explore so the welcome dashboard is still their
+ *  default home. While auth is loading we render nothing (no flash of
+ *  authenticated UI before the redirect resolves). */
+function HomeRouter() {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  if (user?.email_confirmed_at) return <Navigate to="/explore" replace />
+  return <Landing />
+}
+
 /** D.2 — top-level /people redirect that runs without waiting for auth.
  *  Previously this was role-aware (students → /mentors, EM → /students)
  *  but that needed `useAuth().loading` to settle, which produced a
@@ -153,6 +164,7 @@ const SavedJobs         = lazy(() => import('./pages/SavedJobs'))
 const AwaitingApproval  = lazy(() => import('./pages/AwaitingApproval'))
 const PendingAccounts   = lazy(() => import('./pages/PendingAccounts'))
 const AdminReports      = lazy(() => import('./pages/AdminReports'))
+const Landing           = lazy(() => import('./pages/Landing'))
 
 export default function App() {
   return (
@@ -361,7 +373,7 @@ export default function App() {
             <Route path="/inbox" element={<Navigate to="/messages" replace />} />
 
             {/* ── Defaults ─────────────────────────────────────────────── */}
-            <Route path="/"  element={<Navigate to="/explore" replace />} />
+            <Route path="/"  element={<HomeRouter />} />
             <Route path="*"  element={<Layout><NotFound /></Layout>} />
 
           </Routes>

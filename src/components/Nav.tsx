@@ -103,7 +103,11 @@ export default function Nav() {
   async function handleSignOut() {
     setOpen(false)
     await signOut()
-    navigate('/login', { replace: true })
+    // Sign-out now lands on the public landing page at `/` rather than
+    // /login. AuthContext has already cleared user/profile synchronously
+    // so HomeRouter on `/` will render Landing immediately, no flash of
+    // authenticated UI.
+    navigate('/', { replace: true })
   }
 
   useEffect(() => {

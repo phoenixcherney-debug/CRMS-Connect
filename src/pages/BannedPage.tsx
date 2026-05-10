@@ -16,7 +16,7 @@ export default function BannedPage() {
 
   async function handleSignOut() {
     await signOut()
-    navigate('/login')
+    navigate('/')
   }
 
   if (loading) {

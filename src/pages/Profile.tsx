@@ -1319,7 +1319,9 @@ function DeleteAccountSection() {
     } catch { /* ignore */ }
 
     await signOut()
-    window.location.href = '/login'
+    // Hard reload so banned_at picks up server-side and the public
+    // landing renders cleanly without any cached authenticated chunks.
+    window.location.href = '/'
   }
 
   return (

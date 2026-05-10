@@ -50,7 +50,7 @@ export default function AwaitingApproval() {
             type="button"
             onClick={async () => {
               await signOut()
-              navigate('/login', { replace: true })
+              navigate('/', { replace: true })
             }}
             className="text-xs text-ink-muted hover:underline mt-2"
           >
