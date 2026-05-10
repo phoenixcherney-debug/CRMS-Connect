@@ -9,12 +9,9 @@ interface ProtectedRouteProps {
   roles?: Role[]
   /** Set true on /onboarding to avoid redirect loop. */
   skipOnboarding?: boolean
-  /** SEC-001 — set true on the routes a `pending` account is allowed to
-   *  reach (/awaiting-approval, /profile, /onboarding) so we don't loop. */
-  skipApprovalGate?: boolean
 }
 
-export default function ProtectedRoute({ children, roles, skipOnboarding, skipApprovalGate }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, roles, skipOnboarding }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
@@ -46,18 +43,6 @@ export default function ProtectedRoute({ children, roles, skipOnboarding, skipAp
   // Admin bypasses onboarding (admin accounts are created via SQL, not signup)
   if (!isAdmin && !skipOnboarding && profile && !profile.onboarding_complete) {
     return <Navigate to="/onboarding" replace />
-  }
-
-  // SEC-001 — pending employer/mentor accounts land on /awaiting-approval.
-  // /profile + /awaiting-approval + /onboarding stay reachable so they can
-  // edit details while waiting.
-  if (
-    !isAdmin
-    && !skipApprovalGate
-    && profile?.role === 'employer_mentor'
-    && profile.account_status === 'pending'
-  ) {
-    return <Navigate to="/awaiting-approval" replace />
   }
 
   // Role restriction — admin always passes

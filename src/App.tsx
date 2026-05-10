@@ -94,9 +94,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/profile/edit': 'Edit profile',
   '/banned': 'Account suspended',
   '/admin': 'Admin Panel',
-  '/admin/pending-accounts': 'Pending Accounts',
   '/admin/reports': 'Reports',
-  '/awaiting-approval': 'Awaiting Approval',
   '/about': 'About',
   '/privacy': 'Privacy',
   '/contact': 'Contact',
@@ -159,8 +157,6 @@ const Privacy           = lazy(() => import('./pages/Privacy'))
 const NotFound          = lazy(() => import('./pages/NotFound'))
 const Contact           = lazy(() => import('./pages/Contact'))
 const SavedJobs         = lazy(() => import('./pages/SavedJobs'))
-const AwaitingApproval  = lazy(() => import('./pages/AwaitingApproval'))
-const PendingAccounts   = lazy(() => import('./pages/PendingAccounts'))
 const AdminReports      = lazy(() => import('./pages/AdminReports'))
 const Landing           = lazy(() => import('./pages/Landing'))
 
@@ -321,13 +317,9 @@ export default function App() {
 
             {/* ── Profile ──────────────────────────────────────────────── */}
             <Route path="/profile" element={
-              <ProtectedRoute skipApprovalGate><Layout><Profile /></Layout></ProtectedRoute>
+              <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>
             } />
 
-            {/* SEC-001 — holding page for pending EM accounts. */}
-            <Route path="/awaiting-approval" element={
-              <ProtectedRoute skipApprovalGate><AwaitingApproval /></ProtectedRoute>
-            } />
             {/* Audit task 23 — bookmarkable edit URL. Profile reads
                 useLocation().pathname and opens the edit form when it
                 matches /profile/edit. */}
@@ -350,12 +342,6 @@ export default function App() {
             <Route path="/admin/users/:id" element={
               <ProtectedRoute roles={['admin']}>
                 <Layout><AdminUserView /></Layout>
-              </ProtectedRoute>
-            } />
-            {/* SEC-001 — staff approval queue for new employer/mentor signups. */}
-            <Route path="/admin/pending-accounts" element={
-              <ProtectedRoute roles={['admin']}>
-                <Layout><PendingAccounts /></Layout>
               </ProtectedRoute>
             } />
             {/* SEC-003 — staff triage queue for user reports. */}
