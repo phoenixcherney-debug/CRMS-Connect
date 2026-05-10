@@ -37,6 +37,8 @@ export default function People({ directory }: PeopleProps = {}) {
 
   // Filters
   const [filterInterests, setFilterInterests] = useState<string[]>([])
+  // Phase 1.5 — hide empty/clearly-test profiles by default on /students.
+  const [showEmpty, setShowEmpty] = useState(false)
   const [filterAvailability, setFilterAvailability] = useState('')
   const [filterGrade, setFilterGrade] = useState<StudentGrade | ''>('')
   const [filterLooking, setFilterLooking] = useState('')
@@ -118,8 +120,23 @@ export default function People({ directory }: PeopleProps = {}) {
 
   const hasActiveFilters = filterInterests.length > 0 || filterAvailability || filterGrade || filterLooking
 
+  // Phase 1.5 — for the students directory, an "empty" profile has all
+  // three of: no bio, no interests, no avatar. We hide these by default
+  // so the directory looks active; the user can opt back in.
+  function isEmptyStudent(p: Profile): boolean {
+    if (targetRole !== 'student') return false
+    const bioEmpty = !p.bio || p.bio.trim().length === 0
+    const interestsEmpty = !p.interests || p.interests.length === 0
+    const avatarEmpty = !p.avatar_url
+    return bioEmpty && interestsEmpty && avatarEmpty
+  }
+  const hiddenEmptyCount = targetRole === 'student'
+    ? people.filter((p) => p.id !== profile?.id && isEmptyStudent(p)).length
+    : 0
+
   const filtered = people.filter((p) => {
     if (p.id === profile?.id) return false
+    if (!showEmpty && isEmptyStudent(p)) return false
     if (search && !p.full_name.toLowerCase().includes(search.toLowerCase())) return false
 
     // Interest/Industry filter — driven by which directory we're rendering,
@@ -174,7 +191,12 @@ export default function People({ directory }: PeopleProps = {}) {
   // already filtered server-side via .eq('open_to_mentorship', true)).
   // Surface that explicitly so an empty list reads as "no one's open" rather
   // than "no mentors exist".
-  const visibleCount = people.filter((p) => p.id !== profile?.id).length
+  // Phase 1.5 — when empty profiles are hidden, the count reflects what
+  // the user actually sees, with a tooltip explaining the delta.
+  const baseVisibleCount = people.filter((p) => p.id !== profile?.id).length
+  const visibleCount = !showEmpty
+    ? baseVisibleCount - hiddenEmptyCount
+    : baseVisibleCount
   const pageSubtitle = loading
     ? 'Loading…'
     : directory === 'mentors'
@@ -185,7 +207,12 @@ export default function People({ directory }: PeopleProps = {}) {
     <div className="max-w-5xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>{pageTitle}</h1>
-        <p className="text-ink-secondary text-sm mt-0.5">{pageSubtitle}</p>
+        <p
+          className="text-ink-secondary text-sm mt-0.5"
+          title={hiddenEmptyCount > 0 && !showEmpty ? `(${hiddenEmptyCount} hidden — incomplete profiles)` : undefined}
+        >
+          {pageSubtitle}
+        </p>
       </div>
 
       {/* Search + filter row */}
@@ -337,6 +364,27 @@ export default function People({ directory }: PeopleProps = {}) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Phase 1.5 — toggle to surface incomplete profiles. Students directory only. */}
+      {targetRole === 'student' && hiddenEmptyCount > 0 && (
+        <div className="mb-4 text-xs text-ink-muted">
+          {showEmpty ? (
+            <>
+              Showing all profiles, including {pluralize(hiddenEmptyCount, 'incomplete profile')}.{' '}
+              <button type="button" onClick={() => setShowEmpty(false)} className="text-primary hover:text-primary-light underline font-medium">
+                Hide empty profiles
+              </button>
+            </>
+          ) : (
+            <>
+              {pluralize(hiddenEmptyCount, 'incomplete profile')} hidden.{' '}
+              <button type="button" onClick={() => setShowEmpty(true)} className="text-primary hover:text-primary-light underline font-medium">
+                Show empty profiles
+              </button>
+            </>
+          )}
         </div>
       )}
 

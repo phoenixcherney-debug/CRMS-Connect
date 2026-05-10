@@ -61,6 +61,10 @@ export interface Profile {
   mentorship_paused_until?: string | null
   /** P1-12 — per-category push toggles. Missing keys default to "send". */
   notification_preferences?: Record<string, boolean> | null
+  /** Phase 1.2 — gates the one-time post-signup mentor-visibility
+   *  interstitial. Server-stored so it's once-per-account, not
+   *  once-per-device. */
+  seen_mentor_visibility_card?: boolean | null
   created_at: string
   banned_at?: string | null
 }

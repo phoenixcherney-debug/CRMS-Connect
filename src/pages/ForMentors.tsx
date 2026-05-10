@@ -1,16 +1,51 @@
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowRight, ShieldCheck, Clock, MessageSquare, Heart, Calendar } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
+import { supabase } from '../lib/supabase'
 
 /**
  * P2-20 — public pitch page for prospective mentors. Linked from the
  * landing page hero + footer so alumni and local employers can read
  * about the program before signing up.
+ *
+ * Phase 1.3 — `?from=<inviter_user_id>` shows a banner above the hero
+ * with the inviter's name. Falls back silently if the param is missing
+ * or the lookup fails.
  */
 export default function ForMentors() {
+  const [searchParams] = useSearchParams()
+  const fromId = searchParams.get('from')
+  const [inviterName, setInviterName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!fromId) return
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', fromId)
+        .maybeSingle()
+      if (!cancelled) setInviterName((data as { full_name?: string } | null)?.full_name ?? null)
+    }
+    load()
+    return () => { cancelled = true }
+  }, [fromId])
+
   return (
     <div className="min-h-screen flex flex-col relative" style={{ backgroundColor: 'var(--color-background)' }}>
       <ThemeToggle className="absolute top-4 right-4 z-10" />
+
+      {/* Phase 1.3 — inviter banner. Renders only when ?from= resolves. */}
+      {inviterName && (
+        <div
+          className="px-6 py-2.5 text-center text-sm font-medium"
+          style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-primary-dark)' }}
+        >
+          {inviterName} thinks you'd be a great mentor.
+        </div>
+      )}
 
       <section
         className="px-6 sm:px-10 py-16 sm:py-24 text-white relative overflow-hidden"
