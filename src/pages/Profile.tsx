@@ -926,32 +926,73 @@ export default function Profile() {
                       </button>
                     </div>
 
-                    {/* P1-10 — pause-until: a mentor going on parental leave or
-                        a busy season can suspend without remembering to flip
-                        the toggle back on. Only visible when toggle is on. */}
+                    {/* P1-10 + Phase 3.7 — pause-until: a mentor going on
+                        parental leave or a busy season can suspend without
+                        remembering to flip the toggle back on. Quick-snooze
+                        buttons set common durations; the date picker stays
+                        for fine-grained control. Auto-resume is built in:
+                        once the date passes, the mentor reappears on /mentors
+                        with no further action. */}
                     {openToMentorship && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-primary-faint">
-                        <label className="text-sm text-ink flex-1">
-                          <span className="font-medium">Pause until</span>
-                          <span className="block text-xs text-ink-muted mt-0.5">
-                            Optional. Hides you from /mentors until this date passes; the toggle stays on.
-                          </span>
-                        </label>
-                        <input
-                          type="date"
-                          value={mentorshipPausedUntil}
-                          min={new Date().toISOString().split('T')[0]}
-                          onChange={(e) => setMentorshipPausedUntil(e.target.value)}
-                          className="px-2.5 py-1.5 rounded-lg border border-border bg-surface text-ink text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        />
+                      <div className="p-3 rounded-lg border border-border bg-primary-faint space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-ink">Snooze (auto-resume)</p>
+                            <p className="text-xs text-ink-muted mt-0.5">
+                              Hides you from /mentors until the date you pick — you reappear automatically. The toggle stays on.
+                            </p>
+                          </div>
+                          {mentorshipPausedUntil && (
+                            <button
+                              type="button"
+                              onClick={() => setMentorshipPausedUntil('')}
+                              className="text-xs font-medium text-ink-muted hover:text-error shrink-0"
+                            >
+                              Clear snooze
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {([
+                            { label: '1 week',  days: 7   },
+                            { label: '2 weeks', days: 14  },
+                            { label: '1 month', days: 30  },
+                            { label: '3 months', days: 90 },
+                          ] as const).map((opt) => {
+                            const target = new Date()
+                            target.setDate(target.getDate() + opt.days)
+                            const iso = target.toISOString().split('T')[0]
+                            const active = mentorshipPausedUntil === iso
+                            return (
+                              <button
+                                key={opt.days}
+                                type="button"
+                                onClick={() => setMentorshipPausedUntil(iso)}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                                  active
+                                    ? 'border-primary bg-primary-muted text-primary'
+                                    : 'border-border text-ink-secondary hover:bg-primary-faint'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-ink-muted">Or pick a date:</label>
+                          <input
+                            type="date"
+                            value={mentorshipPausedUntil}
+                            min={new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setMentorshipPausedUntil(e.target.value)}
+                            className="px-2.5 py-1.5 rounded-lg border border-border bg-surface text-ink text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                        </div>
                         {mentorshipPausedUntil && (
-                          <button
-                            type="button"
-                            onClick={() => setMentorshipPausedUntil('')}
-                            className="text-xs text-ink-muted hover:text-ink"
-                          >
-                            Clear
-                          </button>
+                          <p className="text-[11px] text-ink-secondary">
+                            Hidden until <span className="font-medium text-ink">{new Date(mentorshipPausedUntil).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>. You'll be visible again automatically.
+                          </p>
                         )}
                       </div>
                     )}
