@@ -1,7 +1,14 @@
 -- ============================================================
--- CRMS Connect — Full Database Setup (Migrations 001–022)
+-- CRMS Connect — Full Database Setup (Migrations 001–056)
 -- Safe to paste into Supabase SQL Editor on a fresh database.
 -- Also idempotent: safe to re-run on an existing database.
+--
+-- This file is composed of two halves:
+--   • Lines 1..(NOTIFY pgrst):  the original 001–022 baseline.
+--   • The "Round 2 — 023..056" appendix below: net additions from
+--     migrations 023 through 056. Reversed migrations (042 email
+--     verification, 033 employer/mentor approval gate) are NOT
+--     included — their reversal in 049 / 050 is the current state.
 -- ============================================================
 
 
@@ -745,4 +752,451 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE conversations; EXCEPTI
 -- this is safe regardless of your email domain.
 
 
+NOTIFY pgrst, 'reload schema';
+
+
+-- ════════════════════════════════════════════════════════════════
+-- ROUND 2 — Migrations 023..056 net additions
+-- ════════════════════════════════════════════════════════════════
+-- Everything below is idempotent. Skipped migrations:
+--   033 employer_mentor_approval  → reversed by 050
+--   042 email_verification_gate   → reversed by 049
+--   038 normalize_display_names   → one-shot UPDATE; fresh DBs have nothing to fix
+-- ----------------------------------------------------------------
+
+-- 026 — job_type_enum extensions (ALTER TYPE ADD VALUE IF NOT EXISTS
+-- is idempotent on Postgres 12+; each in its own statement so a Supabase
+-- migration runner that wraps statements in transactions still applies).
+ALTER TYPE job_type_enum ADD VALUE IF NOT EXISTS 'mentorship';
+ALTER TYPE job_type_enum ADD VALUE IF NOT EXISTS 'shadow';
+ALTER TYPE job_type_enum ADD VALUE IF NOT EXISTS 'other';
+
+-- 052 — application_status intermediate values
+ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'interview_scheduled';
+ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'offer_sent';
+ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'started';
+ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'completed';
+ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'withdrawn_by_employer';
+
+-- account_status enum (introduced in 033 for the approval gate; the
+-- gate itself is gone but the column + 'disabled' state still drive
+-- admin ban-from-report flow).
+DO $$ BEGIN CREATE TYPE public.account_status_t AS ENUM ('pending', 'active', 'disabled'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+
+-- ── profiles: column additions ──────────────────────────────────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS share_grade_with_employers BOOLEAN NOT NULL DEFAULT FALSE,  -- 031
+  ADD COLUMN IF NOT EXISTS share_grade_with_staff      BOOLEAN NOT NULL DEFAULT TRUE,  -- 047
+  ADD COLUMN IF NOT EXISTS account_status              public.account_status_t NOT NULL DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS meeting_request_mode        TEXT NOT NULL DEFAULT 'flexible'; -- 054
+
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_meeting_request_mode_chk;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_meeting_request_mode_chk
+    CHECK (meeting_request_mode IN ('flexible', 'slots'));
+
+
+-- ── jobs: column + check additions ──────────────────────────────
+ALTER TABLE public.jobs
+  ADD COLUMN IF NOT EXISTS compensation TEXT;  -- 039
+
+-- 027 — non-blank checks (idempotent via NOT VALID + drop/add)
+ALTER TABLE public.jobs
+  DROP CONSTRAINT IF EXISTS jobs_title_not_blank;
+ALTER TABLE public.jobs
+  ADD CONSTRAINT jobs_title_not_blank CHECK (length(btrim(title)) > 0);
+ALTER TABLE public.jobs
+  DROP CONSTRAINT IF EXISTS jobs_company_not_blank;
+ALTER TABLE public.jobs
+  ADD CONSTRAINT jobs_company_not_blank CHECK (length(btrim(company)) > 0);
+ALTER TABLE public.jobs
+  DROP CONSTRAINT IF EXISTS jobs_location_not_blank;
+ALTER TABLE public.jobs
+  ADD CONSTRAINT jobs_location_not_blank CHECK (length(btrim(location)) > 0);
+ALTER TABLE public.jobs
+  DROP CONSTRAINT IF EXISTS jobs_description_not_blank;
+ALTER TABLE public.jobs
+  ADD CONSTRAINT jobs_description_not_blank CHECK (length(btrim(description)) > 0);
+
+-- 039 — compensation max length
+ALTER TABLE public.jobs
+  DROP CONSTRAINT IF EXISTS jobs_compensation_max;
+ALTER TABLE public.jobs
+  ADD CONSTRAINT jobs_compensation_max CHECK (compensation IS NULL OR char_length(compensation) <= 200);
+
+
+-- ── applications: resume link CHECK (048) ──────────────────────
+ALTER TABLE public.applications
+  DROP CONSTRAINT IF EXISTS applications_resume_link_format;
+ALTER TABLE public.applications
+  ADD CONSTRAINT applications_resume_link_format
+    CHECK (
+      resume_link IS NULL
+      OR resume_link ~* '^https?://[^\s]+$'
+    );
+
+
+-- ── events: richer fields (041) ─────────────────────────────────
+ALTER TABLE public.events
+  ADD COLUMN IF NOT EXISTS all_day            BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS end_time           TEXT,
+  ADD COLUMN IF NOT EXISTS registration_link  TEXT,
+  ADD COLUMN IF NOT EXISTS capacity           INTEGER;
+
+UPDATE public.events SET all_day = TRUE WHERE time IS NULL AND all_day = FALSE;
+
+ALTER TABLE public.events
+  DROP CONSTRAINT IF EXISTS events_capacity_positive;
+ALTER TABLE public.events
+  ADD CONSTRAINT events_capacity_positive
+    CHECK (capacity IS NULL OR capacity > 0);
+
+ALTER TABLE public.events
+  DROP CONSTRAINT IF EXISTS events_registration_link_format;
+ALTER TABLE public.events
+  ADD CONSTRAINT events_registration_link_format
+    CHECK (
+      registration_link IS NULL
+      OR registration_link ~* '^https?://[^\s]+$'
+    );
+
+ALTER TABLE public.events
+  DROP CONSTRAINT IF EXISTS events_time_consistency;
+ALTER TABLE public.events
+  ADD CONSTRAINT events_time_consistency
+    CHECK (
+      (all_day = TRUE  AND time IS NULL AND end_time IS NULL)
+      OR
+      (all_day = FALSE AND time IS NOT NULL)
+    );
+
+
+-- ── messages: is_system flag (051) ──────────────────────────────
+ALTER TABLE public.messages
+  ADD COLUMN IF NOT EXISTS is_system BOOLEAN NOT NULL DEFAULT FALSE;
+
+
+-- ── new tables (035, 036, 040, 053, 055, 056) ───────────────────
+
+-- 035 user_reports
+CREATE TABLE IF NOT EXISTS public.user_reports (
+  id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  reporter_id   UUID         NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  reported_id   UUID         NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  reason        TEXT         NOT NULL CHECK (length(btrim(reason)) > 0),
+  status        TEXT         NOT NULL DEFAULT 'open'
+                              CHECK (status IN ('open','reviewed','actioned')),
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  reviewed_at   TIMESTAMPTZ,
+  reviewer_id   UUID         REFERENCES public.profiles(id) ON DELETE SET NULL
+);
+ALTER TABLE public.user_reports ENABLE ROW LEVEL SECURITY;
+
+-- 036 notifications
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID         NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  source_id   TEXT,
+  link        TEXT         NOT NULL,
+  title       TEXT         NOT NULL,
+  subtitle    TEXT,
+  read_at     TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS notifications_user_unread_idx
+  ON public.notifications (user_id, read_at, created_at DESC);
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+-- 040 saved_jobs
+CREATE TABLE IF NOT EXISTS public.saved_jobs (
+  user_id     UUID         NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  job_id      UUID         NOT NULL REFERENCES public.jobs(id)     ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, job_id)
+);
+ALTER TABLE public.saved_jobs ENABLE ROW LEVEL SECURITY;
+
+-- 053 applicant_notes
+CREATE TABLE IF NOT EXISTS public.applicant_notes (
+  id            UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id        UUID         NOT NULL REFERENCES public.jobs(id)     ON DELETE CASCADE,
+  applicant_id  UUID         NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  author_id     UUID         NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  body          TEXT         NOT NULL CHECK (char_length(body) <= 4000),
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  UNIQUE (job_id, applicant_id, author_id)
+);
+CREATE INDEX IF NOT EXISTS idx_applicant_notes_job
+  ON public.applicant_notes (job_id, applicant_id);
+ALTER TABLE public.applicant_notes ENABLE ROW LEVEL SECURITY;
+
+-- 055 opportunity_views + RPC
+CREATE TABLE IF NOT EXISTS public.opportunity_views (
+  id          UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id      UUID         NOT NULL REFERENCES public.jobs(id)     ON DELETE CASCADE,
+  viewer_id   UUID         NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  source      TEXT         NOT NULL DEFAULT 'direct'
+                            CHECK (source IN ('explore','opportunities','student-posts','feed','direct','saved','employer','notification')),
+  viewed_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_opportunity_views_job_time
+  ON public.opportunity_views (job_id, viewed_at DESC);
+ALTER TABLE public.opportunity_views ENABLE ROW LEVEL SECURITY;
+
+-- 056 company_meta
+CREATE TABLE IF NOT EXISTS public.company_meta (
+  name_key      TEXT         PRIMARY KEY,
+  display_name  TEXT         NOT NULL,
+  description   TEXT
+                              CHECK (description IS NULL OR char_length(description) <= 500),
+  logo_url      TEXT
+                              CHECK (logo_url IS NULL OR logo_url ~* '^https?://[^\s]+$'),
+  website_url   TEXT
+                              CHECK (website_url IS NULL OR website_url ~* '^https?://[^\s]+$'),
+  hq_location   TEXT
+                              CHECK (hq_location IS NULL OR char_length(hq_location) <= 200),
+  industry      TEXT
+                              CHECK (industry IS NULL OR char_length(industry) <= 100),
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_by    UUID         REFERENCES public.profiles(id) ON DELETE SET NULL
+);
+ALTER TABLE public.company_meta ENABLE ROW LEVEL SECURITY;
+
+
+-- ── 037 — block same-role DM trigger ────────────────────────────
+CREATE OR REPLACE FUNCTION public.conversations_block_same_role_trg()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  role_one public.profiles.role%TYPE;
+  role_two public.profiles.role%TYPE;
+BEGIN
+  SELECT role INTO role_one FROM public.profiles WHERE id = NEW.participant_one;
+  SELECT role INTO role_two FROM public.profiles WHERE id = NEW.participant_two;
+  IF role_one IS NULL OR role_two IS NULL THEN RETURN NEW; END IF;
+  IF role_one = 'admin' OR role_two = 'admin' THEN RETURN NEW; END IF;
+  IF role_one = role_two THEN
+    RAISE EXCEPTION 'crms: same-role conversations are not allowed (% ↔ %)', role_one, role_two
+      USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS conversations_block_same_role ON public.conversations;
+CREATE TRIGGER conversations_block_same_role
+  BEFORE INSERT ON public.conversations
+  FOR EACH ROW EXECUTE FUNCTION public.conversations_block_same_role_trg();
+
+
+-- ── 043 — validate_profile_email_role on INSERT *or* UPDATE OF role ──
+DROP TRIGGER IF EXISTS validate_profile_before_insert ON public.profiles;
+DROP TRIGGER IF EXISTS validate_profile_email_role_iud ON public.profiles;
+CREATE TRIGGER validate_profile_email_role_iud
+  BEFORE INSERT OR UPDATE OF role ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.validate_profile_email_role();
+
+
+-- ── 044 — count-query indexes ───────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_profiles_directory_visible
+  ON public.profiles (role)
+  WHERE banned_at IS NULL
+    AND account_status NOT IN ('pending', 'disabled');
+
+CREATE INDEX IF NOT EXISTS idx_meeting_requests_recipient_pending
+  ON public.meeting_requests (recipient_id)
+  WHERE status = 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_unread
+  ON public.messages (conversation_id)
+  WHERE is_read = FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_one
+  ON public.conversations (participant_one);
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_two
+  ON public.conversations (participant_two);
+
+
+-- ── 045 — directory_member_count() (post-049 version) ───────────
+CREATE OR REPLACE FUNCTION public.directory_member_count()
+RETURNS INTEGER LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT count(*)::int
+    FROM public.profiles p
+   WHERE p.role <> 'admin'
+     AND p.banned_at IS NULL
+     AND p.account_status NOT IN ('pending', 'disabled');
+$$;
+GRANT EXECUTE ON FUNCTION public.directory_member_count() TO authenticated, anon;
+
+
+-- ── 046 — student_posts: one open post per student ─────────────
+CREATE UNIQUE INDEX IF NOT EXISTS student_posts_one_open_per_student
+  ON public.student_posts (student_id)
+  WHERE is_closed = FALSE;
+
+
+-- ── 055 — opportunity_view_stats() ─────────────────────────────
+CREATE OR REPLACE FUNCTION public.opportunity_view_stats(job_ids UUID[])
+RETURNS TABLE (
+  job_id              UUID,
+  views_30d           BIGINT,
+  unique_viewers_30d  BIGINT
+)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT
+    v.job_id,
+    count(*) AS views_30d,
+    count(DISTINCT v.viewer_id) AS unique_viewers_30d
+  FROM public.opportunity_views v
+  WHERE v.job_id = ANY(job_ids)
+    AND v.viewed_at >= now() - interval '30 days'
+    AND (
+      public.is_admin()
+      OR auth.uid() = (SELECT posted_by FROM public.jobs WHERE id = v.job_id)
+    )
+  GROUP BY v.job_id;
+$$;
+GRANT EXECUTE ON FUNCTION public.opportunity_view_stats(UUID[]) TO authenticated;
+
+
+-- ── RLS for the new tables ──────────────────────────────────────
+-- user_reports (035)
+DROP POLICY IF EXISTS user_reports_insert_self ON public.user_reports;
+CREATE POLICY user_reports_insert_self
+  ON public.user_reports FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = reporter_id);
+DROP POLICY IF EXISTS user_reports_select_admin ON public.user_reports;
+CREATE POLICY user_reports_select_admin
+  ON public.user_reports FOR SELECT TO authenticated
+  USING (public.is_admin());
+DROP POLICY IF EXISTS user_reports_update_admin ON public.user_reports;
+CREATE POLICY user_reports_update_admin
+  ON public.user_reports FOR UPDATE TO authenticated
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
+
+-- notifications (036)
+DROP POLICY IF EXISTS notifications_select_own ON public.notifications;
+CREATE POLICY notifications_select_own
+  ON public.notifications FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS notifications_update_own ON public.notifications;
+CREATE POLICY notifications_update_own
+  ON public.notifications FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id);
+
+-- saved_jobs (040)
+DROP POLICY IF EXISTS saved_jobs_select_own ON public.saved_jobs;
+CREATE POLICY saved_jobs_select_own
+  ON public.saved_jobs FOR SELECT TO authenticated
+  USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS saved_jobs_insert_own ON public.saved_jobs;
+CREATE POLICY saved_jobs_insert_own
+  ON public.saved_jobs FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS saved_jobs_delete_own ON public.saved_jobs;
+CREATE POLICY saved_jobs_delete_own
+  ON public.saved_jobs FOR DELETE TO authenticated
+  USING (auth.uid() = user_id);
+
+-- applicant_notes (053)
+DROP POLICY IF EXISTS applicant_notes_select_owner_or_admin ON public.applicant_notes;
+CREATE POLICY applicant_notes_select_owner_or_admin
+  ON public.applicant_notes FOR SELECT
+  USING (
+    public.is_admin()
+    OR auth.uid() = (SELECT posted_by FROM public.jobs WHERE id = job_id)
+  );
+DROP POLICY IF EXISTS applicant_notes_insert_owner ON public.applicant_notes;
+CREATE POLICY applicant_notes_insert_owner
+  ON public.applicant_notes FOR INSERT
+  WITH CHECK (
+    auth.uid() = author_id
+    AND auth.uid() = (SELECT posted_by FROM public.jobs WHERE id = job_id)
+  );
+DROP POLICY IF EXISTS applicant_notes_update_owner ON public.applicant_notes;
+CREATE POLICY applicant_notes_update_owner
+  ON public.applicant_notes FOR UPDATE
+  USING (auth.uid() = author_id)
+  WITH CHECK (auth.uid() = author_id);
+DROP POLICY IF EXISTS applicant_notes_delete_owner ON public.applicant_notes;
+CREATE POLICY applicant_notes_delete_owner
+  ON public.applicant_notes FOR DELETE
+  USING (auth.uid() = author_id);
+
+-- opportunity_views (055)
+DROP POLICY IF EXISTS opportunity_views_insert_self ON public.opportunity_views;
+CREATE POLICY opportunity_views_insert_self
+  ON public.opportunity_views FOR INSERT
+  WITH CHECK (
+    auth.uid() = viewer_id
+    AND auth.uid() <> (SELECT posted_by FROM public.jobs WHERE id = job_id)
+  );
+DROP POLICY IF EXISTS opportunity_views_select_owner ON public.opportunity_views;
+CREATE POLICY opportunity_views_select_owner
+  ON public.opportunity_views FOR SELECT
+  USING (
+    public.is_admin()
+    OR auth.uid() = (SELECT posted_by FROM public.jobs WHERE id = job_id)
+  );
+
+-- company_meta (056) — anyone authed reads; only posters under that
+-- name (or admins) write.
+DROP POLICY IF EXISTS company_meta_select ON public.company_meta;
+CREATE POLICY company_meta_select
+  ON public.company_meta FOR SELECT TO authenticated
+  USING (TRUE);
+DROP POLICY IF EXISTS company_meta_insert_poster ON public.company_meta;
+CREATE POLICY company_meta_insert_poster
+  ON public.company_meta FOR INSERT TO authenticated
+  WITH CHECK (
+    public.is_admin()
+    OR EXISTS (
+      SELECT 1 FROM public.jobs j
+       WHERE lower(j.company) = name_key
+         AND j.posted_by = auth.uid()
+    )
+  );
+DROP POLICY IF EXISTS company_meta_update_poster ON public.company_meta;
+CREATE POLICY company_meta_update_poster
+  ON public.company_meta FOR UPDATE TO authenticated
+  USING (
+    public.is_admin()
+    OR EXISTS (
+      SELECT 1 FROM public.jobs j
+       WHERE lower(j.company) = name_key
+         AND j.posted_by = auth.uid()
+    )
+  )
+  WITH CHECK (
+    public.is_admin()
+    OR EXISTS (
+      SELECT 1 FROM public.jobs j
+       WHERE lower(j.company) = name_key
+         AND j.posted_by = auth.uid()
+    )
+  );
+DROP POLICY IF EXISTS company_meta_delete_admin ON public.company_meta;
+CREATE POLICY company_meta_delete_admin
+  ON public.company_meta FOR DELETE TO authenticated
+  USING (public.is_admin());
+
+
+-- ── 030 — hide admin profiles from cross-row SELECT ─────────────
+-- (Owner can still read their own admin row; admins can read all.)
+DROP POLICY IF EXISTS profiles_hide_admin_rows ON public.profiles;
+CREATE POLICY profiles_hide_admin_rows
+  ON public.profiles AS RESTRICTIVE FOR SELECT
+  USING (
+    role <> 'admin'
+    OR id = auth.uid()
+    OR public.is_admin()
+  );
+
+
+-- ────────────────────────────────────────────────────────────────
+-- Reload PostgREST schema cache so all the additions are visible.
+-- ────────────────────────────────────────────────────────────────
 NOTIFY pgrst, 'reload schema';
