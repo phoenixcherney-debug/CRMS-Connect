@@ -25,7 +25,26 @@ interface AvailSlot {
   recurrence_pattern: 'daily' | 'weekly' | 'monthly' | null
   recurrence_end_date: string | null
   created_at: string
+  /** Phase 3.1 — IANA timezone the slot was authored in. */
+  timezone: string
 }
+
+// Phase 3.1 — small curated IANA list. The dropdown also includes the
+// viewer's detected zone if it isn't already on the list.
+export const TZ_OPTIONS: { id: string; label: string }[] = [
+  { id: 'America/Denver',      label: 'Mountain — Denver' },
+  { id: 'America/Los_Angeles', label: 'Pacific — Los Angeles' },
+  { id: 'America/Chicago',     label: 'Central — Chicago' },
+  { id: 'America/New_York',    label: 'Eastern — New York' },
+  { id: 'America/Phoenix',     label: 'Arizona (no DST) — Phoenix' },
+  { id: 'America/Anchorage',   label: 'Alaska — Anchorage' },
+  { id: 'Pacific/Honolulu',    label: 'Hawaii — Honolulu' },
+  { id: 'Europe/London',       label: 'UK — London' },
+  { id: 'Europe/Berlin',       label: 'Central Europe — Berlin' },
+  { id: 'Asia/Kolkata',        label: 'India — Kolkata' },
+  { id: 'Asia/Tokyo',          label: 'Japan — Tokyo' },
+  { id: 'Australia/Sydney',    label: 'Australia — Sydney' },
+]
 
 interface Occ { slot: AvailSlot; date: string }
 type View = 'month' | 'week' | 'day' | 'agenda'
@@ -82,17 +101,16 @@ function getOccs(slots: AvailSlot[], from: Date, to: Date): Occ[] {
   return out.sort((a, b) => a.date.localeCompare(b.date) || a.slot.start_time.localeCompare(b.slot.start_time))
 }
 
-/** Generate time select options at 15-minute intervals, constrained to the
- *  visible week-view grid (HR_S inclusive, HR_E exclusive) so a user can't
- *  pick a time that the same view would later hide (audit task 18). The
- *  help text and the picker now agree exactly — last start is HR_E:00.
- *  NAV-009 trims 9:15–9:45 PM from the previous version. */
+/** Phase 3.1 — picker now spans all 24 hours so mentors in non-US tzs (or
+ *  who genuinely want late-night slots) aren't capped at the 7am-9pm grid.
+ *  Slots outside HR_S..HR_E still save fine — they just don't render on
+ *  the week grid. The agenda + month views show them as expected. */
 const TIME_OPTS = Array.from({ length: 96 }, (_, i) => {
   const h = Math.floor(i / 4), m = (i % 4) * 15
   const v = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
   const ampm = h >= 12 ? 'PM' : 'AM'
   return { v, l: `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`, h, m }
-}).filter((o) => o.h >= HR_S && (o.h < HR_E || (o.h === HR_E && o.m === 0)))
+})
 
 const INPUT_CLS = 'w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors'
 
@@ -108,13 +126,21 @@ function SlotModal({
   onDeleted: (id: string) => void
 }) {
   const { profile } = useAuth()
+  const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Denver'
   const [title, setTitle]       = useState(slot?.title ?? '')
   const [date, setDate]         = useState(slot?.date ?? initDate)
   const [st, setSt]             = useState(slot?.start_time?.slice(0, 5) ?? '09:00')
   const [et, setEt]             = useState(slot?.end_time?.slice(0, 5) ?? '10:00')
+  const [tz, setTz]             = useState(slot?.timezone ?? detectedTz)
   const [recurring, setRecurring] = useState(slot?.is_recurring ?? false)
   const [pattern, setPattern]   = useState<'daily' | 'weekly' | 'monthly'>(slot?.recurrence_pattern ?? 'weekly')
   const [endDate, setEndDate]   = useState(slot?.recurrence_end_date ?? '')
+
+  // Phase 3.1 — make sure the viewer's detected zone appears in the list
+  // even if it's not in the curated 12.
+  const tzList = TZ_OPTIONS.some((o) => o.id === detectedTz)
+    ? TZ_OPTIONS
+    : [{ id: detectedTz, label: `${detectedTz} (your zone)` }, ...TZ_OPTIONS]
   const [saving, setSaving]     = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [err, setErr]           = useState<string | null>(null)
@@ -138,6 +164,7 @@ function SlotModal({
       user_id: profile.id,
       title: title.trim() || null,
       date, start_time: st, end_time: et,
+      timezone: tz,
       is_recurring: recurring,
       recurrence_pattern: recurring ? pattern : null,
       recurrence_end_date: recurring && endDate ? endDate : null,
@@ -198,15 +225,11 @@ function SlotModal({
             <input type="date" value={date} onChange={e => setDate(e.target.value)} className={INPUT_CLS} />
           </div>
 
-          {/* Start / End time — pickers are constrained to the visible
-              week-view grid range so a user can't add a slot that the
-              same view would hide (audit task 18). P2-34 — timezone shown
-              so the user knows what they're picking. */}
+          {/* Phase 3.1 — picker now spans 24h; tz is explicit. Slots outside
+              7am–9pm save fine; they just don't render on the week grid. */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs font-medium text-ink mb-1">
-                Start time <span className="text-ink-muted font-normal">({HR_S}am–{HR_E - 12}pm · {Intl.DateTimeFormat().resolvedOptions().timeZone})</span>
-              </label>
+              <label className="block text-xs font-medium text-ink mb-1">Start time</label>
               <select value={st} onChange={e => setSt(e.target.value)} className={INPUT_CLS}>
                 {TIME_OPTS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
               </select>
@@ -219,6 +242,21 @@ function SlotModal({
                 )}
               </select>
             </div>
+          </div>
+
+          {/* Timezone */}
+          <div>
+            <label className="block text-xs font-medium text-ink mb-1">Time zone</label>
+            <select value={tz} onChange={e => setTz(e.target.value)} className={INPUT_CLS}>
+              {tzList.map((o) => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+            {tz !== detectedTz && (
+              <p className="mt-1 text-[11px] text-ink-muted">
+                Heads up — your browser is in <span className="font-medium text-ink">{detectedTz}</span>.
+              </p>
+            )}
           </div>
 
           {/* Recurring toggle */}

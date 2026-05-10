@@ -18,6 +18,8 @@ interface AvailSlot {
   start_time: string
   end_time: string
   title: string | null
+  /** Phase 3.1 — IANA zone the mentor authored the slot in. */
+  timezone: string | null
 }
 
 function fmtTime(t: string) {
@@ -71,7 +73,7 @@ export default function PublicProfile() {
           .order('start_year', { ascending: false }),
         supabase
           .from('availability_slots')
-          .select('id, date, start_time, end_time, title')
+          .select('id, date, start_time, end_time, title, timezone')
           .eq('user_id', id)
           .gte('date', today)
           .order('date', { ascending: true })
@@ -564,6 +566,11 @@ export default function PublicProfile() {
                           <span className="ml-2 text-xs">
                             <Clock size={10} className="inline mr-0.5" />
                             {fmtTime(slot.start_time)} – {fmtTime(slot.end_time)}
+                            {slot.timezone && (
+                              <span className="ml-1 text-ink-muted">
+                                ({slot.timezone.split('/').pop()?.replace('_', ' ')})
+                              </span>
+                            )}
                           </span>
                           {slot.title && <span className="ml-2 text-xs text-ink-muted">· {slot.title}</span>}
                         </button>
