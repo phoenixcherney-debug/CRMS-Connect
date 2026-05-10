@@ -244,17 +244,19 @@ export default function MyPostings() {
                   >
                     <Edit3 size={14} /> Edit
                   </Link>
-                  {/* P1-4 — Repost as new on closed/expired non-draft rows.
-                      Navigates to the create form prefilled from this row;
-                      date fields are intentionally cleared. */}
-                  {!(job as { is_draft?: boolean }).is_draft && (expired || !job.is_active) && (
+                  {/* P1-4 + Phase 3.5 — duplicate now also works on active
+                      postings (employers asked for it when they post the same
+                      role with multiple openings or for multiple terms). The
+                      label flips between "Duplicate" (active) and "Repost as
+                      new" (closed/expired) so the intent reads right. */}
+                  {!(job as { is_draft?: boolean }).is_draft && (
                     <Link
                       to={`/opportunities/new?from=${job.id}`}
                       title="Open a new posting prefilled from this one"
                       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border
                         text-sm text-ink-secondary hover:bg-primary-faint hover:text-ink transition-colors"
                     >
-                      <RotateCcw size={14} /> Repost as new
+                      <RotateCcw size={14} /> {(expired || !job.is_active) ? 'Repost as new' : 'Duplicate'}
                     </Link>
                   )}
                   <button type="button"
