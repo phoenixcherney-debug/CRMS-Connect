@@ -105,6 +105,13 @@ export default function Applicants() {
   const [filterInterest,    setFilterInterest]    = useState('')
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // P2-17 — bulk-action selection. Cleared whenever the active tab changes
+  // since the bulk verbs (Accept all / Reject all) only make sense for
+  // applicants of one tab at a time.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkAction, setBulkAction] = useState<'accept' | 'reject' | null>(null)
+  const [bulkRunning, setBulkRunning] = useState(false)
+  const [showBulkMessage, setShowBulkMessage] = useState(false)
   // NAV-008 — default to whichever tab has rows. We'll re-pin once
   // applications load below.
   const [activeTab, setActiveTab] = useState<Tab>('inbox')
@@ -199,6 +206,84 @@ export default function Applicants() {
       }
     }
     setUpdatingId(null)
+  }
+
+  // P2-17 — toggle a single applicant's selection.
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  // P2-17 — bulk Accept / Reject. Walks each selected row through
+  // updateStatus serially so the existing post-update side effects (push
+  // notifications, system-message on accept) fire per applicant. Any error
+  // is surfaced via toast; the loop continues so a single bad row doesn't
+  // leave the rest in a half-applied state.
+  async function runBulkDecision(status: 'accepted' | 'rejected') {
+    if (selectedIds.size === 0 || !job) return
+    setBulkRunning(true)
+    let ok = 0, fail = 0
+    for (const id of selectedIds) {
+      try {
+        await updateStatus(id, status)
+        ok++
+      } catch { fail++ }
+    }
+    setBulkRunning(false)
+    setSelectedIds(new Set())
+    setBulkAction(null)
+    if (fail > 0) toast(`${ok} updated, ${fail} failed.`, { kind: 'error' })
+    else toast(`${ok} ${status === 'accepted' ? 'accepted' : 'declined'}.`)
+  }
+
+  // P2-17 — bulk message. Each recipient gets their own thread; the same
+  // body is sent to all. Auto-creates conversations that don't yet exist.
+  async function runBulkMessage(body: string) {
+    if (selectedIds.size === 0 || !profile || !body.trim()) return
+    setBulkRunning(true)
+    const targets: string[] = []
+    for (const id of selectedIds) {
+      const app = applications.find((a) => a.id === id)
+      const applicantId = (app?.profiles as { id?: string } | null)?.id
+      if (applicantId) targets.push(applicantId)
+    }
+    let ok = 0, fail = 0
+    for (const applicantId of targets) {
+      try {
+        const p1 = profile.id < applicantId ? profile.id : applicantId
+        const p2 = profile.id < applicantId ? applicantId : profile.id
+        const { data: existing } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('participant_one', p1)
+          .eq('participant_two', p2)
+          .maybeSingle()
+        let conversationId = (existing as { id?: string } | null)?.id ?? null
+        if (!conversationId) {
+          const { data: created } = await supabase
+            .from('conversations')
+            .insert({ participant_one: p1, participant_two: p2 })
+            .select('id')
+            .single()
+          conversationId = (created as { id?: string } | null)?.id ?? null
+        }
+        if (!conversationId) { fail++; continue }
+        const { error: msgErr } = await supabase.from('messages').insert({
+          conversation_id: conversationId,
+          sender_id: profile.id,
+          content: body.trim(),
+        })
+        if (msgErr) fail++; else ok++
+      } catch { fail++ }
+    }
+    setBulkRunning(false)
+    setSelectedIds(new Set())
+    setShowBulkMessage(false)
+    if (fail > 0) toast(`${ok} sent, ${fail} failed.`, { kind: 'error' })
+    else toast(`Sent to ${ok} ${ok === 1 ? 'applicant' : 'applicants'}.`)
   }
 
   // P1-4 — finds (or creates) the conversation between employer + applicant
@@ -342,7 +427,7 @@ export default function Applicants() {
         {TABS.map(({ key, label, count }) => (
           <button type="button"
             key={key}
-            onClick={() => setActiveTab(key)}
+            onClick={() => { setActiveTab(key); setSelectedIds(new Set()) }}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
               activeTab === key
                 ? 'border-primary text-primary'
@@ -431,23 +516,151 @@ export default function Applicants() {
         <div className="space-y-6">
           {filteredCompatible.length > 0 && (
             <div className="space-y-4">
-              {filteredCompatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} />)}
+              {filteredCompatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} isSelected={selectedIds.has(app.id)} onToggleSelected={() => toggleSelected(app.id)} />)}
             </div>
           )}
           {filteredIncompatible.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Other applicants</p>
               <div className="space-y-4 opacity-60">
-                {filteredIncompatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} />)}
+                {filteredIncompatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} isSelected={selectedIds.has(app.id)} onToggleSelected={() => toggleSelected(app.id)} />)}
               </div>
             </div>
           )}
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredTabApps.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} />)}
+          {filteredTabApps.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} isSelected={selectedIds.has(app.id)} onToggleSelected={() => toggleSelected(app.id)} />)}
         </div>
       )}
+
+      {/* P2-17 — sticky bottom action bar when ≥1 selected. Bulk Accept/
+          Reject only on the New tab; Message all is universal. */}
+      {selectedIds.size > 0 && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-surface/95 backdrop-blur px-4 py-3 flex items-center gap-3 shadow-lg"
+          role="region"
+          aria-label="Bulk applicant actions"
+        >
+          <p className="text-sm font-medium text-ink">
+            {selectedIds.size} selected
+          </p>
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set())}
+            className="text-xs text-ink-muted hover:text-ink underline"
+          >
+            Clear
+          </button>
+          <div className="flex-1" />
+          {activeTab === 'inbox' && (
+            <>
+              <button
+                type="button"
+                onClick={() => setBulkAction('accept')}
+                disabled={bulkRunning}
+                className="px-3 py-1.5 rounded-lg border border-status-accepted-border text-success text-xs font-medium hover:bg-success-bg disabled:opacity-50"
+              >
+                Accept all
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkAction('reject')}
+                disabled={bulkRunning}
+                className="px-3 py-1.5 rounded-lg border border-status-rejected-border text-error text-xs font-medium hover:bg-error-bg disabled:opacity-50"
+              >
+                Reject all
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowBulkMessage(true)}
+            disabled={bulkRunning}
+            className="btn-gold px-3 py-1.5 text-xs"
+          >
+            <MessageSquare size={12} /> Message all
+          </button>
+        </div>
+      )}
+
+      {/* P2-17 — bulk-decision confirm. */}
+      <ConfirmDialog
+        open={bulkAction !== null}
+        title={bulkAction === 'accept' ? `Accept ${selectedIds.size} applicants?` : `Reject ${selectedIds.size} applicants?`}
+        description={bulkAction === 'accept'
+          ? "Each will be notified and a conversation will be opened with a system note. You can flip individuals back via Reverse decision."
+          : "Each will be notified that their application was not selected. They can re-apply if the post is still open."}
+        confirmLabel={bulkRunning ? 'Working…' : (bulkAction === 'accept' ? 'Yes, accept all' : 'Yes, reject all')}
+        confirmDisabled={bulkRunning}
+        destructive={bulkAction === 'reject'}
+        onConfirm={() => { if (bulkAction) void runBulkDecision(bulkAction === 'accept' ? 'accepted' : 'rejected') }}
+        onCancel={() => setBulkAction(null)}
+      />
+
+      {/* P2-17 — bulk message composer. */}
+      {showBulkMessage && (
+        <BulkMessageModal
+          count={selectedIds.size}
+          onClose={() => setShowBulkMessage(false)}
+          onSend={runBulkMessage}
+          sending={bulkRunning}
+        />
+      )}
+    </div>
+  )
+}
+
+// P2-17 — modal for "Message all". Single textarea, sends the same body
+// to every selected applicant as a separate thread.
+function BulkMessageModal({
+  count, sending, onClose, onSend,
+}: {
+  count: number
+  sending: boolean
+  onClose: () => void
+  onSend: (body: string) => Promise<void> | void
+}) {
+  const [body, setBody] = useState('')
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8 overflow-y-auto" onClick={onClose}>
+      <div
+        className="bg-surface rounded-2xl border border-border max-w-md w-full p-6"
+        style={{ boxShadow: 'var(--shadow-modal)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-semibold text-ink mb-1">Message {count} {count === 1 ? 'applicant' : 'applicants'}</h3>
+        <p className="text-xs text-ink-muted mb-4">
+          Each recipient gets the same body in their own thread. They won't see who else you messaged.
+        </p>
+        <textarea
+          rows={5}
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          maxLength={4000}
+          placeholder="Hi — quick update on your application…"
+          className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        />
+        <p className="text-[11px] text-ink-muted text-right mt-1">{body.length} / 4000</p>
+        <div className="flex gap-2 justify-end mt-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={sending}
+            className="px-3 py-2 rounded-lg border border-border text-sm text-ink-secondary hover:bg-primary-faint disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!body.trim() || sending}
+            onClick={() => onSend(body.trim())}
+            className="btn-gold px-4 py-2"
+          >
+            {sending ? 'Sending…' : `Send to ${count}`}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -463,9 +676,12 @@ interface CardProps {
   updateStatus: (id: string, status: ApplicationStatus) => void
   profile: import('../types').Profile | null
   navigate: (path: string) => void
+  /** P2-17 — bulk select. */
+  isSelected: boolean
+  onToggleSelected: () => void
 }
 
-function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, updateStatus, profile, navigate }: CardProps) {
+function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, updateStatus, profile, navigate, isSelected, onToggleSelected }: CardProps) {
   const applicant = app.profiles as ApplicantProfile | null
   // Audit M4 — two-step confirmation. Holds the action the user is about to
   // confirm. null = idle. 'accepted' | 'rejected' = waiting for the second
@@ -476,7 +692,21 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
   const initials = initialsOf(applicant?.full_name)
 
   return (
-    <div className="bg-surface rounded-xl border border-border p-5" style={{ boxShadow: 'var(--shadow-card)' }}>
+    <div className={`relative bg-surface rounded-xl border p-5 ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`} style={{ boxShadow: 'var(--shadow-card)' }}>
+      {/* P2-17 — bulk-action checkbox, anchored top-right of the card. */}
+      <label
+        className="absolute top-3 right-3 inline-flex items-center justify-center w-6 h-6 cursor-pointer"
+        onClick={(e) => e.stopPropagation()}
+        title="Select for bulk actions"
+      >
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelected}
+          aria-label="Select applicant for bulk actions"
+          className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30"
+        />
+      </label>
       {/* Top row */}
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Applicant info — name + avatar link to /people/:id (audit task 13). */}
