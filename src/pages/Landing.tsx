@@ -76,7 +76,7 @@ export default function Landing() {
           {
             icon: MessageSquare,
             title: 'Direct messaging',
-            body: 'Reach out directly. School staff review accounts before mentors and employers can post.',
+            body: 'Reach out directly to students, mentors, and alumni — keep conversations private to the CRMS community.',
           },
         ].map(({ icon: Icon, title, body }) => (
           <div

@@ -25,17 +25,16 @@ export default function AwaitingApproval() {
           Thanks for signing up
         </h1>
         <p className="text-sm text-ink-secondary leading-relaxed mb-3">
-          Your employer/mentor account is awaiting review by school staff.
-          You'll be able to post opportunities and message students once
-          someone at CRMS approves your account.
+          Your employer/mentor account is being set up. You'll be able to
+          post opportunities and message students once it's ready.
         </p>
         <p className="text-sm text-ink-secondary leading-relaxed mb-5">
-          You can still update your profile while you wait.
+          You can still update your profile in the meantime.
           {profile?.full_name ? ` Welcome, ${profile.full_name.split(' ')[0]}.` : ''}
         </p>
         <div className="flex flex-col gap-2 items-center">
           <a
-            href="mailto:registrar@crms.org?subject=CRMS%20Connect%20account%20approval"
+            href="mailto:registrar@crms.org?subject=CRMS%20Connect%20account%20access"
             className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary-light"
           >
             <Mail size={14} /> Email the registrar
