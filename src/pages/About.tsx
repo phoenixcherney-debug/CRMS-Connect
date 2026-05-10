@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import MentorWall from '../components/MentorWall'
 
 export default function About() {
   return (
@@ -18,6 +19,7 @@ export default function About() {
         employer and mentor accounts use a personal email. Questions about
         account access go to the registrar.
       </p>
+      <MentorWall />
       <h2 className="text-lg font-semibold text-ink mt-6 mb-2">Questions?</h2>
       <p className="text-ink-secondary leading-relaxed">
         Email{' '}

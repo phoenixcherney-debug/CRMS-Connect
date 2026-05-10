@@ -41,6 +41,8 @@ export default function Profile() {
   const [meetingRequestMode, setMeetingRequestMode] = useState<'flexible' | 'slots'>('flexible')
   // P1-10 — empty string means "not paused".
   const [mentorshipPausedUntil, setMentorshipPausedUntil] = useState('')
+  // Phase 4.3 — opt-in public Mentor Wall on /about.
+  const [showOnMentorWall, setShowOnMentorWall] = useState(false)
   const [interests, setInterests]                   = useState<string[]>([])
   const [weeklyAvailability, setWeeklyAvailability] = useState('')
 
@@ -98,6 +100,7 @@ export default function Profile() {
       setOpenToMentorship(profile.open_to_mentorship ?? false)
       setMeetingRequestMode((profile.meeting_request_mode as 'flexible' | 'slots' | null | undefined) ?? 'flexible')
       setMentorshipPausedUntil((profile.mentorship_paused_until as string | null | undefined) ?? '')
+      setShowOnMentorWall(profile.show_on_mentor_wall ?? false)
       setInterests(profile.interests ?? [])
       setWeeklyAvailability(profile.weekly_availability ?? '')
       setMentorType(profile.mentor_type ?? '')
@@ -268,6 +271,7 @@ export default function Profile() {
       updates.mentorship_paused_until = mentorshipPausedUntil || null
       updates.mentor_type      = mentorType || null
       updates.mentor_type_other = mentorType === 'other' ? mentorTypeOther.trim() || null : null
+      updates.show_on_mentor_wall = showOnMentorWall
     }
 
     if (profile?.role === 'student') {
@@ -994,6 +998,30 @@ export default function Profile() {
                             Hidden until <span className="font-medium text-ink">{new Date(mentorshipPausedUntil).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>. You'll be visible again automatically.
                           </p>
                         )}
+                      </div>
+                    )}
+
+                    {/* Phase 4.3 — opt-in public Mentor Wall. Hidden when
+                        the mentor isn't open to mentorship since the wall
+                        is meant to surface "available now" mentors only. */}
+                    {openToMentorship && (
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-primary-faint">
+                        <div className="min-w-0 pr-3">
+                          <p className="text-sm font-medium text-ink">Show on public Mentor Wall</p>
+                          <p className="text-xs text-ink-muted mt-0.5">
+                            Lists your name, photo, and company on the public /about page so prospective students and partners can see who's mentoring. Email and bio are not shared.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowOnMentorWall((v) => !v)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors
+                            ${showOnMentorWall ? 'bg-primary' : 'bg-border-strong'}`}
+                          aria-pressed={showOnMentorWall}
+                        >
+                          <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform
+                            ${showOnMentorWall ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </button>
                       </div>
                     )}
 

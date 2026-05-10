@@ -19,6 +19,7 @@ import OnboardingChecklist from '../components/OnboardingChecklist'
 import MentorVisibilityCard from '../components/MentorVisibilityCard'
 import PhotoBioNudge from '../components/PhotoBioNudge'
 import ProfileCompleteness from '../components/ProfileCompleteness'
+import MentorAnalyticsCard from '../components/MentorAnalyticsCard'
 import { isPast, parseISO } from 'date-fns'
 
 /** Audit task 17 — preserve the casing the user typed. We only trim
@@ -210,6 +211,7 @@ export default function Explore() {
       <MentorModeBanner />
       <PhotoBioNudge />
       {isStudent && profile && <ProfileCompleteness profile={profile} variant="card" />}
+      {isEmployerMentor && <MentorAnalyticsCard />}
       <EmployerDashboardStrip />
       {isEmployerMentor && (
         <>

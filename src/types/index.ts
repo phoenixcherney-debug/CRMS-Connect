@@ -65,6 +65,8 @@ export interface Profile {
    *  interstitial. Server-stored so it's once-per-account, not
    *  once-per-device. */
   seen_mentor_visibility_card?: boolean | null
+  /** Phase 4.3 — opt-in display on public /about Mentor Wall. */
+  show_on_mentor_wall?: boolean | null
   /** Phase 2.1 — student structured profile sections. */
   skills?: string[] | null
   projects?: { title: string; url?: string; description?: string }[] | null
