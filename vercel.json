@@ -11,7 +11,24 @@
     { "source": "/postings",         "destination": "/student-posts",      "permanent": true },
     { "source": "/my-posts",         "destination": "/student-posts/mine", "permanent": true },
     { "source": "/feed",             "destination": "/activity",           "permanent": true },
-    { "source": "/inbox",            "destination": "/messages",           "permanent": true }
+    { "source": "/inbox",            "destination": "/messages",           "permanent": true },
+    { "source": "/why",              "destination": "/about",              "permanent": false }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://vercel.live; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'"
+        },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",     "value": "camera=(), microphone=(), geolocation=(), payment=()" },
+        { "key": "X-Frame-Options",        "value": "DENY" },
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" }
+      ]
+    }
+  ]
 }
