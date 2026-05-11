@@ -160,7 +160,7 @@ export default function Nav() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
 
-            <Link to="/explore" className="flex items-center gap-3 shrink-0">
+            <Link to={isAuthed ? '/explore' : '/'} className="flex items-center gap-3 shrink-0">
               {logoError ? (
                 <div
                   className="flex items-center justify-center w-8 h-8 rounded-md"
@@ -184,6 +184,42 @@ export default function Nav() {
                 Connect
               </span>
             </Link>
+
+            {/* Task 6 — horizontal primary nav at md+. The hamburger still
+                shows the full menu so SECONDARY_ITEMS stay accessible. */}
+            {isAuthed && (
+              <nav className="hidden md:flex items-center gap-1 ml-6 mr-auto">
+                {NAV_ITEMS.map(({ to, label, icon: Icon }) => {
+                  const isInbox = label === 'Messages'
+                  const isBell  = label === 'Notifications'
+                  const badgeCount = isInbox ? unreadCount : isBell ? unreadNotifications : 0
+                  return (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      className={({ isActive }) =>
+                        `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          isActive ? 'bg-white/15 text-white' : 'text-white/75 hover:text-white hover:bg-white/10'
+                        }`
+                      }
+                    >
+                      <span className="relative inline-flex">
+                        <Icon size={15} />
+                        {(isInbox || isBell) && badgeCount > 0 && (
+                          <span
+                            className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 rounded-full text-[9px] font-bold leading-none"
+                            style={{ backgroundColor: 'var(--color-error)', color: '#ffffff' }}
+                          >
+                            {badgeCount > 9 ? '9+' : badgeCount}
+                          </span>
+                        )}
+                      </span>
+                      <span>{label}</span>
+                    </NavLink>
+                  )
+                })}
+              </nav>
+            )}
 
             <div className="flex items-center gap-1">
               <button type="button"
