@@ -423,9 +423,24 @@ export default function JobDetail() {
             </div>
 
             {/* S3.7 — bookmark on detail (parity with cards). Students only. */}
-            {profile?.role === 'student' && !isPoster && (
-              <SaveJobButton jobId={job.id} size={16} />
-            )}
+            {/* Task 16 — Apply CTA pinned in the header next to the title
+                so it's above the fold. The inline button at the bottom of
+                the page stays as a fallback for long scrollers. */}
+            <div className="flex items-center gap-2 shrink-0">
+              {isStudent && !isPoster && !myApplication && !applySuccess && job.is_active && !expired && !applying && (
+                <button
+                  type="button"
+                  onClick={() => setApplying(true)}
+                  className="btn-gold px-5 py-2.5"
+                  aria-label="Apply now (jump to apply form)"
+                >
+                  Apply now
+                </button>
+              )}
+              {profile?.role === 'student' && !isPoster && (
+                <SaveJobButton jobId={job.id} size={16} />
+              )}
+            </div>
 
             {/* Poster actions */}
             {isPoster && (
@@ -912,6 +927,27 @@ export default function JobDetail() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Task 16 — mobile sticky bottom CTA. Only renders for an eligible
+          student on small viewports while the apply modal is closed and
+          the user hasn't already applied. */}
+      {isStudent && !isPoster && !myApplication && !applySuccess && job?.is_active && !expired && !applying && (
+        <div
+          className="sm:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface p-3 flex"
+          style={{
+            paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)',
+            boxShadow: '0 -8px 24px rgba(0,0,0,0.08)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setApplying(true)}
+            className="btn-gold w-full min-h-[44px]"
+          >
+            Apply now
+          </button>
         </div>
       )}
     </div>
