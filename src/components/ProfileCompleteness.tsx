@@ -22,8 +22,10 @@ function buildChecks(profile: Profile): Check[] {
   const skills = profile.skills ?? []
   const projects = profile.projects ?? []
   const links = profile.links ?? {}
+  // Task 14 — student-side checklist no longer asks for a photo.
+  // Photos are required for mentors (gated where they toggle mentor
+  // mode on), not for students.
   return [
-    { key: 'avatar',    label: 'Add a profile photo',          done: !!profile.avatar_url, hash: 'avatar' },
     { key: 'bio',       label: 'Write a short bio',            done: !!profile.bio && profile.bio.trim().length >= 30, hash: 'bio' },
     { key: 'grade',     label: 'Pick your grade',              done: !!profile.grade, hash: 'grade' },
     { key: 'gradyear',  label: 'Set your graduation year',     done: !!profile.graduation_year, hash: 'graduation_year' },

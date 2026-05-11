@@ -52,6 +52,9 @@ export default function Onboarding() {
   // toggled on stay on. New signups must opt in explicitly.
   const [openToMentorship, setOpenToMentorship] = useState(false)
   const [alumGradYear, setAlumGradYear] = useState('')
+  // Task 13 — radio gate: "Are you a CRMS alum?" Yes shows + requires
+  // class year; No hides the input.
+  const [isAlum, setIsAlum] = useState<null | boolean>(null)
   const [studentSeeking, setStudentSeeking] = useState<StudentSeeking | ''>('')
   const [studentSeekingOther, setStudentSeekingOther] = useState('')
   const [interests, setInterests] = useState<string[]>([])
@@ -158,6 +161,14 @@ export default function Onboarding() {
         setSaveError('Please fill in the required fields above.')
       }
       return
+    }
+    // Task 13 — alum gate: if the user picked Yes, the year is required.
+    if (isEmployerMentor && isAlum === true) {
+      const ay = parseInt(alumGradYear, 10)
+      if (isNaN(ay) || ay < 1900 || ay > 2100) {
+        setSaveError('Please enter your CRMS class year.')
+        return
+      }
     }
     // Task 1 — bio + company text-filter check before save.
     const bioTerm = containsBlockedTerms(bio)
@@ -526,26 +537,59 @@ export default function Onboarding() {
                   )}
                 </div>
 
-                {/* P2-12 — alum class year + mentorship intent. Both
-                    optional; defaults are off / blank so a non-alum
-                    employer just leaves them. */}
+                {/* Task 13 — alum radio gate. Class year only shows when
+                    the user answers Yes; required at that point. */}
                 <div>
-                  <label className="block text-sm font-medium text-ink mb-1.5">
-                    Class year <span className="text-ink-muted font-normal">(if you're a CRMS alum)</span>
+                  <label className="block text-sm font-medium text-ink mb-2">
+                    Are you a CRMS alum? <span className="text-ink-muted font-normal">(optional)</span>
                   </label>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1900}
-                    max={2100}
-                    value={alumGradYear}
-                    onChange={(e) => setAlumGradYear(e.target.value)}
-                    placeholder="e.g. 2010"
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
-                      placeholder:text-ink-placeholder
-                      focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                  />
+                  <p className="text-xs text-ink-muted mb-2">
+                    This helps the school connect students with the right alumni mentors.
+                  </p>
+                  <div className="flex gap-2">
+                    {[
+                      { val: true,  label: 'Yes' },
+                      { val: false, label: 'No' },
+                    ].map((opt) => (
+                      <button
+                        key={String(opt.val)}
+                        type="button"
+                        onClick={() => {
+                          setIsAlum(opt.val)
+                          if (!opt.val) setAlumGradYear('')
+                        }}
+                        className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                          isAlum === opt.val
+                            ? 'border-primary text-primary'
+                            : 'border-border text-ink-secondary hover:bg-primary-faint'
+                        }`}
+                        style={isAlum === opt.val ? { backgroundColor: 'var(--color-primary-muted)' } : {}}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                {isAlum === true && (
+                  <div>
+                    <label className="block text-sm font-medium text-ink mb-1.5">
+                      Class year <span className="text-error">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      inputMode="numeric"
+                      min={1900}
+                      max={2100}
+                      value={alumGradYear}
+                      onChange={(e) => setAlumGradYear(e.target.value)}
+                      placeholder="e.g. 2010"
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                        placeholder:text-ink-placeholder
+                        focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    />
+                  </div>
+                )}
 
                 <label className="flex items-start gap-3 p-3 rounded-lg border border-border bg-primary-faint cursor-pointer">
                   <input

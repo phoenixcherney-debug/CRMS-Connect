@@ -214,19 +214,61 @@ export default function Profile() {
       e.target.value = ''
       return
     }
+    // Task 14 — reject animated GIFs and enforce min 200×200 dims, then
+    // re-encode through a canvas to strip EXIF (including GPS). Result
+    // uploaded as image/jpeg.
+    if (file.type === 'image/gif') {
+      setAvatarUploadError('Animated GIFs aren\'t allowed — please pick a still image.')
+      e.target.value = ''
+      return
+    }
     setAvatarUploading(true)
-    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-    const path = `${profile.id}/avatar.${ext}`
+    let blobToUpload: Blob = file
+    try {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      await new Promise<void>((resolve, reject) => {
+        img.onload  = () => resolve()
+        img.onerror = () => reject(new Error('Could not read the image.'))
+        img.src = url
+      })
+      if (img.width < 200 || img.height < 200) {
+        URL.revokeObjectURL(url)
+        setAvatarUploadError('Photo must be at least 200×200 pixels.')
+        setAvatarUploading(false)
+        e.target.value = ''
+        return
+      }
+      // Canvas re-encode strips EXIF + any embedded GPS tags. Cap the
+      // long edge at 1024px so we don't ship full-res phone shots to
+      // students' browsers either.
+      const max = 1024
+      const ratio = Math.min(1, max / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width  = Math.round(img.width * ratio)
+      canvas.height = Math.round(img.height * ratio)
+      const ctx = canvas.getContext('2d')
+      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
+      const reencoded = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/jpeg', 0.9)
+      )
+      URL.revokeObjectURL(url)
+      if (reencoded) blobToUpload = reencoded
+    } catch {
+      // Fall back to the original file on any canvas failure.
+    }
+    const path = `${profile.id}/avatar.jpg`
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(path, file, { upsert: true, contentType: file.type })
+      .upload(path, blobToUpload, { upsert: true, contentType: 'image/jpeg' })
     if (uploadError) {
       setAvatarUploadError('Upload failed — please try again or paste a URL below.')
       setAvatarUploading(false)
       return
     }
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-    setAvatarUrl(publicUrl)
+    // Cache-bust so the new avatar shows up without a hard refresh.
+    setAvatarUrl(`${publicUrl}?v=${Date.now()}`)
     setAvatarUploading(false)
   }
 
@@ -984,6 +1026,13 @@ export default function Profile() {
                           // P1-10 — toast + deep link the moment the toggle flips on,
                           // so the mentor sees the proof their card landed.
                           const next = !openToMentorship
+                          // Task 14 — block toggling ON without a profile photo.
+                          if (next && !avatarUrl.trim()) {
+                            toast('Please add a profile photo before going public on the Mentors page.', { kind: 'error' })
+                            const el = document.querySelector<HTMLElement>('[data-section="avatar"]')
+                            el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                            return
+                          }
                           setOpenToMentorship(next)
                           if (next) {
                             toast(

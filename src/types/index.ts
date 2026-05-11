@@ -317,4 +317,18 @@ export const INDUSTRY_OPTIONS = [
   'Other',
 ] as const
 
-export const INTEREST_OPTIONS = INDUSTRY_OPTIONS
+// Task 12 — student-facing taxonomy collapsed from the 19-entry
+// INDUSTRY_OPTIONS to 8 broad buckets. Existing rows are migrated by
+// SQL migration 077 (data/interest-migration.ts mirrors the mapping).
+// INDUSTRY_OPTIONS still drives the employer "Industry" select since
+// that field talks about a single company, not a personal interest.
+export const INTEREST_OPTIONS = [
+  'Technology & Engineering',
+  'Finance, Business & Government',
+  'Healthcare & Science',
+  'Arts, Media & Communications',
+  'Environment, Agriculture & Outdoors',
+  'Education & Social Impact',
+  'Hospitality, Sports & Recreation',
+  'Other',
+] as const
