@@ -13,6 +13,9 @@ interface Check {
   key: string
   label: string
   done: boolean
+  /** Task 19 — hash fragment on /profile/edit that scrolls + focuses
+   *  the matching field when this row is clicked. */
+  hash: string
 }
 
 function buildChecks(profile: Profile): Check[] {
@@ -20,17 +23,17 @@ function buildChecks(profile: Profile): Check[] {
   const projects = profile.projects ?? []
   const links = profile.links ?? {}
   return [
-    { key: 'avatar',    label: 'Add a profile photo',          done: !!profile.avatar_url },
-    { key: 'bio',       label: 'Write a short bio',            done: !!profile.bio && profile.bio.trim().length >= 30 },
-    { key: 'grade',     label: 'Pick your grade',              done: !!profile.grade },
-    { key: 'gradyear',  label: 'Set your graduation year',     done: !!profile.graduation_year },
-    { key: 'seeking',   label: 'Say what you are looking for', done: !!profile.student_seeking },
-    { key: 'hours',     label: 'Set weekly availability',      done: !!profile.weekly_availability },
-    { key: 'interests', label: 'Pick areas of interest',       done: (profile.interests?.length ?? 0) >= 1 },
-    { key: 'skills',    label: 'Add 3+ skills',                done: skills.length >= 3 },
-    { key: 'projects',  label: 'Add a project',                done: projects.length >= 1 },
-    { key: 'links',     label: 'Add a link (GitHub / site / LinkedIn)', done: Object.values(links).some((v) => !!v) },
-    { key: 'resume',    label: 'Upload a default resume',      done: !!profile.default_resume_path },
+    { key: 'avatar',    label: 'Add a profile photo',          done: !!profile.avatar_url, hash: 'avatar' },
+    { key: 'bio',       label: 'Write a short bio',            done: !!profile.bio && profile.bio.trim().length >= 30, hash: 'bio' },
+    { key: 'grade',     label: 'Pick your grade',              done: !!profile.grade, hash: 'grade' },
+    { key: 'gradyear',  label: 'Set your graduation year',     done: !!profile.graduation_year, hash: 'graduation_year' },
+    { key: 'seeking',   label: 'Say what you are looking for', done: !!profile.student_seeking, hash: 'student_seeking' },
+    { key: 'hours',     label: 'Set weekly availability',      done: !!profile.weekly_availability, hash: 'weekly_availability' },
+    { key: 'interests', label: 'Pick areas of interest',       done: (profile.interests?.length ?? 0) >= 1, hash: 'interests' },
+    { key: 'skills',    label: 'Add 3+ skills',                done: skills.length >= 3, hash: 'skills' },
+    { key: 'projects',  label: 'Add a project',                done: projects.length >= 1, hash: 'projects' },
+    { key: 'links',     label: 'Add a link (GitHub / site / LinkedIn)', done: Object.values(links).some((v) => !!v), hash: 'links' },
+    { key: 'resume',    label: 'Upload a default resume',      done: !!profile.default_resume_path, hash: 'default_resume' },
   ]
 }
 
@@ -93,11 +96,19 @@ export default function ProfileCompleteness({ profile, variant = 'card' }: Props
       </p>
       <ul className="space-y-1 text-xs">
         {checks.map((c) => (
-          <li key={c.key} className={c.done ? 'text-ink-muted line-through' : 'text-ink-secondary'}>
-            <span className={`inline-block w-3 ${c.done ? 'text-success' : 'text-ink-muted'}`}>
-              {c.done ? '✓' : '○'}
-            </span>{' '}
-            {c.label}
+          <li key={c.key}>
+            {c.done ? (
+              <span className="text-ink-muted line-through">
+                <span className="inline-block w-3 text-success">✓</span> {c.label}
+              </span>
+            ) : (
+              <Link
+                to={`/profile/edit#${c.hash}`}
+                className="text-ink-secondary hover:text-primary transition-colors"
+              >
+                <span className="inline-block w-3 text-ink-muted">○</span> {c.label}
+              </Link>
+            )}
           </li>
         ))}
       </ul>

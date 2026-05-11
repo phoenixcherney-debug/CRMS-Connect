@@ -28,7 +28,7 @@ type LinksMap = { github?: string; website?: string; linkedin?: string }
 export default function Profile() {
   const { profile, user, refreshProfile, loading } = useAuth()
   const toast = useToast()
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
   // Audit task 23 — /profile/edit opens the form by default.
   const [editing, setEditing] = useState(pathname === '/profile/edit')
 
@@ -84,6 +84,19 @@ export default function Profile() {
   // rules of hooks (rendered more hooks than the previous render → React
   // error #310). Pulled it up here so every hook runs unconditionally.
   const [avatarBroken, setAvatarBroken] = useState(false)
+
+  // Task 19 — when /profile/edit#<field> loads, scroll the matching
+  // section into view and focus its first input. The matching `id`
+  // attributes are sprinkled across the JSX below (data-section).
+  useEffect(() => {
+    if (!editing || !hash) return
+    const target = hash.replace(/^#/, '')
+    const el = document.querySelector<HTMLElement>(`[data-section="${target}"]`)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const focusable = el.querySelector<HTMLElement>('input, textarea, select, button')
+    focusable?.focus({ preventScroll: true })
+  }, [editing, hash])
   // Reset when the preview source changes — derived from `editing`,
   // `avatarUrl`, and the persisted profile avatar.
   useEffect(() => {
@@ -460,6 +473,10 @@ export default function Profile() {
           {/* ── VIEW MODE ── */}
           {!editing && (
             <div className="space-y-4">
+              {/* Task 11 — completion checklist lives here, not on /explore. */}
+              {profile.role === 'student' && (
+                <ProfileCompleteness profile={profile} variant="card" />
+              )}
               <div className="p-3 rounded-lg bg-primary-faint border border-border text-sm space-y-1.5">
                 <div className="flex gap-2">
                   <span className="font-medium text-ink w-28 shrink-0">Email</span>
@@ -680,7 +697,7 @@ export default function Profile() {
 
                 {/* Grade (students only) */}
                 {profile.role === 'student' && (
-                  <div>
+                  <div data-section="grade">
                     <label className="block text-sm font-medium text-ink mb-1.5">
                       Grade <span className="text-ink-muted font-normal">(optional)</span>
                     </label>
@@ -736,7 +753,7 @@ export default function Profile() {
                 )}
 
                 {/* Graduation year */}
-                <div>
+                <div data-section="graduation_year">
                   <label className="block text-sm font-medium text-ink mb-1.5">
                     {profile.role === 'student' ? 'Graduation year' : 'Graduation year (alumni)'}{' '}
                     <span className="text-ink-muted font-normal">(optional)</span>
@@ -762,7 +779,7 @@ export default function Profile() {
                 {profile.role === 'student' && (
                   <>
                     {/* What they're seeking */}
-                    <div>
+                    <div data-section="student_seeking">
                       <label className="block text-sm font-medium text-ink mb-2">
                         Looking for <span className="text-ink-muted font-normal">(optional)</span>
                       </label>
@@ -795,7 +812,7 @@ export default function Profile() {
                     </div>
 
                     {/* Weekly availability */}
-                    <div>
+                    <div data-section="weekly_availability">
                       <label className="block text-sm font-medium text-ink mb-1.5">
                         Weekly availability <span className="text-ink-muted font-normal">(optional)</span>
                       </label>
@@ -811,7 +828,7 @@ export default function Profile() {
                     </div>
 
                     {/* Interests */}
-                    <div>
+                    <div data-section="interests">
                       <label className="block text-sm font-medium text-ink mb-1.5">
                         Areas of interest <span className="text-ink-muted font-normal">(optional — select all that apply)</span>
                       </label>
@@ -835,7 +852,15 @@ export default function Profile() {
                       </div>
                     </div>
 
-                    {/* Phase 2.1 — skills, projects, links, default resume. */}
+                    {/* Phase 2.1 — skills, projects, links, default resume.
+                        Carries multiple data-section anchors so the completion
+                        checklist deep-links scroll here (Task 19). */}
+                    <div
+                      data-section="skills"
+                      data-section-alt-1="projects"
+                      data-section-alt-2="links"
+                      data-section-alt-3="default_resume"
+                    >
                     <StudentSectionsEditor
                       skills={skills}
                       setSkills={setSkills}
@@ -846,6 +871,7 @@ export default function Profile() {
                       defaultResume={defaultResume}
                       setDefaultResume={setDefaultResume}
                     />
+                    </div>
                   </>
                 )}
 
@@ -1101,7 +1127,7 @@ export default function Profile() {
                 )}
 
                 {/* Bio */}
-                <div>
+                <div data-section="bio">
                   <label className="block text-sm font-medium text-ink mb-1.5">
                     Bio <span className="text-ink-muted font-normal">(optional)</span>
                   </label>
@@ -1118,7 +1144,7 @@ export default function Profile() {
                 </div>
 
                 {/* Profile photo */}
-                <div>
+                <div data-section="avatar">
                   <label className="block text-sm font-medium text-ink mb-1.5">
                     Profile photo <span className="text-ink-muted font-normal">(optional)</span>
                   </label>

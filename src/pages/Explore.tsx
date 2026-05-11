@@ -18,7 +18,6 @@ import EmployerTourModal from '../components/EmployerTourModal'
 import OnboardingChecklist from '../components/OnboardingChecklist'
 import MentorVisibilityCard from '../components/MentorVisibilityCard'
 import PhotoBioNudge from '../components/PhotoBioNudge'
-import ProfileCompleteness from '../components/ProfileCompleteness'
 import MentorAnalyticsCard from '../components/MentorAnalyticsCard'
 import MentorReconfirmPrompt from '../components/MentorReconfirmPrompt'
 import { getCommunityStats } from '../lib/stats'
@@ -194,7 +193,9 @@ export default function Explore() {
 
       <MentorModeBanner />
       <PhotoBioNudge />
-      {isStudent && profile && <ProfileCompleteness profile={profile} variant="card" />}
+      {/* Task 11 — completion widget no longer renders on /explore. It
+          lives on /profile (inline) where it can't scold the user the
+          moment they land on the home dashboard. */}
       {isEmployerMentor && <MentorAnalyticsCard />}
       {isEmployerMentor && <MentorReconfirmPrompt />}
       <EmployerDashboardStrip />
