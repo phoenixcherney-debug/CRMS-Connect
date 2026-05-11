@@ -123,11 +123,9 @@ export default function Employers() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Employers &amp; Mentors</h1>
+        <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>Companies</h1>
         <p className="text-ink-secondary text-sm mt-0.5">
-          {loading
-            ? 'Loading…'
-            : `${employers.length} ${employers.length === 1 ? 'company' : 'companies'} in the CRMS network — click to see opportunities and the people behind them`}
+          Organizations in the CRMS network — click to see their open opportunities.
         </p>
       </div>
 

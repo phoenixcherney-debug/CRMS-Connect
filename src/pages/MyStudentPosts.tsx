@@ -148,7 +148,7 @@ export default function MyStudentPosts() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>My Post</h1>
+          <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>My Listing</h1>
           <p className="text-ink-secondary text-sm mt-0.5">
             Let employers and mentors know what you're looking for
           </p>

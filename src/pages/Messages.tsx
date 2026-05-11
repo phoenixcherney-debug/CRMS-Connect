@@ -367,9 +367,14 @@ export default function Messages() {
                       : 'Search for a student by name.'}
                   </p>
                   <p className="mt-2 text-xs text-ink-muted">
-                    {profile?.role === 'student'
-                      ? 'You can only start conversations with employers and mentors. To talk to other students, comment on their post.'
-                      : 'You can only start conversations with students. To talk to other employers/mentors, post or comment on the activity feed.'}
+                    {profile?.role === 'student' ? (
+                      <>
+                        You can only start conversations with employers and mentors. To reach another student, leave a comment on their listing on the{' '}
+                        <Link to="/student-posts" className="text-primary hover:text-primary-light font-medium">Student Posts</Link>{' '}page.
+                      </>
+                    ) : (
+                      'You can only start conversations with students. To talk to other employers/mentors, post or comment on the activity feed.'
+                    )}
                   </p>
                 </div>
               ) : searchResults.length === 0 ? (

@@ -83,7 +83,7 @@ export default function Nav() {
       { to: '/opportunities/new',  label: 'Post an Opportunity', icon: PlusSquare  },
     ] : []),
     ...(isStudent ? [
-      { to: '/student-posts/mine', label: 'My Post', icon: BookOpen },
+      { to: '/student-posts/mine', label: 'My Listing', icon: BookOpen },
     ] : []),
     // P2-33 — Availability is mentor-only (the page sets DM slots students
     // can request meetings for); hide the menu item for students.
@@ -96,7 +96,7 @@ export default function Nav() {
     { to: '/activity', label: 'Activity', icon: Rss      },
     { to: '/events',   label: 'Events', icon: Calendar  },
     ...(isStudent ? [
-      { to: '/employers', label: 'Employers & Mentors', icon: Building2 },
+      { to: '/employers', label: 'Companies', icon: Building2 },
       // Audit M11 — students can also browse other students.
       { to: '/students', label: 'Students', icon: Users },
     ] : []),
