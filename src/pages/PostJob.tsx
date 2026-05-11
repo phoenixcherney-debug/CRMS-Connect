@@ -11,6 +11,7 @@ import type { JobType, LocationType, CustomQuestion, CustomQuestionType } from '
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
 import { friendlyError } from '../lib/errors'
+import { containsBlockedTerms } from '../lib/textFilter'
 
 const JOB_TYPES: JobType[] = ['internship', 'part-time', 'full-time', 'volunteer', 'mentorship', 'shadow', 'other']
 const LOCATION_TYPES: LocationType[] = ['remote', 'in-person', 'hybrid']
@@ -242,6 +243,21 @@ export default function PostJob() {
         document.getElementById('post-job-error-banner')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       })
       return
+    }
+
+    // Task 1 — text filter on title, description, how_to_apply, company.
+    for (const [label, value] of [
+      ['title',         title] as const,
+      ['description',   description] as const,
+      ['how_to_apply',  form.how_to_apply.trim()] as const,
+      ['company',       company] as const,
+    ]) {
+      const term = containsBlockedTerms(value)
+      if (term.blocked) {
+        setFieldErrors({ [label]: term.reason ?? 'Please revise this text.' })
+        setError('Please revise the highlighted text and try again.')
+        return
+      }
     }
 
     setSubmitting(true)

@@ -11,6 +11,7 @@ import {
   WEEKLY_AVAILABILITY_OPTIONS,
 } from '../types'
 import type { MentorType, StudentSeeking, StudentGrade } from '../types'
+import { containsBlockedTerms } from '../lib/textFilter'
 import Spinner from '../components/Spinner'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
@@ -156,6 +157,20 @@ export default function Onboarding() {
       }
       return
     }
+    // Task 1 — bio + company text-filter check before save.
+    const bioTerm = containsBlockedTerms(bio)
+    if (bioTerm.blocked) {
+      setSaveError(bioTerm.reason ?? 'Please revise your bio.')
+      return
+    }
+    if (isEmployerMentor) {
+      const companyTerm = containsBlockedTerms(company)
+      if (companyTerm.blocked) {
+        setSaveError(companyTerm.reason ?? 'Please revise the company name.')
+        return
+      }
+    }
+
     setSaving(true)
     setSaveError(null)
 

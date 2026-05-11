@@ -14,6 +14,7 @@ import type { CareerHistory, MentorType, StudentSeeking } from '../types'
 import Spinner from '../components/Spinner'
 import { useToast } from '../components/ToastProvider'
 import { validateDisplayName } from '../lib/nameFilter'
+import { containsBlockedTerms, validateFullNameShape } from '../lib/textFilter'
 import { formatDisplayName } from '../lib/displayName'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { initialsOf } from '../lib/initials'
@@ -230,6 +231,22 @@ export default function Profile() {
     const nameCheck = validateDisplayName(trimmedName)
     if (!nameCheck.ok) {
       setSaveError(nameCheck.reason ?? 'That display name isn\'t allowed.')
+      return
+    }
+    // Task 1 — name shape + text-filter on name and bio.
+    const shape = validateFullNameShape(trimmedName)
+    if (shape.blocked) {
+      setSaveError(shape.reason ?? 'Please use your real first and last name.')
+      return
+    }
+    const nameTerm = containsBlockedTerms(trimmedName)
+    if (nameTerm.blocked) {
+      setSaveError(nameTerm.reason ?? 'That name isn\'t allowed.')
+      return
+    }
+    const bioTerm = containsBlockedTerms(bio)
+    if (bioTerm.blocked) {
+      setSaveError(bioTerm.reason ?? 'Please revise your bio.')
       return
     }
 

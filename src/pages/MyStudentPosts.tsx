@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, Plus, X, RefreshCw, Archive, Trash2 } from 'lucide-react'
 import { sanitizeUserText } from '../lib/sanitize'
+import { containsBlockedTerms } from '../lib/textFilter'
 import { useToast } from '../components/ToastProvider'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -65,6 +66,12 @@ export default function MyStudentPosts() {
     if (cleaned.rejected) {
       setSubmitting(false)
       window.alert(cleaned.reason ?? 'That text contains characters we don\'t allow.')
+      return
+    }
+    // Task 1 — blocked-term check before the DB trigger.
+    const term = containsBlockedTerms(cleaned.clean)
+    if (term.blocked) {
+      window.alert(term.reason ?? 'Please revise your post.')
       return
     }
     const seekingOtherClean = seeking === 'other' ? sanitizeUserText(seekingOther.trim()) : null

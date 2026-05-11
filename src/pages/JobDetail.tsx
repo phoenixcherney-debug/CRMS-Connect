@@ -11,6 +11,7 @@ import { sendPushToUser } from '../lib/sendPush'
 import { friendlyError } from '../lib/errors'
 import { validateExternalUrl, safeExternalHref } from '../lib/url'
 import { sanitizeUserText } from '../lib/sanitize'
+import { containsBlockedTerms } from '../lib/textFilter'
 import type { Job, Application, ApplicationStatus, CustomQuestion } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, ROLE_LABELS } from '../types'
 
@@ -212,6 +213,12 @@ export default function JobDetail() {
     const cleanedNote = sanitizeUserText(note)
     if (cleanedNote.rejected) {
       setCoverNoteError(cleanedNote.reason ?? 'Cover note contains characters we don\'t allow.')
+      return
+    }
+    // Task 1 — blocked-term filter on cover note.
+    const term = containsBlockedTerms(cleanedNote.clean)
+    if (term.blocked) {
+      setCoverNoteError(term.reason ?? 'Please revise your cover note.')
       return
     }
 

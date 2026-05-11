@@ -6,6 +6,7 @@ import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
+import { containsBlockedTerms } from '../lib/textFilter'
 import { initialsOf } from '../lib/initials'
 import type { Message, Profile } from '../types'
 import { ROLE_LABELS } from '../types'
@@ -215,6 +216,13 @@ export default function Conversation() {
     e?.preventDefault()
     const text = content.trim()
     if (!text || !profile || sending) return
+
+    // Task 1 — message-body text filter. The DB trigger backs this up.
+    const term = containsBlockedTerms(text)
+    if (term.blocked) {
+      setSendError(term.reason ?? 'Please revise your message.')
+      return
+    }
 
     setSending(true)
     setContent('') // Optimistic clear

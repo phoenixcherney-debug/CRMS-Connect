@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { friendlyError } from '../lib/errors'
 import { validateDisplayName } from '../lib/nameFilter'
+import { validateFullNameShape, containsBlockedTerms } from '../lib/textFilter'
 import { formatDisplayName } from '../lib/displayName'
 import type { Profile, Role } from '../types'
 
@@ -171,6 +172,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // sanitize trigger; doing it here gives a friendly error before submit.
     const nameCheck = validateDisplayName(trimmedName)
     if (!nameCheck.ok) return { error: nameCheck.reason ?? 'That display name isn\'t allowed.' }
+    // Task 1 — additionally enforce real-name shape (2+ tokens, no digits)
+    // and a broader text-filter pass. validateDisplayName covers slurs;
+    // these add the "must look like a real first+last" rule on signup.
+    const shape = validateFullNameShape(trimmedName)
+    if (shape.blocked) return { error: shape.reason ?? 'Please use your real first and last name.' }
+    const term = containsBlockedTerms(trimmedName)
+    if (term.blocked) return { error: term.reason ?? 'That name isn\'t allowed.' }
     // P2-20 — normalize casing at signup so the stored value is the
     // canonical display form (no separate render-time helper drift).
     const canonicalName = formatDisplayName(trimmedName)
