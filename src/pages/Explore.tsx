@@ -21,6 +21,7 @@ import PhotoBioNudge from '../components/PhotoBioNudge'
 import ProfileCompleteness from '../components/ProfileCompleteness'
 import MentorAnalyticsCard from '../components/MentorAnalyticsCard'
 import MentorReconfirmPrompt from '../components/MentorReconfirmPrompt'
+import { getCommunityStats } from '../lib/stats'
 import { isPast, parseISO } from 'date-fns'
 
 /** Audit task 17 — preserve the casing the user typed. We only trim
@@ -48,9 +49,7 @@ export default function Explore() {
       const [
         { data: jobs },
         { data: people, error: peopleError },
-        { count: totalJobs },
-        { data: memberCountData },
-        { data: allCompanyRows },
+        community,
       ] = await Promise.all([
         supabase
           .from('jobs')
@@ -67,22 +66,9 @@ export default function Explore() {
           .neq('role', 'admin')
           .order('created_at', { ascending: false })
           .limit(12),
-        supabase
-          .from('jobs')
-          .select('*', { count: 'exact', head: true })
-          .eq('is_active', true),
-        // Members count via SECURITY DEFINER RPC so we can apply
-        // the same admin / banned / pending-status filters the
-        // directory pages use without round-tripping a HEAD COUNT.
-        supabase.rpc('directory_member_count'),
-        // Pull every active job's `company` so we can count distinct companies
-        // across the whole community, not just the 4-row sample we render.
-        supabase
-          .from('jobs')
-          .select('company')
-          .eq('is_active', true),
+        // Task 5 — single source of truth for headcounts.
+        getCommunityStats(),
       ])
-      const totalPeople = typeof memberCountData === 'number' ? memberCountData : 0
 
       if (peopleError) console.error('Explore: profiles query failed', peopleError)
 
@@ -95,13 +81,10 @@ export default function Explore() {
       setRecentPeople(peopleList)
       setMentors(peopleList.filter((p) => p.open_to_mentorship && p.role === 'employer_mentor' && p.id !== profile?.id))
 
-      const companyNames = ((allCompanyRows ?? []) as { company: string }[])
-        .map((r) => (r.company ?? '').trim())
-        .filter((c) => c.length > 0)
       setStats({
-        jobs: totalJobs ?? jobList.length,
-        people: totalPeople ?? peopleList.length,
-        companies: new Set(companyNames).size,
+        jobs:      community.opportunitiesActive,
+        people:    community.members,
+        companies: community.companies,
       })
       setLoading(false)
     }

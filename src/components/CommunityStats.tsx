@@ -1,31 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Users, Briefcase, Heart } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { getCommunityStats, type CommunityStats as Stats } from '../lib/stats'
 
 /**
- * Phase 4.4 — community-stat strip rendered on public pages
- * (Landing, /for-mentors, /for-employers, /about). Calls
- * community_stats() — a SECURITY DEFINER RPC that only returns
- * three counts. Hidden until the data loads to avoid flash of
- * skeletons on slow connections.
+ * Phase 4.4 / Task 5 — community-stat strip rendered on public pages
+ * (Landing, /for-mentors, /for-employers, /about). Reads from the one
+ * shared getCommunityStats() helper so the numbers can't drift from
+ * other surfaces that show counts.
  */
-interface Stats {
-  active_mentors: number
-  active_students: number
-  active_opportunities: number
-}
-
 export default function CommunityStats() {
   const [stats, setStats] = useState<Stats | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const { data } = await supabase.rpc('community_stats')
-      if (!cancelled) {
-        const row = Array.isArray(data) ? data[0] : data
-        if (row) setStats(row as Stats)
-      }
+      const next = await getCommunityStats()
+      if (!cancelled) setStats(next)
     })()
     return () => { cancelled = true }
   }, [])
@@ -33,9 +23,9 @@ export default function CommunityStats() {
   if (!stats) return null
 
   const items: { value: number; label: string; icon: React.ReactNode }[] = [
-    { value: stats.active_mentors,       label: 'Mentors available', icon: <Heart size={14} /> },
-    { value: stats.active_students,      label: 'Students',          icon: <Users size={14} /> },
-    { value: stats.active_opportunities, label: 'Opportunities open', icon: <Briefcase size={14} /> },
+    { value: stats.mentors,             label: 'Mentors available', icon: <Heart size={14} /> },
+    { value: stats.students,            label: 'Students',          icon: <Users size={14} /> },
+    { value: stats.opportunitiesActive, label: 'Opportunities open', icon: <Briefcase size={14} /> },
   ]
 
   return (
