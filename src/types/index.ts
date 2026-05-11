@@ -58,6 +58,10 @@ export interface Profile {
   account_status?: 'pending' | 'active' | 'disabled'
   /** P2-14 — for mentors with open_to_mentorship=true. */
   meeting_request_mode?: 'flexible' | 'slots' | null
+  /** Task 3 — last time the mentor affirmed they're open to mentoring.
+   *  Stamped automatically on toggle-on; used to drive a yearly
+   *  reconfirmation prompt. */
+  mentor_consent_confirmed_at?: string | null
   /** P1-10 — when set to a future date, hides the mentor from /mentors
    *  even though open_to_mentorship is true (for parental leave / busy
    *  season). Past dates are no-ops. */

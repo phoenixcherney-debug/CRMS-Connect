@@ -48,7 +48,9 @@ export default function Onboarding() {
   // than hoping mentors remember to flip it on later.
   // P0-4 — default ON for new E/M signups so the directory shows them
   // immediately. Profile-edit can flip it back off any time.
-  const [openToMentorship, setOpenToMentorship] = useState(true)
+  // Task 3 — mentor mode is OFF by default. Existing accounts already
+  // toggled on stay on. New signups must opt in explicitly.
+  const [openToMentorship, setOpenToMentorship] = useState(false)
   const [alumGradYear, setAlumGradYear] = useState('')
   const [studentSeeking, setStudentSeeking] = useState<StudentSeeking | ''>('')
   const [studentSeekingOther, setStudentSeekingOther] = useState('')
@@ -555,7 +557,7 @@ export default function Onboarding() {
                   <span className="text-sm">
                     <span className="font-medium text-ink">Open to mentoring students</span>
                     <span className="block text-xs text-ink-muted mt-0.5">
-                      On by default. When on, you appear in /mentors and students can request meetings. Flip it off any time in your profile.
+                      You'll be listed publicly on the Mentors page and students can request to meet with you. You can turn this on any time from your profile.
                     </span>
                   </span>
                 </label>
