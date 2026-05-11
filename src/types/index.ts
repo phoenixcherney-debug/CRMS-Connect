@@ -51,6 +51,9 @@ export interface Profile {
   grade?: StudentGrade | null
   /** Audit M9: students opt in before their grade is exposed to other roles. */
   share_grade_with_employers?: boolean
+  /** Task 2 — students opt in before adult accounts can DM them
+   *  (existing threads where the student wrote first are unaffected). */
+  student_outreach_consent?: boolean
   /** SEC-001 — staff-approval gate for employer/mentor signups. */
   account_status?: 'pending' | 'active' | 'disabled'
   /** P2-14 — for mentors with open_to_mentorship=true. */

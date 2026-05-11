@@ -74,8 +74,8 @@ export default function ShortlistButton({ studentId, size = 13, className = '' }
       onClick={toggle}
       disabled={busy || loading}
       aria-pressed={shortlisted}
-      aria-label={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
-      title={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
+      aria-label={shortlisted ? 'Remove from saved candidates' : 'Save candidate'}
+      title={shortlisted ? 'Remove from saved candidates' : 'Save candidate'}
       className={`inline-flex items-center justify-center rounded-md border transition-colors disabled:opacity-50 ${
         shortlisted
           ? 'border-primary bg-primary-muted text-primary'

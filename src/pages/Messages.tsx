@@ -137,13 +137,20 @@ export default function Messages() {
 
     setSearchLoading(true)
     const timeout = setTimeout(async () => {
-      const { data } = await supabase
+      // Task 2 — for E/M searchers, hide students who haven't opted into
+      // outreach. They'd hit the DB trigger anyway; this saves the round-
+      // trip and avoids surfacing kids who don't want to be contacted.
+      let query = supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, role')
+        .select('id, full_name, avatar_url, role, student_outreach_consent')
         .neq('id', profile.id)
         .neq('role', profile.role)
         .ilike('full_name', `%${q}%`)
         .limit(10)
+      if (profile.role === 'employer_mentor') {
+        query = query.or('role.neq.student,student_outreach_consent.eq.true')
+      }
+      const { data } = await query
 
       setSearchResults((data as Profile[]) ?? [])
       setSearchLoading(false)

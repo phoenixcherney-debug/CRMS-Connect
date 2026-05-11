@@ -65,7 +65,7 @@ export default function People({ directory }: PeopleProps = {}) {
       // bylines or direct profile links. /students directory is unchanged.
       let q = supabase
         .from('profiles')
-        .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, mentorship_paused_until, interests, weekly_availability, mentor_type, student_seeking, grade, share_grade_with_employers, created_at')
+        .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, mentorship_paused_until, interests, weekly_availability, mentor_type, student_seeking, grade, share_grade_with_employers, student_outreach_consent, created_at')
         .eq('role', targetRole)
         .order('full_name', { ascending: true })
       if (directory === 'mentors') q = q.eq('open_to_mentorship', true)
@@ -547,25 +547,42 @@ export default function People({ directory }: PeopleProps = {}) {
                     dropped the trigger). Anyone non-self can be messaged.
                     P0-8 — Report mounts directly on the directory card so
                     flagging doesn't require navigating to the full profile. */}
-                {!isSelf && (
-                  <div className="mt-3 flex gap-2 items-stretch" onClick={(e) => e.stopPropagation()}>
-                    <button type="button"
-                      onClick={(e) => { e.stopPropagation(); openConversation(person.id) }}
-                      disabled={creatingFor === person.id}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
-                        border border-border text-xs font-medium text-ink-secondary
-                        hover:bg-primary-faint hover:text-ink
-                        disabled:opacity-50 transition-colors"
-                    >
-                      <MessageSquare size={13} />
-                      {creatingFor === person.id ? 'Opening…' : 'Message'}
-                    </button>
-                    {person.role === 'student' && (
-                      <ShortlistButton studentId={person.id} className="px-2 py-2" />
-                    )}
-                    <ReportUserButton targetId={person.id} targetName={person.full_name} />
-                  </div>
-                )}
+                {!isSelf && (() => {
+                  // Task 2 — adult cannot DM a non-consenting student.
+                  const outreachBlocked =
+                    profile?.role === 'employer_mentor'
+                    && person.role === 'student'
+                    && !person.student_outreach_consent
+                  return (
+                    <div className="mt-3 flex gap-2 items-stretch" onClick={(e) => e.stopPropagation()}>
+                      {!outreachBlocked && (
+                        <button type="button"
+                          onClick={(e) => { e.stopPropagation(); openConversation(person.id) }}
+                          disabled={creatingFor === person.id}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                            border border-border text-xs font-medium text-ink-secondary
+                            hover:bg-primary-faint hover:text-ink
+                            disabled:opacity-50 transition-colors"
+                        >
+                          <MessageSquare size={13} />
+                          {creatingFor === person.id ? 'Opening…' : 'Message'}
+                        </button>
+                      )}
+                      {outreachBlocked && (
+                        <span
+                          className="flex-1 inline-flex items-center justify-center px-3 py-2 rounded-lg border border-dashed border-border text-[11px] text-ink-muted"
+                          title="This student isn't accepting outreach yet"
+                        >
+                          Not accepting outreach
+                        </span>
+                      )}
+                      {person.role === 'student' && (
+                        <ShortlistButton studentId={person.id} className="px-2 py-2" />
+                      )}
+                      <ReportUserButton targetId={person.id} targetName={person.full_name} />
+                    </div>
+                  )
+                })()}
               </div>
             )
           })}

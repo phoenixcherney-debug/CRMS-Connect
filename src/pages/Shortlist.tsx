@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Heart, MessageSquare, Trash2, Pencil } from 'lucide-react'
+import { Heart, MessageSquare, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -22,12 +22,9 @@ export default function Shortlist() {
   const navigate = useNavigate()
   const [rows, setRows]       = useState<ShortlistRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingNote, setEditingNote] = useState('')
-  const [savingId, setSavingId] = useState<string | null>(null)
 
   useEffect(() => {
-    document.title = 'Shortlist · CRMS Connect'
+    document.title = 'Saved candidates · CRMS Connect'
     return () => { document.title = 'CRMS Connect' }
   }, [])
 
@@ -59,19 +56,6 @@ export default function Shortlist() {
     await supabase.from('mentor_shortlist').delete().eq('id', id)
   }
 
-  async function saveNote(id: string) {
-    const trimmed = editingNote.trim().slice(0, 200)
-    setSavingId(id)
-    await supabase
-      .from('mentor_shortlist')
-      .update({ note: trimmed || null })
-      .eq('id', id)
-    setRows((prev) => prev.map((r) => r.id === id ? { ...r, note: trimmed || null } : r))
-    setEditingId(null)
-    setEditingNote('')
-    setSavingId(null)
-  }
-
   async function openConversation(studentId: string) {
     if (!profile) return
     const { data: existing } = await supabase
@@ -100,17 +84,17 @@ export default function Shortlist() {
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-ink" style={{ fontFamily: 'var(--font-serif)' }}>
-          Shortlist
+          Saved candidates
         </h1>
         <p className="text-sm text-ink-secondary mt-0.5">
-          Students you've saved to follow up with. Notes are private to you.
+          Students you've saved to follow up with later.
         </p>
       </div>
 
       {rows.length === 0 ? (
         <EmptyState
           icon={Heart}
-          title="No shortlisted students yet"
+          title="No saved candidates yet"
           description="Tap the heart on a student's profile or directory card to add them here."
           ctaLabel="Browse students"
           ctaTo="/students"
@@ -154,7 +138,7 @@ export default function Shortlist() {
                         type="button"
                         onClick={() => remove(row.id)}
                         className="text-ink-muted hover:text-error p-1"
-                        aria-label="Remove from shortlist"
+                        aria-label="Remove from saved candidates"
                         title="Remove"
                       >
                         <Trash2 size={14} />
@@ -162,59 +146,6 @@ export default function Shortlist() {
                     </div>
                     {s.bio && (
                       <p className="text-xs text-ink-secondary mt-1 line-clamp-2 leading-relaxed">{s.bio}</p>
-                    )}
-
-                    {editingId === row.id ? (
-                      <div className="mt-2">
-                        <textarea
-                          rows={2}
-                          maxLength={200}
-                          value={editingNote}
-                          onChange={(e) => setEditingNote(e.target.value)}
-                          placeholder="Private note (≤200 chars)…"
-                          className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-xs placeholder:text-ink-placeholder resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                        />
-                        <div className="mt-1 flex items-center justify-between">
-                          <span className="text-[10px] text-ink-muted">{editingNote.length}/200</span>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => saveNote(row.id)}
-                              disabled={savingId === row.id}
-                              className="text-xs font-medium text-primary hover:text-primary-light disabled:opacity-50"
-                            >
-                              {savingId === row.id ? 'Saving…' : 'Save'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setEditingId(null); setEditingNote('') }}
-                              className="text-xs text-ink-muted hover:text-ink"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : row.note ? (
-                      <div className="mt-2 p-2 rounded-md bg-primary-faint border border-border text-xs text-ink-secondary flex items-start justify-between gap-2">
-                        <span className="whitespace-pre-wrap flex-1">{row.note}</span>
-                        <button
-                          type="button"
-                          onClick={() => { setEditingId(row.id); setEditingNote(row.note ?? '') }}
-                          className="text-ink-muted hover:text-primary shrink-0"
-                          aria-label="Edit note"
-                        >
-                          <Pencil size={11} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => { setEditingId(row.id); setEditingNote('') }}
-                        className="mt-2 text-xs font-medium text-primary hover:text-primary-light"
-                      >
-                        + Add private note
-                      </button>
                     )}
 
                     <div className="mt-2 flex gap-2">

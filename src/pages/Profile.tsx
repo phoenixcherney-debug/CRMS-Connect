@@ -55,6 +55,8 @@ export default function Profile() {
   const [studentSeekingOther, setStudentSeekingOther] = useState('')
   const [grade, setGrade]                         = useState('')
   const [shareGradeWithEmployers, setShareGradeWithEmployers] = useState(false)
+  // Task 2 — students must opt in before adult accounts can DM them.
+  const [studentOutreachConsent, setStudentOutreachConsent] = useState(false)
 
   // Phase 2.1 — student profile sections.
   const [skills, setSkills]                       = useState<string[]>([])
@@ -111,6 +113,7 @@ export default function Profile() {
       setStudentSeekingOther(profile.student_seeking_other ?? '')
       setGrade(profile.grade ?? '')
       setShareGradeWithEmployers(profile.share_grade_with_employers ?? false)
+      setStudentOutreachConsent(profile.student_outreach_consent ?? false)
       setSkills(profile.skills ?? [])
       setProjects((profile.projects ?? []) as ProjectRow[])
       setLinks((profile.links ?? {}) as LinksMap)
@@ -172,6 +175,7 @@ export default function Profile() {
     setStudentSeekingOther(profile!.student_seeking_other ?? '')
     setGrade(profile!.grade ?? '')
     setShareGradeWithEmployers(profile!.share_grade_with_employers ?? false)
+    setStudentOutreachConsent(profile!.student_outreach_consent ?? false)
     setSkills(profile!.skills ?? [])
     setProjects((profile!.projects ?? []) as ProjectRow[])
     setLinks((profile!.links ?? {}) as LinksMap)
@@ -299,6 +303,7 @@ export default function Profile() {
       updates.student_seeking_other = studentSeeking === 'other' ? studentSeekingOther.trim() || null : null
       updates.grade               = grade || null
       updates.share_grade_with_employers = shareGradeWithEmployers
+      updates.student_outreach_consent = studentOutreachConsent
       // Phase 2.1 — structured sections.
       updates.skills = skills
       updates.projects = projects.filter((p) => p.title.trim()).map((p) => ({
@@ -702,6 +707,28 @@ export default function Profile() {
                         Share my grade and class year with employers and mentors
                         <span className="block text-ink-muted">
                           Off by default. School staff always see your grade.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                )}
+
+                {/* Task 2 — Visibility & outreach. The DB trigger backstops
+                    this: an adult account cannot DM a non-consenting student. */}
+                {profile.role === 'student' && (
+                  <div className="p-3 rounded-lg border border-border bg-primary-faint">
+                    <p className="text-sm font-medium text-ink mb-1">Visibility & outreach</p>
+                    <label className="flex items-start gap-2 text-xs text-ink-secondary cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={studentOutreachConsent}
+                        onChange={(e) => setStudentOutreachConsent(e.target.checked)}
+                        className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary/30"
+                      />
+                      <span>
+                        Let employers and mentors send me a first message
+                        <span className="block text-ink-muted mt-0.5">
+                          Off by default. You can always reach out to them first — opening this lets them message you cold. Existing message threads aren't affected.
                         </span>
                       </span>
                     </label>

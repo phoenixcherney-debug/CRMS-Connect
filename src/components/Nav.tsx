@@ -89,8 +89,8 @@ export default function Nav() {
     // can request meetings for); hide the menu item for students.
     ...(isEmployerMentor ? [
       { to: '/availability' as const, label: 'Availability' as const, icon: CalendarClock },
-      // Phase 2.4 — mentor shortlist.
-      { to: '/shortlist' as const, label: 'Shortlist' as const, icon: Heart },
+      // Phase 2.4 / Task 2 — saved candidates (no notes).
+      { to: '/shortlist' as const, label: 'Saved candidates' as const, icon: Heart },
     ] : []),
     { to: '/meetings', label: 'Meetings', icon: CalendarCheck },
     { to: '/activity', label: 'Activity', icon: Rss      },

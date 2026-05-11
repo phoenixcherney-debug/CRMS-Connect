@@ -59,7 +59,8 @@ export default function PublicProfile() {
           .select(`
             id, full_name, role, graduation_year, bio, avatar_url, company, industry,
             open_to_mentorship, meeting_request_mode, created_at, interests, weekly_availability,
-            grade, share_grade_with_employers, mentor_type, mentor_type_other,
+            grade, share_grade_with_employers, student_outreach_consent,
+            mentor_type, mentor_type_other,
             student_seeking, student_seeking_other,
             skills, projects, links, default_resume_path
           `)
@@ -640,28 +641,41 @@ export default function PublicProfile() {
             {/* P0-6 — same-role DM block was removed (the trigger that
                 rejected mentor↔mentor inserts is dropped in 057). Anyone
                 signed in can DM anyone except themselves. */}
-            {!isSelf && (
-              <>
-                <div className="flex gap-2 items-stretch">
-                  <button type="button"
-                    onClick={openConversation}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
-                      border border-border text-sm font-medium text-ink-secondary
-                      hover:bg-primary-faint hover:text-ink transition-colors"
-                  >
-                    <MessageSquare size={15} />
-                    Message {person.full_name.trim() || 'this person'}
-                  </button>
-                  {person.role === 'student' && (
-                    <ShortlistButton studentId={person.id} size={16} className="px-3 py-2.5" />
+            {!isSelf && (() => {
+              // Task 2 — adult cannot first-message a non-consenting student.
+              const viewerIsAdult = myProfile?.role === 'employer_mentor'
+              const targetIsStudent = person.role === 'student'
+              const consentOff = !person.student_outreach_consent
+              const outreachBlocked = viewerIsAdult && targetIsStudent && consentOff
+              return (
+                <>
+                  {outreachBlocked ? (
+                    <div className="rounded-lg border border-border bg-primary-faint px-3 py-3 text-xs text-ink-secondary">
+                      This student isn't accepting outreach. You'll see them here if they apply to one of your opportunities, or if they message you first.
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 items-stretch">
+                      <button type="button"
+                        onClick={openConversation}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
+                          border border-border text-sm font-medium text-ink-secondary
+                          hover:bg-primary-faint hover:text-ink transition-colors"
+                      >
+                        <MessageSquare size={15} />
+                        Message {person.full_name.trim() || 'this person'}
+                      </button>
+                      {person.role === 'student' && (
+                        <ShortlistButton studentId={person.id} size={16} className="px-3 py-2.5" />
+                      )}
+                    </div>
                   )}
-                </div>
-                {/* SEC-003 — flag a problematic profile to school staff. */}
-                <div className="flex justify-center">
-                  <ReportUserButton targetId={person.id} targetName={person.full_name} />
-                </div>
-              </>
-            )}
+                  {/* SEC-003 — flag a problematic profile to school staff. */}
+                  <div className="flex justify-center">
+                    <ReportUserButton targetId={person.id} targetName={person.full_name} />
+                  </div>
+                </>
+              )
+            })()}
 
             {isSelf && (
               <Link
