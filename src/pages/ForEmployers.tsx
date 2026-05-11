@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Briefcase, Users, ShieldCheck, FileText, Send } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
 import CommunityStats from '../components/CommunityStats'
+import Footer from '../components/Footer'
 
 /**
  * P2-20 — public pitch page for prospective employers / posting partners.
@@ -122,15 +123,7 @@ export default function ForEmployers() {
         </Link>
       </section>
 
-      <footer className="px-6 sm:px-10 py-8 mt-auto border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-muted">
-        <p>© Colorado Rocky Mountain School</p>
-        <div className="flex gap-4">
-          <Link to="/" className="hover:text-ink">Home</Link>
-          <Link to="/about" className="hover:text-ink">About</Link>
-          <Link to="/privacy" className="hover:text-ink">Privacy</Link>
-          <Link to="/contact" className="hover:text-ink">Contact</Link>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

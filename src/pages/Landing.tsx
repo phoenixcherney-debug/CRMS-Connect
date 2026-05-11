@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Briefcase, Users, MessageSquare } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
+import Footer from '../components/Footer'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
 
@@ -101,17 +102,7 @@ export default function Landing() {
         ))}
       </section>
 
-      {/* Footer links */}
-      <footer className="px-6 sm:px-10 py-8 mt-auto border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-muted">
-        <p>© Colorado Rocky Mountain School</p>
-        <div className="flex gap-4 flex-wrap justify-center">
-          <Link to="/for-mentors" className="hover:text-ink">For Mentors</Link>
-          <Link to="/for-employers" className="hover:text-ink">For Employers</Link>
-          <Link to="/about" className="hover:text-ink">Why CRMS Connect?</Link>
-          <Link to="/privacy" className="hover:text-ink">Privacy</Link>
-          <Link to="/contact" className="hover:text-ink">Contact</Link>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

@@ -11,7 +11,8 @@
     "test": "vitest run --exclude='e2e/**'",
     "test:watch": "vitest --exclude='e2e/**'",
     "e2e": "playwright test",
-    "e2e:install": "playwright install --with-deps chromium"
+    "e2e:install": "playwright install --with-deps chromium",
+    "check:links": "tsx scripts/check-links.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",
