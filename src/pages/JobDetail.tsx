@@ -209,6 +209,14 @@ export default function JobDetail() {
     }
     setCoverNoteError(null)
 
+    // Task 21 — minimum 120 chars on cover note. Server-side trigger
+    // on applications already protects, but inline UX is friendlier.
+    if (note.length < 120) {
+      setCoverNoteError(`Cover note must be at least 120 characters (currently ${note.length}).`)
+      document.getElementById('cover-note')?.focus()
+      return
+    }
+
     // Audit task 2 — friendly error before the DB trigger raises.
     const cleanedNote = sanitizeUserText(note)
     if (cleanedNote.rejected) {
@@ -250,11 +258,15 @@ export default function JobDetail() {
     // cap and PDF-only MIME allow-list; column has a `\.pdf$` CHECK.
     if (resumeFile) {
       if (resumeFile.size > 5 * 1024 * 1024) {
-        setResumeFileError('Resume PDF must be 5 MB or less.')
+        setResumeFileError('Resume must be 5 MB or less.')
         return
       }
-      if (resumeFile.type !== 'application/pdf' && !/\.pdf$/i.test(resumeFile.name)) {
-        setResumeFileError('Resume must be a PDF.')
+      // Task 22 — accept PDF or DOCX.
+      const isPdf  = resumeFile.type === 'application/pdf' || /\.pdf$/i.test(resumeFile.name)
+      const isDocx = resumeFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        || /\.docx$/i.test(resumeFile.name)
+      if (!isPdf && !isDocx) {
+        setResumeFileError('Resume must be PDF or DOCX (under 5 MB).')
         return
       }
     }
@@ -298,11 +310,21 @@ export default function JobDetail() {
     // to come after the INSERT above. Failures are toast-only — the
     // application itself already landed.
     if (resumeFile) {
+      // Task 22 — keep the file's real extension so the poster's
+      // download isn't mislabeled as PDF when a DOCX was uploaded.
+      const isDocxFile =
+        resumeFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        || /\.docx$/i.test(resumeFile.name)
+      const ext = isDocxFile ? '.docx' : '.pdf'
+      const mime = isDocxFile
+        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        : 'application/pdf'
       const safeName = resumeFile.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80)
-      const path = `resumes/${created.id}/${safeName.endsWith('.pdf') ? safeName : safeName + '.pdf'}`
+      const baseName = safeName.replace(/\.(pdf|docx)$/i, '')
+      const path = `resumes/${created.id}/${baseName}${ext}`
       const { error: upErr } = await supabase.storage
         .from('resumes')
-        .upload(path, resumeFile, { contentType: 'application/pdf', upsert: true })
+        .upload(path, resumeFile, { contentType: mime, upsert: true })
       if (upErr) {
         toast('Application submitted, but the resume upload failed. Re-upload from your application later.', { kind: 'error' })
       } else {
@@ -679,17 +701,31 @@ export default function JobDetail() {
                     id="cover-note"
                     rows={4}
                     required
+                    minLength={120}
                     maxLength={2000}
                     value={coverNote}
                     onChange={(e) => { setCoverNote(e.target.value); if (coverNoteError) setCoverNoteError(null) }}
                     placeholder="Introduce yourself and explain why you're a great fit…"
                     aria-invalid={!!coverNoteError}
-                    aria-describedby={coverNoteError ? 'cover-note-error' : undefined}
+                    aria-describedby={coverNoteError ? 'cover-note-error' : 'cover-note-counter'}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
                       placeholder:text-ink-placeholder resize-none
                       focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
                       transition-colors"
                   />
+                  {/* Task 21 — live counter + soft nudge under 100 chars. */}
+                  <div id="cover-note-counter" className="mt-1 flex items-start justify-between gap-3 text-xs">
+                    <span className={coverNote.length < 100 ? 'text-ink-secondary' : 'text-ink-muted'}>
+                      {coverNote.length < 100
+                        ? 'This looks short — a sentence or two about why you\'re interested goes a long way.'
+                        : coverNote.length < 120
+                        ? 'Almost there.'
+                        : 'Looks good.'}
+                    </span>
+                    <span className={coverNote.length < 120 ? 'text-error font-medium' : 'text-ink-muted'}>
+                      {coverNote.length} / 120 minimum
+                    </span>
+                  </div>
                   {coverNoteError && (
                     <p id="cover-note-error" role="alert" className="mt-1 text-xs text-error">
                       {coverNoteError}
@@ -767,8 +803,8 @@ export default function JobDetail() {
                     per-application upload. */}
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">
-                    Resume PDF{' '}
-                    <span className="text-ink-muted font-normal">(optional · 5 MB max)</span>
+                    Resume{' '}
+                    <span className="text-ink-muted font-normal">(PDF or DOCX · 5 MB max · optional)</span>
                   </label>
                   {profile?.default_resume_path && useDefaultResume ? (
                     <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-primary-faint text-sm">
@@ -785,12 +821,12 @@ export default function JobDetail() {
                     <>
                       <input
                         type="file"
-                        accept="application/pdf"
+                        accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.docx"
                         onChange={(e) => {
                           const f = e.target.files?.[0] ?? null
                           setResumeFileError(null)
                           if (f && f.size > 5 * 1024 * 1024) {
-                            setResumeFileError('Resume PDF must be 5 MB or less.')
+                            setResumeFileError('Resume must be PDF or DOCX (under 5 MB).')
                             e.target.value = ''
                             setResumeFile(null)
                             return

@@ -149,8 +149,9 @@ export default function JobCard({ job, actions, applicantCount }: JobCardProps) 
           )}
         </div>
 
-        {/* Description preview */}
-        <p className="text-sm text-ink-secondary leading-relaxed line-clamp-2">
+        {/* Description preview. Task 18 — flex-grow so cards in the
+            same row settle to equal heights. */}
+        <p className="text-sm text-ink-secondary leading-relaxed line-clamp-2 flex-1">
           {job.description}
         </p>
       </Link>

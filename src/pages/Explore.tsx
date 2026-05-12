@@ -147,21 +147,9 @@ export default function Explore() {
               : 'Discover opportunities and connect with employers and mentors in the CRMS community.'}
           </p>
 
-          {/* Inline stats */}
-          {!loading && (
-            <div className="flex items-center gap-0 mb-7">
-              {[
-                { value: stats.jobs, label: 'Opportunities' },
-                { value: stats.people, label: 'Members' },
-                { value: stats.companies, label: 'Companies' },
-              ].map(({ value, label }, i) => (
-                <div key={label} className={`${i > 0 ? 'border-l border-white/20 pl-5 ml-5' : ''}`}>
-                  <p className="text-2xl font-bold text-white">{value}</p>
-                  <p className="text-xs text-white/50 font-medium">{label}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Task 17 — stat blocks removed from the hero; they were
+              decorative chrome at this size. The same numbers still
+              ship on the public marketing pages via CommunityStats. */}
 
           <form onSubmit={handleSearch} className="flex gap-2 max-w-xl">
             <div className="relative flex-1">

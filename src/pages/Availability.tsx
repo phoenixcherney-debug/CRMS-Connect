@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import {
   Plus, ChevronLeft, ChevronRight, X, Trash2,
   Calendar, List, LayoutGrid, Clock, AlertCircle, Repeat,
@@ -462,6 +462,14 @@ function TimeGrid({ dayColumns, onSlotClick }: {
   dayColumns: { label: ReactNode; isToday: boolean; occs: Occ[] }[]
   onSlotClick: (s: AvailSlot) => void
 }) {
+  // Task 23 — open the grid scrolled to 8 AM on first mount so the
+  // working hours are visible without manual scrolling.
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTop = (8 - HR_S) * HR_H
+  }, [])
   return (
     <div className="border border-border rounded-2xl overflow-hidden bg-surface">
       {/* Day header row */}
@@ -469,7 +477,7 @@ function TimeGrid({ dayColumns, onSlotClick }: {
         {dayColumns.map((col, i) => (
           <div
             key={i}
-            className={`flex-1 py-2.5 text-center border-l border-border ${i === 0 ? 'border-l-0' : ''}`}
+            className={`flex-1 py-2.5 text-center border-l border-border ${i === 0 ? 'border-l-0' : ''} ${col.isToday ? 'bg-primary-faint' : ''}`}
           >
             {col.label}
           </div>
@@ -479,7 +487,7 @@ function TimeGrid({ dayColumns, onSlotClick }: {
       {/* Scrollable grid body */}
       <div className="overflow-x-auto">
         <div style={{ minWidth: dayColumns.length === 1 ? 260 : 520 }}>
-          <div className="overflow-y-auto" style={{ maxHeight: 504 }}>
+          <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 504 }}>
             <div className="flex" style={{ height: GRID_H }}>
               {/* Hour labels */}
               <div className="flex flex-col shrink-0" style={{ width: 52 }}>
@@ -498,7 +506,7 @@ function TimeGrid({ dayColumns, onSlotClick }: {
               {dayColumns.map((col, ci) => (
                 <div
                   key={ci}
-                  className="relative flex-1 border-l border-border"
+                  className={`relative flex-1 border-l border-border ${col.isToday ? 'bg-primary-faint/30' : ''}`}
                   style={{ minWidth: 0 }}
                 >
                   {/* Hour lines */}

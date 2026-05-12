@@ -70,7 +70,7 @@ export default function ForMentors() {
             CRMS Connect lets alumni and local professionals advise current
             students on internships, college, careers — whatever they're
             puzzling over. Set your own availability, stay private until you
-            decide otherwise, and only meet the students you want to.
+            decide otherwise, and you decide which students you have time to meet.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
