@@ -20,7 +20,6 @@ import MentorVisibilityCard from '../components/MentorVisibilityCard'
 import PhotoBioNudge from '../components/PhotoBioNudge'
 import MentorAnalyticsCard from '../components/MentorAnalyticsCard'
 import MentorReconfirmPrompt from '../components/MentorReconfirmPrompt'
-import { getCommunityStats } from '../lib/stats'
 import { firstNameOf } from '../lib/preferredName'
 import { isPast, parseISO } from 'date-fns'
 
@@ -34,7 +33,6 @@ export default function Explore() {
   const [recentJobs, setRecentJobs] = useState<Job[]>([])
   const [recentPeople, setRecentPeople] = useState<Profile[]>([])
   const [mentors, setMentors] = useState<Profile[]>([])
-  const [stats, setStats] = useState({ jobs: 0, people: 0, companies: 0 })
   const [loading, setLoading] = useState(true)
 
   const isEmployerMentor = profile?.role === 'employer_mentor'
@@ -45,7 +43,6 @@ export default function Explore() {
       const [
         { data: jobs },
         { data: people, error: peopleError },
-        community,
       ] = await Promise.all([
         supabase
           .from('jobs')
@@ -62,8 +59,6 @@ export default function Explore() {
           .neq('role', 'admin')
           .order('created_at', { ascending: false })
           .limit(12),
-        // Task 5 — single source of truth for headcounts.
-        getCommunityStats(),
       ])
 
       if (peopleError) console.error('Explore: profiles query failed', peopleError)
@@ -76,12 +71,6 @@ export default function Explore() {
       setRecentJobs(jobList)
       setRecentPeople(peopleList)
       setMentors(peopleList.filter((p) => p.open_to_mentorship && p.role === 'employer_mentor' && p.id !== profile?.id))
-
-      setStats({
-        jobs:      community.opportunitiesActive,
-        people:    community.members,
-        companies: community.companies,
-      })
       setLoading(false)
     }
     load()
