@@ -12,6 +12,9 @@ import {
   MENTOR_TYPE_LABELS, STUDENT_SEEKING_LABELS,
 } from '../types'
 import Spinner from '../components/Spinner'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { friendlyError } from '../lib/errors'
+import { useToast } from '../components/ToastProvider'
 
 export default function AdminUserView() {
   const { id } = useParams<{ id: string }>()
@@ -28,6 +31,11 @@ export default function AdminUserView() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [confirmDeleteJob, setConfirmDeleteJob] = useState<string | null>(null)
   const [messagingLoading, setMessagingLoading] = useState(false)
+  // Account-delete flow (mirrors AdminPanel): typed email confirms.
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false)
+  const [typedConfirm, setTypedConfirm] = useState('')
+  const [deletingAccount, setDeletingAccount] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     if (id) load(id)
@@ -95,6 +103,19 @@ export default function AdminUserView() {
     const { error } = await supabase.rpc('admin_unban_user', { target_id: id })
     if (error) { setActionError(error.message); return }
     setPerson(prev => prev ? { ...prev, banned_at: null } : prev)
+  }
+
+  async function handleDeleteAccount() {
+    if (!id || deletingAccount) return
+    setDeletingAccount(true)
+    const { error } = await supabase.rpc('admin_delete_user', { target_id: id })
+    setDeletingAccount(false)
+    if (error) {
+      toast(friendlyError(error, 'Could not delete that account.'), { kind: 'error' })
+      return
+    }
+    toast(`${person?.full_name || email || 'Account'} deleted.`)
+    navigate('/admin', { replace: true })
   }
 
   async function handleDeleteJob(jobId: string) {
@@ -236,6 +257,19 @@ export default function AdminUserView() {
           >
             <Ban size={13} />
             Ban
+          </button>
+        )}
+        {/* Permanent delete — hidden when the target is another admin
+            (use the demote flow first) or when viewing yourself. */}
+        {person.role !== 'admin' && person.id !== adminProfile?.id && (
+          <button type="button"
+            onClick={() => { setConfirmDeleteAccount(true); setTypedConfirm('') }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:bg-error-bg"
+            style={{ borderColor: 'var(--color-error)', color: 'var(--color-error)' }}
+            title="Permanently delete this account"
+          >
+            <Trash2 size={13} />
+            Delete account
           </button>
         )}
       </div>
@@ -559,6 +593,33 @@ export default function AdminUserView() {
           <p className="text-sm text-ink-muted">Admin accounts have no associated content.</p>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteAccount}
+        title={`Delete ${person?.full_name ?? 'this account'}?`}
+        description={'This permanently removes the auth row and cascades to their profile, applications, posts, messages, and uploads. This cannot be undone.'}
+        confirmLabel={deletingAccount ? 'Deleting…' : 'Permanently delete'}
+        confirmDisabled={
+          deletingAccount
+          || !email
+          || typedConfirm.trim().toLowerCase() !== (email ?? '').trim().toLowerCase()
+        }
+        destructive
+        onConfirm={handleDeleteAccount}
+        onCancel={() => { if (!deletingAccount) { setConfirmDeleteAccount(false); setTypedConfirm('') } }}
+      >
+        <label className="block text-xs font-medium text-ink mb-1.5">
+          Type the account's email to confirm: <span className="font-mono text-ink-secondary">{email ?? ''}</span>
+        </label>
+        <input
+          type="email"
+          value={typedConfirm}
+          onChange={(e) => setTypedConfirm(e.target.value)}
+          placeholder={email ?? ''}
+          autoComplete="off"
+          className="w-full mb-3 px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+        />
+      </ConfirmDialog>
     </div>
   )
 }
