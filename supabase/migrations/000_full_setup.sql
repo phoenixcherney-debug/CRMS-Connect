@@ -1196,6 +1196,511 @@ CREATE POLICY profiles_hide_admin_rows
   );
 
 
+-- ════════════════════════════════════════════════════════════════
+-- Round 3 appendix — migrations 057–080 folded into the bootstrap.
+-- Everything below is idempotent (CREATE OR REPLACE / DROP IF
+-- EXISTS / ADD IF NOT EXISTS) so applying 000 on a fresh DB or on
+-- top of an already-migrated DB both land in the same state.
+-- ════════════════════════════════════════════════════════════════
+
+-- ── 057 — drop the same-role DM-block trigger ───────────────────
+DROP TRIGGER IF EXISTS messages_block_same_role ON public.messages;
+DROP FUNCTION IF EXISTS public.messages_block_same_role_trg();
+
+-- ── 060 — extend opportunity_view_stats output ──────────────────
+-- (no schema change beyond the function; see migration 055 + 060)
+
+-- ── 061 — mentorship pause + 062 — jobs draft + 064 — notif prefs
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS mentorship_paused_until DATE,
+  ADD COLUMN IF NOT EXISTS notification_preferences JSONB;
+ALTER TABLE public.jobs
+  ADD COLUMN IF NOT EXISTS is_draft BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- ── 063 — resume uploads ────────────────────────────────────────
+ALTER TABLE public.applications
+  ADD COLUMN IF NOT EXISTS resume_path TEXT;
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'resumes', 'resumes', FALSE, 5 * 1024 * 1024,
+  ARRAY['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+)
+ON CONFLICT (id) DO UPDATE
+  SET public = EXCLUDED.public,
+      file_size_limit = EXCLUDED.file_size_limit,
+      allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- ── 065 — mentor visibility card seen ───────────────────────────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS seen_mentor_visibility_card BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- ── 066 — student profile sections ──────────────────────────────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS skills TEXT[] NOT NULL DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS projects JSONB NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS links JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ADD COLUMN IF NOT EXISTS default_resume_path TEXT;
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_skills_max12;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_skills_max12
+    CHECK (array_length(skills, 1) IS NULL OR array_length(skills, 1) <= 12);
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_projects_shape;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_projects_shape
+    CHECK (jsonb_typeof(projects) = 'array' AND jsonb_array_length(projects) <= 4);
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_links_shape;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_links_shape CHECK (jsonb_typeof(links) = 'object');
+-- Resume-path CHECK is widened by 078 below to accept PDF or DOCX.
+
+-- ── 067 — mentor shortlist (a.k.a. saved candidates) ────────────
+CREATE TABLE IF NOT EXISTS public.mentor_shortlist (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mentor_id    UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  student_id   UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  note         TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT mentor_shortlist_unique UNIQUE (mentor_id, student_id),
+  CONSTRAINT mentor_shortlist_note_len CHECK (note IS NULL OR char_length(note) <= 200),
+  CONSTRAINT mentor_shortlist_no_self CHECK (mentor_id <> student_id)
+);
+CREATE INDEX IF NOT EXISTS mentor_shortlist_mentor_idx
+  ON public.mentor_shortlist (mentor_id, created_at DESC);
+ALTER TABLE public.mentor_shortlist ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS mentor_shortlist_select_own ON public.mentor_shortlist;
+CREATE POLICY mentor_shortlist_select_own ON public.mentor_shortlist FOR SELECT TO authenticated
+  USING (auth.uid() = mentor_id);
+DROP POLICY IF EXISTS mentor_shortlist_insert_own ON public.mentor_shortlist;
+CREATE POLICY mentor_shortlist_insert_own ON public.mentor_shortlist FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = mentor_id);
+DROP POLICY IF EXISTS mentor_shortlist_update_own ON public.mentor_shortlist;
+CREATE POLICY mentor_shortlist_update_own ON public.mentor_shortlist FOR UPDATE TO authenticated
+  USING (auth.uid() = mentor_id) WITH CHECK (auth.uid() = mentor_id);
+DROP POLICY IF EXISTS mentor_shortlist_delete_own ON public.mentor_shortlist;
+CREATE POLICY mentor_shortlist_delete_own ON public.mentor_shortlist FOR DELETE TO authenticated
+  USING (auth.uid() = mentor_id);
+
+-- ── 068 — IANA timezone on availability slots ───────────────────
+ALTER TABLE public.availability_slots
+  ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'America/Denver';
+ALTER TABLE public.availability_slots
+  DROP CONSTRAINT IF EXISTS availability_slots_timezone_shape;
+ALTER TABLE public.availability_slots
+  ADD CONSTRAINT availability_slots_timezone_shape
+    CHECK (char_length(timezone) BETWEEN 3 AND 64 AND timezone ~ '^[A-Za-z]+(/[A-Za-z_\-+0-9]+){0,2}$');
+
+-- ── 069 — typed custom application questions (≤5) ──────────────
+ALTER TABLE public.jobs
+  ADD COLUMN IF NOT EXISTS custom_questions_v2 JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.jobs
+  DROP CONSTRAINT IF EXISTS jobs_custom_questions_max3;
+ALTER TABLE public.jobs
+  DROP CONSTRAINT IF EXISTS jobs_custom_questions_v2_shape;
+ALTER TABLE public.jobs
+  ADD CONSTRAINT jobs_custom_questions_v2_shape
+    CHECK (jsonb_typeof(custom_questions_v2) = 'array' AND jsonb_array_length(custom_questions_v2) <= 5);
+
+-- ── 070 — opt-in public Mentor Wall ─────────────────────────────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS show_on_mentor_wall BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE OR REPLACE FUNCTION public.list_mentor_wall()
+RETURNS TABLE (
+  id           UUID,
+  full_name    TEXT,
+  avatar_url   TEXT,
+  company      TEXT,
+  industry     TEXT,
+  mentor_type  TEXT,
+  mentor_type_other TEXT
+) LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  SELECT id, full_name, avatar_url, company, industry, mentor_type::text, mentor_type_other
+    FROM public.profiles
+   WHERE role = 'employer_mentor'
+     AND show_on_mentor_wall = TRUE
+     AND coalesce(banned_at, 'epoch'::timestamptz) <= 'epoch'::timestamptz
+   ORDER BY created_at DESC
+   LIMIT 60;
+$$;
+REVOKE ALL ON FUNCTION public.list_mentor_wall() FROM public;
+GRANT EXECUTE ON FUNCTION public.list_mentor_wall() TO anon, authenticated;
+
+-- ── 071 / 076 — community_stats() (single source of truth) ──────
+DROP FUNCTION IF EXISTS public.community_stats();
+CREATE OR REPLACE FUNCTION public.community_stats()
+RETURNS TABLE (
+  members              BIGINT,
+  students             BIGINT,
+  mentors              BIGINT,
+  companies            BIGINT,
+  opportunities_active BIGINT
+) LANGUAGE sql SECURITY DEFINER SET search_path = public STABLE AS $$
+  SELECT
+    (SELECT count(*) FROM public.profiles
+       WHERE role <> 'admin'
+         AND coalesce(banned_at, 'epoch'::timestamptz) <= 'epoch'::timestamptz),
+    (SELECT count(*) FROM public.profiles
+       WHERE role = 'student'
+         AND coalesce(array_length(interests, 1), 0) >= 1
+         AND coalesce(banned_at, 'epoch'::timestamptz) <= 'epoch'::timestamptz),
+    (SELECT count(*) FROM public.profiles
+       WHERE role = 'employer_mentor'
+         AND open_to_mentorship = TRUE
+         AND coalesce(banned_at, 'epoch'::timestamptz) <= 'epoch'::timestamptz),
+    (SELECT count(DISTINCT btrim(company)) FROM public.jobs
+       WHERE is_active = TRUE
+         AND coalesce(is_draft, FALSE) = FALSE
+         AND company IS NOT NULL
+         AND btrim(company) <> ''),
+    (SELECT count(*) FROM public.jobs
+       WHERE is_active = TRUE
+         AND coalesce(is_draft, FALSE) = FALSE
+         AND (deadline IS NULL OR deadline >= current_date));
+$$;
+REVOKE ALL ON FUNCTION public.community_stats() FROM public;
+GRANT EXECUTE ON FUNCTION public.community_stats() TO anon, authenticated;
+
+-- ── 072 — invite tracking ───────────────────────────────────────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS invited_by_user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_invited_by_not_self;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_invited_by_not_self
+    CHECK (invited_by_user_id IS NULL OR invited_by_user_id <> id);
+CREATE INDEX IF NOT EXISTS profiles_invited_by_idx
+  ON public.profiles (invited_by_user_id) WHERE invited_by_user_id IS NOT NULL;
+
+-- ── 073 — server-side text filter for slurs / grooming-adjacent ─
+CREATE OR REPLACE FUNCTION public.text_has_blocked_terms(input TEXT)
+RETURNS BOOLEAN LANGUAGE plpgsql IMMUTABLE AS $$
+DECLARE
+  flat TEXT; pat TEXT;
+  pats TEXT[] := ARRAY[
+    '[n][i1!][g][g3][3e][r]','[n][i1!][g][g3][3e][a4@]','[f][a4@][g][g][o0][t7]',
+    '[r][3e][t7][a4@][r][d]','[t7][r][a4@][n][n][y]','[k][i1!][k][3e]',
+    '[s$5][p][i1!][c]','[c][h][i1!][n][k]','[g][o0][o0][k]',
+    '[w][3e][t7][b][a4@][c][k]','[c][o0][o0][n]','[c][u][n][t7]',
+    '[p][3e][d][o0]','[r][a4@][p][i1!][s$5][t7]','[m][o0][l][3e][s$5][t7][3e][r]',
+    'likeslittleboys','likeslittlegirls','lickslittleboys','lickslittlegirls'
+  ];
+BEGIN
+  IF input IS NULL OR length(input) = 0 THEN RETURN FALSE; END IF;
+  flat := regexp_replace(lower(input), '[^a-z0-9$@!]+', '', 'g');
+  IF flat = '' THEN RETURN FALSE; END IF;
+  FOREACH pat IN ARRAY pats LOOP
+    IF flat ~ pat THEN RETURN TRUE; END IF;
+  END LOOP;
+  RETURN FALSE;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.profiles_check_text_filter_trg()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF public.text_has_blocked_terms(NEW.full_name) THEN
+    RAISE EXCEPTION 'crms: blocked term in name'
+      USING ERRCODE = 'check_violation', HINT = 'blocked_term:name';
+  END IF;
+  IF public.text_has_blocked_terms(NEW.bio) THEN
+    RAISE EXCEPTION 'crms: blocked term in bio'
+      USING ERRCODE = 'check_violation', HINT = 'blocked_term:bio';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS profiles_check_text_filter ON public.profiles;
+CREATE TRIGGER profiles_check_text_filter
+  BEFORE INSERT OR UPDATE OF full_name, bio ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.profiles_check_text_filter_trg();
+
+CREATE OR REPLACE FUNCTION public.jobs_check_text_filter_trg()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF public.text_has_blocked_terms(NEW.title)
+     OR public.text_has_blocked_terms(NEW.description)
+     OR public.text_has_blocked_terms(NEW.how_to_apply)
+     OR public.text_has_blocked_terms(NEW.company) THEN
+    RAISE EXCEPTION 'crms: blocked term in opportunity text'
+      USING ERRCODE = 'check_violation', HINT = 'blocked_term:opportunity';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS jobs_check_text_filter ON public.jobs;
+CREATE TRIGGER jobs_check_text_filter
+  BEFORE INSERT OR UPDATE OF title, description, how_to_apply, company ON public.jobs
+  FOR EACH ROW EXECUTE FUNCTION public.jobs_check_text_filter_trg();
+
+CREATE OR REPLACE FUNCTION public.student_posts_check_text_filter_trg()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF public.text_has_blocked_terms(NEW.pitch) THEN
+    RAISE EXCEPTION 'crms: blocked term in student post'
+      USING ERRCODE = 'check_violation', HINT = 'blocked_term:student_post';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS student_posts_check_text_filter ON public.student_posts;
+CREATE TRIGGER student_posts_check_text_filter
+  BEFORE INSERT OR UPDATE OF pitch ON public.student_posts
+  FOR EACH ROW EXECUTE FUNCTION public.student_posts_check_text_filter_trg();
+
+CREATE OR REPLACE FUNCTION public.messages_check_text_filter_trg()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF public.text_has_blocked_terms(NEW.content) THEN
+    RAISE EXCEPTION 'crms: blocked term in message'
+      USING ERRCODE = 'check_violation', HINT = 'blocked_term:message';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS messages_check_text_filter ON public.messages;
+CREATE TRIGGER messages_check_text_filter
+  BEFORE INSERT OR UPDATE OF content ON public.messages
+  FOR EACH ROW EXECUTE FUNCTION public.messages_check_text_filter_trg();
+
+CREATE OR REPLACE FUNCTION public.applications_check_text_filter_trg()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF public.text_has_blocked_terms(NEW.cover_note) THEN
+    RAISE EXCEPTION 'crms: blocked term in cover note'
+      USING ERRCODE = 'check_violation', HINT = 'blocked_term:application';
+  END IF;
+  IF NEW.custom_answers IS NOT NULL
+     AND public.text_has_blocked_terms(NEW.custom_answers::text) THEN
+    RAISE EXCEPTION 'crms: blocked term in custom answers'
+      USING ERRCODE = 'check_violation', HINT = 'blocked_term:application';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS applications_check_text_filter ON public.applications;
+CREATE TRIGGER applications_check_text_filter
+  BEFORE INSERT OR UPDATE OF cover_note, custom_answers ON public.applications
+  FOR EACH ROW EXECUTE FUNCTION public.applications_check_text_filter_trg();
+
+-- ── 074 — student outreach consent ──────────────────────────────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS student_outreach_consent BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE OR REPLACE FUNCTION public.messages_check_outreach_consent_trg()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  sender_role public.role_type; conv_p1 UUID; conv_p2 UUID;
+  other_id UUID; other_role public.role_type;
+  other_consent BOOLEAN; prior_msg_count BIGINT;
+BEGIN
+  SELECT role INTO sender_role FROM public.profiles WHERE id = NEW.sender_id;
+  IF sender_role IS DISTINCT FROM 'employer_mentor' THEN RETURN NEW; END IF;
+  SELECT participant_one, participant_two INTO conv_p1, conv_p2
+    FROM public.conversations WHERE id = NEW.conversation_id;
+  IF conv_p1 IS NULL THEN
+    RAISE EXCEPTION 'crms: conversation not found' USING ERRCODE = 'foreign_key_violation';
+  END IF;
+  other_id := CASE WHEN conv_p1 = NEW.sender_id THEN conv_p2 ELSE conv_p1 END;
+  SELECT role, student_outreach_consent INTO other_role, other_consent
+    FROM public.profiles WHERE id = other_id;
+  IF other_role IS DISTINCT FROM 'student' THEN RETURN NEW; END IF;
+  SELECT count(*) INTO prior_msg_count
+    FROM public.messages m
+   WHERE m.conversation_id = NEW.conversation_id AND m.sender_id = other_id;
+  IF prior_msg_count > 0 THEN RETURN NEW; END IF;
+  IF NOT coalesce(other_consent, FALSE) THEN
+    RAISE EXCEPTION 'crms: student is not accepting outreach'
+      USING ERRCODE = 'check_violation', HINT = 'no_outreach_consent';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS messages_check_outreach_consent ON public.messages;
+CREATE TRIGGER messages_check_outreach_consent
+  BEFORE INSERT ON public.messages
+  FOR EACH ROW EXECUTE FUNCTION public.messages_check_outreach_consent_trg();
+
+CREATE OR REPLACE FUNCTION public.conversations_check_outreach_consent_trg()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  initiator_role public.role_type; target_role public.role_type;
+  target_consent BOOLEAN; initiator_id UUID; target_id UUID;
+BEGIN
+  initiator_id := auth.uid();
+  IF initiator_id IS NULL THEN RETURN NEW; END IF;
+  SELECT role INTO initiator_role FROM public.profiles WHERE id = initiator_id;
+  IF initiator_role IS DISTINCT FROM 'employer_mentor' THEN RETURN NEW; END IF;
+  target_id := CASE WHEN NEW.participant_one = initiator_id THEN NEW.participant_two ELSE NEW.participant_one END;
+  SELECT role, student_outreach_consent INTO target_role, target_consent
+    FROM public.profiles WHERE id = target_id;
+  IF target_role IS DISTINCT FROM 'student' THEN RETURN NEW; END IF;
+  IF NOT coalesce(target_consent, FALSE) THEN
+    RAISE EXCEPTION 'crms: student is not accepting outreach'
+      USING ERRCODE = 'check_violation', HINT = 'no_outreach_consent';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS conversations_check_outreach_consent ON public.conversations;
+CREATE TRIGGER conversations_check_outreach_consent
+  BEFORE INSERT ON public.conversations
+  FOR EACH ROW EXECUTE FUNCTION public.conversations_check_outreach_consent_trg();
+
+-- ── 075 — mentor consent confirmation timestamp + auto-stamp ────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS mentor_consent_confirmed_at TIMESTAMPTZ;
+UPDATE public.profiles
+   SET mentor_consent_confirmed_at = created_at
+ WHERE role = 'employer_mentor'
+   AND open_to_mentorship = TRUE
+   AND mentor_consent_confirmed_at IS NULL;
+CREATE OR REPLACE FUNCTION public.profiles_mentor_consent_stamp_trg()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.open_to_mentorship = TRUE
+     AND (TG_OP = 'INSERT' OR OLD.open_to_mentorship IS DISTINCT FROM TRUE) THEN
+    NEW.mentor_consent_confirmed_at := now();
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS profiles_mentor_consent_stamp ON public.profiles;
+CREATE TRIGGER profiles_mentor_consent_stamp
+  BEFORE INSERT OR UPDATE OF open_to_mentorship ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.profiles_mentor_consent_stamp_trg();
+
+-- ── 077 — interest taxonomy (8 buckets) + specific_interests ────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS specific_interests TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_specific_interests_max20;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_specific_interests_max20
+    CHECK (array_length(specific_interests, 1) IS NULL OR array_length(specific_interests, 1) <= 20);
+-- Remap legacy interests on profiles + student_posts to the new
+-- 8-bucket taxonomy. Re-running is a no-op (all old keys are gone
+-- after the first pass).
+WITH map(old_key, new_key) AS (VALUES
+  ('Technology','Technology & Engineering'),
+  ('Engineering','Technology & Engineering'),
+  ('Architecture & Design','Technology & Engineering'),
+  ('Finance & Banking','Finance, Business & Government'),
+  ('Consulting','Finance, Business & Government'),
+  ('Real Estate','Finance, Business & Government'),
+  ('Government & Public Policy','Finance, Business & Government'),
+  ('Law & Legal','Finance, Business & Government'),
+  ('Healthcare & Medicine','Healthcare & Science'),
+  ('Science & Research','Healthcare & Science'),
+  ('Arts & Entertainment','Arts, Media & Communications'),
+  ('Marketing & Communications','Arts, Media & Communications'),
+  ('Environmental & Sustainability','Environment, Agriculture & Outdoors'),
+  ('Agriculture & Ranching','Environment, Agriculture & Outdoors'),
+  ('Education','Education & Social Impact'),
+  ('Non-Profit & Social Impact','Education & Social Impact'),
+  ('Hospitality & Tourism','Hospitality, Sports & Recreation'),
+  ('Sports & Recreation','Hospitality, Sports & Recreation'),
+  ('Other','Other'))
+UPDATE public.profiles p
+   SET interests = (
+     SELECT array_agg(DISTINCT coalesce(m.new_key, raw)) FROM unnest(p.interests) AS raw
+       LEFT JOIN map m ON m.old_key = raw
+   )
+ WHERE p.interests IS NOT NULL AND array_length(p.interests, 1) IS NOT NULL;
+
+-- ── 078 — accept DOCX resumes (path CHECK + bucket MIME) ────────
+ALTER TABLE public.applications
+  DROP CONSTRAINT IF EXISTS applications_resume_path_pdf;
+ALTER TABLE public.applications
+  ADD CONSTRAINT applications_resume_path_pdf
+    CHECK (resume_path IS NULL OR resume_path ~* '\.(pdf|docx)$');
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_default_resume_pdf;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_default_resume_pdf
+    CHECK (default_resume_path IS NULL OR default_resume_path ~* '\.(pdf|docx)$');
+-- Bucket MIME list was already widened above in the 063 INSERT … ON CONFLICT.
+
+-- ── 079 — preferred_name ────────────────────────────────────────
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS preferred_name TEXT;
+ALTER TABLE public.profiles
+  DROP CONSTRAINT IF EXISTS profiles_preferred_name_len;
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_preferred_name_len
+    CHECK (preferred_name IS NULL OR (char_length(preferred_name) BETWEEN 1 AND 40));
+
+-- ── 072 + 079 — handle_new_user (replaces the 001 definition) ───
+-- Reads invited_by (UUID) and preferred_name from the signup metadata
+-- payload set by AuthContext.signUp.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  inviter UUID;
+  pref    TEXT;
+BEGIN
+  BEGIN
+    inviter := (NEW.raw_user_meta_data->>'invited_by')::uuid;
+    IF inviter = NEW.id THEN inviter := NULL; END IF;
+  EXCEPTION WHEN OTHERS THEN
+    inviter := NULL;
+  END;
+  pref := NULLIF(btrim(NEW.raw_user_meta_data->>'preferred_name'), '');
+  IF pref IS NOT NULL AND char_length(pref) > 40 THEN
+    pref := substr(pref, 1, 40);
+  END IF;
+  INSERT INTO public.profiles (id, full_name, role, invited_by_user_id, preferred_name)
+  VALUES (
+    NEW.id,
+    NEW.raw_user_meta_data->>'full_name',
+    (NEW.raw_user_meta_data->>'role')::public.role_type,
+    inviter,
+    pref
+  );
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN RAISE;
+END;
+$$;
+
+-- ── 080 — admin_delete_user(target_id) ──────────────────────────
+CREATE OR REPLACE FUNCTION public.admin_delete_user(target_id UUID)
+RETURNS BOOLEAN LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE caller_role TEXT; target_role TEXT; admin_count BIGINT;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'crms: not authenticated' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF target_id = auth.uid() THEN
+    RAISE EXCEPTION 'crms: admins cannot delete themselves'
+      USING ERRCODE = 'check_violation', HINT = 'self_delete_forbidden';
+  END IF;
+  SELECT role::text INTO caller_role FROM public.profiles WHERE id = auth.uid();
+  IF caller_role IS DISTINCT FROM 'admin' THEN
+    RAISE EXCEPTION 'crms: admin only' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  SELECT role::text INTO target_role FROM public.profiles WHERE id = target_id;
+  IF target_role IS NULL THEN
+    RAISE EXCEPTION 'crms: user not found'
+      USING ERRCODE = 'no_data_found', HINT = 'no_such_user';
+  END IF;
+  IF target_role = 'admin' THEN
+    SELECT count(*) INTO admin_count FROM public.profiles WHERE role = 'admin';
+    IF admin_count <= 1 THEN
+      RAISE EXCEPTION 'crms: cannot delete the last admin'
+        USING ERRCODE = 'check_violation', HINT = 'last_admin';
+    END IF;
+  END IF;
+  DELETE FROM auth.users WHERE id = target_id;
+  RETURN TRUE;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.admin_delete_user(UUID) FROM public;
+GRANT EXECUTE ON FUNCTION public.admin_delete_user(UUID) TO authenticated;
+
+
 -- ────────────────────────────────────────────────────────────────
 -- Reload PostgREST schema cache so all the additions are visible.
 -- ────────────────────────────────────────────────────────────────
