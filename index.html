@@ -15,10 +15,15 @@
   </head>
   <body>
     <script>
+      // Task 20 — mirror ThemeContext at first paint so a system-light
+      // user doesn't get a dark flash before React mounts.
       (function(){
-        if(localStorage.getItem('theme')==='dark'){
-          document.documentElement.setAttribute('data-theme','dark');
+        var stored = localStorage.getItem('crms-theme') || localStorage.getItem('theme');
+        var theme = stored;
+        if (theme !== 'dark' && theme !== 'light') {
+          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
         }
+        if (theme === 'dark') document.documentElement.setAttribute('data-theme','dark');
       })();
     </script>
     <div id="root"></div>
