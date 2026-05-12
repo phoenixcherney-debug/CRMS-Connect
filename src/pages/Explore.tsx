@@ -21,14 +21,11 @@ import PhotoBioNudge from '../components/PhotoBioNudge'
 import MentorAnalyticsCard from '../components/MentorAnalyticsCard'
 import MentorReconfirmPrompt from '../components/MentorReconfirmPrompt'
 import { getCommunityStats } from '../lib/stats'
+import { firstNameOf } from '../lib/preferredName'
 import { isPast, parseISO } from 'date-fns'
 
-/** Audit task 17 — preserve the casing the user typed. We only trim
- *  whitespace; we don't re-capitalize. Names like "O'Brien", "Mary-Ann",
- *  or a deliberately lowercase "sam" all render verbatim. */
-function greetingFirstName(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] ?? ''
-}
+// Task 24 — greeting first-name resolution lives in lib/preferredName
+// so signup, profile, conversation, and admin all agree.
 
 export default function Explore() {
   const { profile } = useAuth()
@@ -134,7 +131,7 @@ export default function Explore() {
           </p>
           <h1 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
             {(() => {
-              const first = profile?.full_name ? greetingFirstName(profile.full_name) : ''
+              const first = firstNameOf(profile)
               // M-01 — H1 used to read "{first}'s Dashboard" but the URL is
               // /explore. Reframed as a personal welcome so the heading
               // matches the route's purpose (explore community + stats).

@@ -33,6 +33,9 @@ export type StudentGrade = typeof STUDENT_GRADES[number]
 export interface Profile {
   id: string
   full_name: string
+  /** Task 24 — optional preferred first name; defaults to first
+   *  whitespace-delimited token of full_name when null. */
+  preferred_name?: string | null
   role: Role
   graduation_year?: number | null
   bio?: string | null

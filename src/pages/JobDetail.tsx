@@ -12,6 +12,7 @@ import { friendlyError } from '../lib/errors'
 import { validateExternalUrl, safeExternalHref } from '../lib/url'
 import { sanitizeUserText } from '../lib/sanitize'
 import { containsBlockedTerms } from '../lib/textFilter'
+import { firstNameOf } from '../lib/preferredName'
 import type { Job, Application, ApplicationStatus, CustomQuestion } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, ROLE_LABELS } from '../types'
 
@@ -93,7 +94,7 @@ export default function JobDetail() {
       setLoading(true)
       const { data } = await supabase
         .from('jobs')
-        .select('*, profiles!jobs_posted_by_fkey(id, full_name, role, graduation_year)')
+        .select('*, profiles!jobs_posted_by_fkey(id, full_name, preferred_name, role, graduation_year)')
         .eq('id', id!)
         .single()
       setJob(data as Job)
@@ -553,7 +554,7 @@ export default function JobDetail() {
                     hover:text-ink transition-colors"
                 >
                   <MessageSquare size={14} />
-                  Message {job.profiles.full_name.trim() || 'poster'}
+                  Message {firstNameOf(job.profiles) || job.profiles.full_name.trim() || 'poster'}
                 </button>
               )}
             </div>

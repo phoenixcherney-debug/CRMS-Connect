@@ -26,6 +26,9 @@ export default function Signup() {
   const invitedBy = searchParams.get('invited_by')
 
   const [fullName, setFullName] = useState('')
+  // Task 24 — optional preferred first name. Falls back to the first
+  // token of fullName when blank.
+  const [preferredName, setPreferredName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   // P3-39 — confirm-password.
@@ -54,7 +57,7 @@ export default function Signup() {
     setFormError(null)
     setSubmitting(true)
 
-    const { error } = await signUp({ email, password, fullName, role, invitedBy })
+    const { error } = await signUp({ email, password, fullName, role, invitedBy, preferredName })
     setSubmitting(false)
 
     if (error) {
@@ -176,6 +179,27 @@ export default function Signup() {
                   focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
                   transition-colors"
               />
+            </div>
+
+            {/* Task 24 — preferred name (optional). */}
+            <div>
+              <label htmlFor="preferredName" className="block text-sm text-ink mb-1.5" style={{ fontWeight: 700 }}>
+                Preferred name <span className="text-ink-muted font-normal">(optional)</span>
+              </label>
+              <input
+                id="preferredName"
+                type="text"
+                autoComplete="given-name"
+                maxLength={40}
+                value={preferredName}
+                onChange={(e) => setPreferredName(e.target.value)}
+                placeholder="What should we call you?"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                  placeholder:text-ink-placeholder
+                  focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
+                  transition-colors"
+              />
+              <p className="mt-1 text-xs text-ink-muted">Defaults to your first name.</p>
             </div>
 
             {/* Role selector */}

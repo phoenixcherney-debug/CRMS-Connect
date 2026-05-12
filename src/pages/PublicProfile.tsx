@@ -10,6 +10,7 @@ import { ROLE_LABELS, MENTOR_TYPE_LABELS, STUDENT_SEEKING_PUBLIC } from '../type
 import Spinner from '../components/Spinner'
 import ReportUserButton from '../components/ReportUserButton'
 import ShortlistButton from '../components/ShortlistButton'
+import { firstNameOf } from '../lib/preferredName'
 import { initialsOf } from '../lib/initials'
 
 interface AvailSlot {
@@ -57,7 +58,7 @@ export default function PublicProfile() {
         supabase
           .from('profiles')
           .select(`
-            id, full_name, role, graduation_year, bio, avatar_url, company, industry,
+            id, full_name, preferred_name, role, graduation_year, bio, avatar_url, company, industry,
             open_to_mentorship, meeting_request_mode, created_at, interests, weekly_availability,
             grade, share_grade_with_employers, student_outreach_consent,
             mentor_type, mentor_type_other,
@@ -662,7 +663,7 @@ export default function PublicProfile() {
                           hover:bg-primary-faint hover:text-ink transition-colors"
                       >
                         <MessageSquare size={15} />
-                        Message {person.full_name.trim() || 'this person'}
+                        Message {firstNameOf(person) || person.full_name.trim() || 'this person'}
                       </button>
                       {person.role === 'student' && (
                         <ShortlistButton studentId={person.id} size={16} className="px-3 py-2.5" />

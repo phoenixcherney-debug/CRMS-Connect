@@ -98,7 +98,7 @@ export default function Conversation() {
 
         const { data: other } = await supabase
           .from('profiles')
-          .select('id, full_name, avatar_url, role, graduation_year')
+          .select('id, full_name, avatar_url, role, graduation_year, preferred_name')
           .eq('id', otherId)
           .single()
 

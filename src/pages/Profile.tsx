@@ -33,6 +33,7 @@ export default function Profile() {
   const [editing, setEditing] = useState(pathname === '/profile/edit')
 
   const [fullName, setFullName]                     = useState('')
+  const [preferredName, setPreferredName]           = useState('')
   const [bio, setBio]                               = useState('')
   const [graduationYear, setGraduationYear]         = useState('')
   const [avatarUrl, setAvatarUrl]                   = useState('')
@@ -106,6 +107,7 @@ export default function Profile() {
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name ?? '')
+      setPreferredName(profile.preferred_name ?? '')
       setBio(profile.bio ?? '')
       setGraduationYear(profile.graduation_year?.toString() ?? '')
       setAvatarUrl(profile.avatar_url ?? '')
@@ -171,6 +173,7 @@ export default function Profile() {
 
   function handleCancel() {
     setFullName(profile!.full_name ?? '')
+    setPreferredName(profile!.preferred_name ?? '')
     setBio(profile!.bio ?? '')
     setGraduationYear(profile!.graduation_year?.toString() ?? '')
     setAvatarUrl(profile!.avatar_url ?? '')
@@ -335,6 +338,8 @@ export default function Profile() {
 
     const updates: Record<string, unknown> = {
       full_name: formatDisplayName(trimmedName),
+      // Task 24 — preferred name (optional, ≤40 chars).
+      preferred_name: preferredName.trim() ? preferredName.trim().slice(0, 40) : null,
       bio: bio.trim() || null,
       avatar_url: avatarUrl.trim() || null,
       graduation_year: isNaN(yr) ? null : yr,
@@ -735,6 +740,24 @@ export default function Profile() {
                     className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
                       placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                   />
+                </div>
+
+                {/* Task 24 — preferred name */}
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">
+                    Preferred name <span className="text-ink-muted font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={40}
+                    autoComplete="given-name"
+                    value={preferredName}
+                    onChange={(e) => setPreferredName(e.target.value)}
+                    placeholder="What should we call you?"
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm
+                      placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                  />
+                  <p className="mt-1 text-xs text-ink-muted">Defaults to your first name.</p>
                 </div>
 
                 {/* Grade (students only) */}

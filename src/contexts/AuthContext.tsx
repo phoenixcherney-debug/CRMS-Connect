@@ -34,6 +34,8 @@ interface AuthContextType {
     role: Role
     /** Phase 4.6 — inviter UUID from `?invited_by=` query string. */
     invitedBy?: string | null
+    /** Task 24 — optional preferred first name. */
+    preferredName?: string | null
   }) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -154,12 +156,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fullName,
     role,
     invitedBy,
+    preferredName,
   }: {
     email: string
     password: string
     fullName: string
     role: Role
     invitedBy?: string | null
+    preferredName?: string | null
   }): Promise<{ error: string | null }> {
     const clientError = validateEmailForRole(email, role)
     if (clientError) return { error: clientError }
@@ -188,6 +192,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // DB trigger guards against junk too, but trimming here keeps the
       // metadata payload honest.
       const uuidish = invitedBy && /^[0-9a-f-]{36}$/i.test(invitedBy) ? invitedBy : undefined
+      // Task 24 — pass preferred_name through the metadata payload so
+      // handle_new_user can write it onto the new profile row.
+      const cleanedPreferred = (preferredName ?? '').trim().slice(0, 40)
       const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
@@ -196,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             full_name: canonicalName,
             role,
             ...(uuidish ? { invited_by: uuidish } : {}),
+            ...(cleanedPreferred ? { preferred_name: cleanedPreferred } : {}),
           },
         },
       })

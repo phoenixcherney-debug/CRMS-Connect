@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Search, MessageSquare, X, SlidersHorizontal, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { initialsOf } from '../lib/initials'
+import { firstNameOf } from '../lib/preferredName'
 import { useAuth } from '../contexts/AuthContext'
 import type { StudentPost } from '../types'
 import {
@@ -285,7 +286,7 @@ export default function StudentPosts() {
                     hover:bg-primary-faint hover:text-ink disabled:opacity-50 transition-colors"
                 >
                   <MessageSquare size={13} />
-                  {creatingFor === studentId ? 'Opening…' : `Message ${student?.full_name?.split(' ')[0] ?? 'student'}`}
+                  {creatingFor === studentId ? 'Opening…' : `Message ${firstNameOf(student ?? null) || 'student'}`}
                 </button>
               </div>
             )
