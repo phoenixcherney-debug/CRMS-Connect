@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Shield, AlertCircle, Trash2 } from 'lucide-react'
+import { Search, Shield, AlertCircle, Trash2, ShieldCheck, ShieldOff, MessageSquare } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { friendlyError } from '../lib/errors'
 import { useAuth } from '../contexts/AuthContext'
@@ -34,6 +35,12 @@ export default function AdminPanel() {
   const [pendingDelete, setPendingDelete] = useState<AdminUser | null>(null)
   const [typedConfirm, setTypedConfirm]   = useState('')
   const [deleting, setDeleting]           = useState(false)
+  // Role-change confirmation
+  const [pendingRole, setPendingRole] = useState<{ user: AdminUser; newRole: 'student' | 'employer_mentor' | 'admin' } | null>(null)
+  const [savingRole, setSavingRole]   = useState(false)
+  // Filters
+  const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'employer_mentor' | 'admin'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'banned' | 'active'>('all')
 
   useEffect(() => {
     load()
@@ -45,6 +52,19 @@ export default function AdminPanel() {
     if (error) { setError(friendlyError(error, 'Could not load the user list.')) }
     else if (data) setUsers(data as AdminUser[])
     setLoading(false)
+  }
+
+  async function setRole(user: AdminUser, newRole: 'student' | 'employer_mentor' | 'admin') {
+    setSavingRole(true)
+    const { error: err } = await supabase.rpc('admin_set_user_role', { target_id: user.id, new_role: newRole })
+    setSavingRole(false)
+    if (err) {
+      toast(friendlyError(err, 'Could not change role.'), { kind: 'error' })
+      return
+    }
+    setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, role: newRole } : u))
+    toast(`${user.full_name || user.email} is now ${newRole}.`)
+    setPendingRole(null)
   }
 
   async function confirmDelete() {
@@ -64,11 +84,15 @@ export default function AdminPanel() {
 
   const filtered = users.filter(u => {
     const q = search.toLowerCase()
-    return (
+    const matchesSearch =
       u.full_name.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
       u.role.toLowerCase().includes(q)
-    )
+    const matchesRole   = roleFilter === 'all'   || u.role === roleFilter
+    const matchesStatus = statusFilter === 'all'
+      || (statusFilter === 'banned' && !!u.banned_at)
+      || (statusFilter === 'active' && !u.banned_at)
+    return matchesSearch && matchesRole && matchesStatus
   })
 
   function initials(name: string) {
@@ -111,7 +135,7 @@ export default function AdminPanel() {
       )}
 
       {/* Search */}
-      <div className="relative mb-4">
+      <div className="relative mb-3">
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" />
         <input
           type="text"
@@ -122,6 +146,47 @@ export default function AdminPanel() {
             placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
             transition-colors"
         />
+      </div>
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-ink-muted font-medium mr-1">Role:</span>
+        {([
+          { v: 'all',             l: 'All' },
+          { v: 'student',         l: 'Students' },
+          { v: 'employer_mentor', l: 'Employer/Mentor' },
+          { v: 'admin',           l: 'Admin' },
+        ] as const).map(opt => (
+          <button
+            key={opt.v}
+            type="button"
+            onClick={() => setRoleFilter(opt.v)}
+            className={`px-2.5 py-1 rounded-md border transition-colors ${roleFilter === opt.v ? 'border-primary bg-primary-muted text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}
+          >
+            {opt.l}
+          </button>
+        ))}
+        <span className="text-ink-muted font-medium ml-3 mr-1">Status:</span>
+        {([
+          { v: 'all',    l: 'All' },
+          { v: 'active', l: 'Active' },
+          { v: 'banned', l: 'Banned' },
+        ] as const).map(opt => (
+          <button
+            key={opt.v}
+            type="button"
+            onClick={() => setStatusFilter(opt.v)}
+            className={`px-2.5 py-1 rounded-md border transition-colors ${statusFilter === opt.v ? 'border-primary bg-primary-muted text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}
+          >
+            {opt.l}
+          </button>
+        ))}
+        <Link
+          to="/admin/messages"
+          className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border text-ink-secondary hover:bg-primary-faint"
+        >
+          <MessageSquare size={11} /> Conversations
+        </Link>
       </div>
 
       {/* List */}
@@ -185,6 +250,30 @@ export default function AdminPanel() {
                     </span>
                   </button>
 
+                  {/* Promote / demote */}
+                  {user.role !== 'admin' ? (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setPendingRole({ user, newRole: 'admin' }) }}
+                      className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border text-ink-secondary hover:bg-primary-faint transition-colors"
+                      aria-label={`Promote ${user.full_name} to admin`}
+                      title="Promote to admin"
+                    >
+                      <ShieldCheck size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setPendingRole({ user, newRole: 'student' }) }}
+                      disabled={isSelf}
+                      className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border text-ink-secondary hover:bg-primary-faint transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label={`Demote ${user.full_name}`}
+                      title={isSelf ? 'You can\'t demote yourself' : 'Demote to student'}
+                    >
+                      <ShieldOff size={14} />
+                    </button>
+                  )}
+
                   {/* Delete — disabled for the admin acting on themselves */}
                   <button
                     type="button"
@@ -225,6 +314,26 @@ export default function AdminPanel() {
           className="w-full mb-3 px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
         />
       </ConfirmDialog>
+
+      {/* Promote / demote confirmation */}
+      <ConfirmDialog
+        open={pendingRole !== null}
+        title={
+          pendingRole?.newRole === 'admin'
+            ? `Promote ${pendingRole?.user.full_name ?? 'this user'} to admin?`
+            : `Demote ${pendingRole?.user.full_name ?? 'this user'}?`
+        }
+        description={
+          pendingRole?.newRole === 'admin'
+            ? 'Admins can read every conversation, see every profile in full, and promote or remove other accounts. Make sure this is what you want.'
+            : 'They lose admin powers immediately. You can re-promote them later from this same panel.'
+        }
+        confirmLabel={savingRole ? 'Saving…' : pendingRole?.newRole === 'admin' ? 'Yes, promote' : 'Yes, demote'}
+        confirmDisabled={savingRole || !pendingRole}
+        destructive={pendingRole?.newRole !== 'admin'}
+        onConfirm={() => { if (pendingRole) void setRole(pendingRole.user, pendingRole.newRole) }}
+        onCancel={() => { if (!savingRole) setPendingRole(null) }}
+      />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useLocation } from 'react-router-dom'
 import { ChevronLeft, Send } from 'lucide-react'
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
@@ -38,6 +38,11 @@ function shouldShowDivider(curr: Message, prev: Message | undefined): boolean {
 export default function Conversation() {
   const { id } = useParams<{ id: string }>()
   const { profile } = useAuth()
+  const location = useLocation()
+  // When the admin views a third-party thread via /admin/messages/<id>,
+  // we render the same UI in read-only mode — input hidden, viewer-
+  // specific reactions (mark-as-read, etc.) skipped.
+  const adminView = location.pathname.startsWith('/admin/messages/') && profile?.role === 'admin'
 
   const [messages, setMessages] = useState<Message[]>([])
   const [otherProfile, setOtherProfile] = useState<Profile | null>(null)
@@ -407,7 +412,12 @@ export default function Conversation() {
         <div className="text-xs text-error mt-2 px-1">{sendError}</div>
       )}
 
-      {/* Input */}
+      {/* Input — hidden when an admin is reading a third-party thread. */}
+      {adminView ? (
+        <div className="shrink-0 mt-4 pt-4 border-t border-border text-xs text-ink-muted text-center">
+          Admin moderation view — read-only.
+        </div>
+      ) : (
       <form
         onSubmit={handleSend}
         className="shrink-0 mt-4 pt-4 border-t border-border flex items-end gap-3"
@@ -439,6 +449,7 @@ export default function Conversation() {
           {sending ? <Spinner size="sm" className="border-white/30 border-t-white" /> : <Send size={16} />}
         </button>
       </form>
+      )}
     </div>
   )
 }

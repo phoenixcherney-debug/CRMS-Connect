@@ -97,6 +97,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/banned': 'Account suspended',
   '/admin': 'Admin Panel',
   '/admin/reports': 'Reports',
+  '/admin/messages': 'All conversations',
   '/about': 'About',
   '/privacy': 'Privacy',
   '/contact': 'Contact',
@@ -159,6 +160,7 @@ const MyStudentPosts    = lazy(() => import('./pages/MyStudentPosts'))
 const MeetingRequests   = lazy(() => import('./pages/MeetingRequests'))
 const AdminPanel        = lazy(() => import('./pages/AdminPanel'))
 const AdminUserView     = lazy(() => import('./pages/AdminUserView'))
+const AdminConversations = lazy(() => import('./pages/AdminConversations'))
 const BannedPage        = lazy(() => import('./pages/BannedPage'))
 const About             = lazy(() => import('./pages/About'))
 const Privacy           = lazy(() => import('./pages/Privacy'))
@@ -364,20 +366,32 @@ export default function App() {
             <Route path="/banned" element={<BannedPage />} />
 
             {/* ── Admin ─────────────────────────────────────────────────── */}
+            {/* hideOnRoleMismatch — non-admins get the normal 404 here
+                so the route's existence isn't advertised. */}
             <Route path="/admin" element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
                 <Layout><AdminPanel /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/admin/users/:id" element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
                 <Layout><AdminUserView /></Layout>
               </ProtectedRoute>
             } />
             {/* SEC-003 — staff triage queue for user reports. */}
             <Route path="/admin/reports" element={
-              <ProtectedRoute roles={['admin']}>
+              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
                 <Layout><AdminReports /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/messages" element={
+              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
+                <Layout><AdminConversations /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/messages/:id" element={
+              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
+                <Layout><Conversation /></Layout>
               </ProtectedRoute>
             } />
 

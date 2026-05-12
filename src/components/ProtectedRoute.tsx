@@ -2,6 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import type { Role } from '../types'
 import Spinner from './Spinner'
+import NotFound from '../pages/NotFound'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -9,9 +10,12 @@ interface ProtectedRouteProps {
   roles?: Role[]
   /** Set true on /onboarding to avoid redirect loop. */
   skipOnboarding?: boolean
+  /** Render the 404 page instead of redirecting on role mismatch.
+   *  Used on /admin to avoid advertising that the route exists. */
+  hideOnRoleMismatch?: boolean
 }
 
-export default function ProtectedRoute({ children, roles, skipOnboarding }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, roles, skipOnboarding, hideOnRoleMismatch }: ProtectedRouteProps) {
   const { user, profile, loading } = useAuth()
   const location = useLocation()
 
@@ -45,8 +49,11 @@ export default function ProtectedRoute({ children, roles, skipOnboarding }: Prot
     return <Navigate to="/onboarding" replace />
   }
 
-  // Role restriction — admin always passes
+  // Role restriction — admin always passes. For routes that must
+  // not be advertised (e.g. /admin), render a 404 instead of a
+  // redirect that would tell the user the route exists.
   if (!isAdmin && roles && profile && !roles.includes(profile.role)) {
+    if (hideOnRoleMismatch) return <NotFound />
     return <Navigate to="/opportunities" replace />
   }
 
