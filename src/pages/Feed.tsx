@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Briefcase, Bell, RefreshCw, MessageSquare, UserCheck, BookOpen } from 'lucide-react'
+import { Briefcase, Bell, RefreshCw, MessageSquare, UserCheck, BookOpen, AlertTriangle } from 'lucide-react'
 import { format, formatDistanceToNow, parseISO, isPast, differenceInDays } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { JOB_COLUMNS } from '../lib/jobColumns'
@@ -31,12 +31,15 @@ export default function Feed() {
   const [items, setItems]         = useState<FeedItem[]>([])
   const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [loadError, setLoadError] = useState(false)
 
   async function load(quiet = false) {
     if (!profile) return
     if (quiet) setRefreshing(true)
     else setLoading(true)
+    setLoadError(false)
 
+    try {
     const feed: FeedItem[] = []
 
     // ── Community opportunities (visible to BOTH roles) ────────────────────
@@ -157,8 +160,12 @@ export default function Feed() {
 
     feed.sort((a, b) => b.ts.localeCompare(a.ts))
     setItems(feed.slice(0, 50))
-    setLoading(false)
-    setRefreshing(false)
+    } catch {
+      setLoadError(true)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
   }
 
   useEffect(() => { load() }, [profile?.id])
@@ -188,6 +195,14 @@ export default function Feed() {
 
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+      ) : loadError ? (
+        <EmptyState
+          icon={AlertTriangle}
+          title="Couldn't load your activity."
+          description="Something went wrong. Please try again."
+          ctaLabel="Retry"
+          ctaOnClick={() => load()}
+        />
       ) : items.length === 0 ? (
         <EmptyState
           icon={Bell}

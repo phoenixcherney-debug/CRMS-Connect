@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bookmark, ArrowRight } from 'lucide-react'
+import { Bookmark, ArrowRight, AlertTriangle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { JOB_COLUMNS } from '../lib/jobColumns'
 import { useAuth } from '../contexts/AuthContext'
@@ -17,18 +17,22 @@ export default function SavedJobs() {
   const { profile } = useAuth()
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!profile) return
     let mounted = true
     async function load() {
       setLoading(true)
-      const { data } = await supabase
+      setLoadError(false)
+      const { data, error } = await supabase
         .from('saved_jobs')
         .select(`created_at, jobs(${JOB_COLUMNS}, profiles!jobs_posted_by_fkey(id, full_name, role))`)
         .eq('user_id', profile!.id)
         .order('created_at', { ascending: false })
       if (!mounted) return
+      if (error) { setLoadError(true); setLoading(false); return }
       // Supabase types the joined `jobs` as an array; in practice with
       // the FK join here it's a single object. Cast accordingly.
       const rows = (data ?? []) as unknown as { created_at: string; jobs: Job | null }[]
@@ -37,7 +41,7 @@ export default function SavedJobs() {
     }
     load()
     return () => { mounted = false }
-  }, [profile?.id])
+  }, [profile?.id, reloadKey])
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -50,6 +54,14 @@ export default function SavedJobs() {
 
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+      ) : loadError ? (
+        <EmptyState
+          icon={AlertTriangle}
+          title="Couldn't load your saved opportunities."
+          description="Something went wrong. Please try again."
+          ctaLabel="Retry"
+          ctaOnClick={() => setReloadKey((k) => k + 1)}
+        />
       ) : jobs.length === 0 ? (
         <EmptyState
           icon={Bookmark}

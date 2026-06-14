@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Building2, Globe, MapPin, Users, ChevronLeft, ExternalLink, Briefcase } from 'lucide-react'
+import { Building2, Globe, MapPin, Users, ChevronLeft, ExternalLink, Briefcase, AlertTriangle } from 'lucide-react'
 import { isPast, parseISO, format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { JOB_COLUMNS } from '../lib/jobColumns'
@@ -39,13 +39,17 @@ export default function Company() {
   const [jobs, setJobs]   = useState<JobWithApps[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!slug) return
     let cancelled = false
     async function load() {
       setLoading(true)
-      const [{ data: metaRow }, { data: jobsRows }] = await Promise.all([
+      setLoadError(false)
+      setNotFound(false)
+      const [metaRes, jobsRes] = await Promise.all([
         supabase
           .from('company_meta')
           .select('*')
@@ -58,7 +62,9 @@ export default function Company() {
           .order('created_at', { ascending: false }),
       ])
       if (cancelled) return
-      const j = (jobsRows as JobWithApps[] | null) ?? []
+      if (jobsRes.error) { setLoadError(true); setLoading(false); return }
+      const metaRow = metaRes.data
+      const j = (jobsRes.data as unknown as JobWithApps[] | null) ?? []
       if (!metaRow && j.length === 0) {
         setNotFound(true)
         setLoading(false)
@@ -70,7 +76,7 @@ export default function Company() {
     }
     load()
     return () => { cancelled = true }
-  }, [slug])
+  }, [slug, reloadKey])
 
   // Derive a display name from meta (canonical) or the first job row
   // (preserves the casing the first poster used).
@@ -98,6 +104,24 @@ export default function Company() {
 
   if (loading) {
     return <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+  }
+  if (loadError) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 text-center">
+        <AlertTriangle size={36} className="mx-auto text-ink-muted mb-3" />
+        <h1 className="text-xl font-bold text-ink mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
+          Couldn't load this company
+        </h1>
+        <p className="text-sm text-ink-muted">Something went wrong. Please try again.</p>
+        <button
+          type="button"
+          onClick={() => setReloadKey((k) => k + 1)}
+          className="inline-block mt-4 text-sm font-medium text-primary hover:text-primary-light"
+        >
+          Retry
+        </button>
+      </div>
+    )
   }
   if (notFound) {
     return (
