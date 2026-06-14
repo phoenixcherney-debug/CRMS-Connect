@@ -1,10 +1,16 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
-// The bookings system has been replaced with the personal availability calendar.
-// Redirect any direct visits to /my-bookings → /availability.
+// The bookings system has been replaced. /availability is employer/mentor-only,
+// so send students to /meetings (where they see their requests) and everyone
+// else to /availability — otherwise students double-redirect onto /opportunities.
 export default function MyBookings() {
   const navigate = useNavigate()
-  useEffect(() => { navigate('/availability', { replace: true }) }, [navigate])
+  const { profile } = useAuth()
+  useEffect(() => {
+    const dest = profile?.role === 'student' ? '/meetings' : '/availability'
+    navigate(dest, { replace: true })
+  }, [navigate, profile?.role])
   return null
 }

@@ -50,6 +50,10 @@ export default function Conversation() {
   // real sender) and the first participant's id (drives left/right alignment).
   const [adminParticipants, setAdminParticipants] = useState<Profile[]>([])
   const [firstPartyId, setFirstPartyId] = useState<string | null>(null)
+  // True when the conversation row isn't visible to this user (invalid id, or
+  // RLS-denied because they aren't a participant) — render a clear not-found
+  // state instead of a ghost composer.
+  const [notFound, setNotFound] = useState(false)
   // Audit task 26 — set the tab title to the other person's name so
   // multi-tab users can tell threads apart.
   useEffect(() => {
@@ -91,6 +95,7 @@ export default function Conversation() {
       setLoading(true)
       setMessages([])
       setHasMore(false)
+      setNotFound(false)
 
       // Find the other participant
       const { data: conv } = await supabase
@@ -127,6 +132,10 @@ export default function Conversation() {
 
           setOtherProfile(other as Profile)
         }
+      } else {
+        setNotFound(true)
+        setLoading(false)
+        return
       }
 
       // Load most recent PAGE_SIZE messages (descending, then reverse for display)
@@ -290,6 +299,21 @@ export default function Conversation() {
   }
 
   const initials = initialsOf(otherProfile?.full_name)
+
+  if (notFound && !loading) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <p className="text-ink-muted">This conversation couldn't be found, or you don't have access to it.</p>
+        <Link
+          to={adminView ? '/admin/messages' : '/messages'}
+          className="mt-4 inline-block text-sm font-medium"
+          style={{ color: 'var(--color-primary)' }}
+        >
+          ← Back to messages
+        </Link>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col" style={{ flex: 1, minHeight: 0, height: 'calc(100vh - 8rem)' }}>
