@@ -96,7 +96,7 @@ export default function Notifications() {
           type:     'app_out',
           ts:       a.created_at,
           unread:   true,
-          link:     `/jobs/${a.job_id}`,
+          link:     `/opportunities/${a.job_id}`,
           title:    `Application: ${jobTitle}${jobCompany ? ` at ${jobCompany}` : ''}`,
           subtitle: STATUS_TEXT[a.status] ?? a.status,
         })
@@ -128,7 +128,7 @@ export default function Notifications() {
             type:     'app_in',
             ts:       a.created_at,
             unread:   isPending,
-            link:     `/jobs/${a.job_id}/applicants`,
+            link:     `/opportunities/${a.job_id}/applicants`,
             title:    `New applicant for ${job?.title ?? 'your posting'}`,
             subtitle: `${name} applied${job?.company ? ` · ${job.company}` : ''}`,
           })
