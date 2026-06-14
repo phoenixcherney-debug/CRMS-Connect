@@ -667,7 +667,7 @@ export default function JobDetail() {
                             </dd>
                           </div>
                         )}
-                        {profile?.grade && (
+                        {profile?.grade && profile?.share_grade_with_employers && (
                           <div className="flex gap-2">
                             <dt className="text-ink-muted w-36 shrink-0">Grade</dt>
                             <dd className="text-ink">{profile.grade}</dd>
