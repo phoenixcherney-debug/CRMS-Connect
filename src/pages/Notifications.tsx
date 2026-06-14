@@ -96,7 +96,7 @@ export default function Notifications() {
           type:     'app_out',
           ts:       a.created_at,
           unread:   true,
-          link:     `/jobs/${a.job_id}`,
+          link:     `/opportunities/${a.job_id}`,
           title:    `Application: ${jobTitle}${jobCompany ? ` at ${jobCompany}` : ''}`,
           subtitle: STATUS_TEXT[a.status] ?? a.status,
         })
@@ -128,7 +128,7 @@ export default function Notifications() {
             type:     'app_in',
             ts:       a.created_at,
             unread:   isPending,
-            link:     `/jobs/${a.job_id}/applicants`,
+            link:     `/opportunities/${a.job_id}/applicants`,
             title:    `New applicant for ${job?.title ?? 'your posting'}`,
             subtitle: `${name} applied${job?.company ? ` · ${job.company}` : ''}`,
           })
@@ -279,13 +279,20 @@ export default function Notifications() {
                     // harmless (next visit re-renders from truth).
                     const handleClick = () => {
                       if (!isNew(item) || !profile) return
-                      const now = new Date().toISOString()
                       setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, unread: false } : i))
-                      void supabase
-                        .from('notifications')
-                        .update({ read_at: now })
-                        .eq('id', item.id)
-                        .eq('user_id', profile.id)
+                      // Only dm_received items are real rows in the notifications
+                      // table; their synthetic id is `dm-<rowId>`. App-status items
+                      // are derived from the applications table and have no row to
+                      // mark (the global notifications_seen_at stamp covers them),
+                      // so the previous `.eq('id', item.id)` matched nothing.
+                      if (item.id.startsWith('dm-')) {
+                        const now = new Date().toISOString()
+                        void supabase
+                          .from('notifications')
+                          .update({ read_at: now })
+                          .eq('id', item.id.slice(3))
+                          .eq('user_id', profile.id)
+                      }
                     }
                     return (
                       <Link

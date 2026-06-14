@@ -330,7 +330,7 @@ export default function AdminPanel() {
         }
         confirmLabel={savingRole ? 'Saving…' : pendingRole?.newRole === 'admin' ? 'Yes, promote' : 'Yes, demote'}
         confirmDisabled={savingRole || !pendingRole}
-        destructive={pendingRole?.newRole !== 'admin'}
+        destructive={pendingRole?.newRole === 'admin'}
         onConfirm={() => { if (pendingRole) void setRole(pendingRole.user, pendingRole.newRole) }}
         onCancel={() => { if (!savingRole) setPendingRole(null) }}
       />

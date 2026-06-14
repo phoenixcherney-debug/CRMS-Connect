@@ -46,6 +46,14 @@ export default function Conversation() {
 
   const [messages, setMessages] = useState<Message[]>([])
   const [otherProfile, setOtherProfile] = useState<Profile | null>(null)
+  // adminView only: both participants (so each message can be attributed to its
+  // real sender) and the first participant's id (drives left/right alignment).
+  const [adminParticipants, setAdminParticipants] = useState<Profile[]>([])
+  const [firstPartyId, setFirstPartyId] = useState<string | null>(null)
+  // True when the conversation row isn't visible to this user (invalid id, or
+  // RLS-denied because they aren't a participant) — render a clear not-found
+  // state instead of a ghost composer.
+  const [notFound, setNotFound] = useState(false)
   // Audit task 26 — set the tab title to the other person's name so
   // multi-tab users can tell threads apart.
   useEffect(() => {
@@ -87,6 +95,7 @@ export default function Conversation() {
       setLoading(true)
       setMessages([])
       setHasMore(false)
+      setNotFound(false)
 
       // Find the other participant
       const { data: conv } = await supabase
@@ -96,18 +105,37 @@ export default function Conversation() {
         .single()
 
       if (conv) {
-        const otherId =
-          conv.participant_one === profile!.id
-            ? conv.participant_two
-            : conv.participant_one
+        setFirstPartyId(conv.participant_one)
+        if (adminView) {
+          // Moderation view: the admin is neither participant, so load BOTH
+          // participants and attribute each message to its real sender.
+          const { data: parts } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, role, graduation_year, preferred_name')
+            .in('id', [conv.participant_one, conv.participant_two])
+          const list = ((parts as Profile[]) ?? [])
+            .slice()
+            .sort((a) => (a.id === conv.participant_one ? -1 : 1))
+          setAdminParticipants(list)
+          setOtherProfile(list[0] ?? null)
+        } else {
+          const otherId =
+            conv.participant_one === profile!.id
+              ? conv.participant_two
+              : conv.participant_one
 
-        const { data: other } = await supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url, role, graduation_year, preferred_name')
-          .eq('id', otherId)
-          .single()
+          const { data: other } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, role, graduation_year, preferred_name')
+            .eq('id', otherId)
+            .single()
 
-        setOtherProfile(other as Profile)
+          setOtherProfile(other as Profile)
+        }
+      } else {
+        setNotFound(true)
+        setLoading(false)
+        return
       }
 
       // Load most recent PAGE_SIZE messages (descending, then reverse for display)
@@ -123,24 +151,28 @@ export default function Conversation() {
       setHasMore((count ?? 0) > PAGE_SIZE)
       setLoading(false)
 
-      // Mark unread messages from the other person as read
-      const unreadIds = sorted
-        .filter((m) => !m.is_read && m.sender_id !== profile!.id)
-        .map((m) => m.id)
+      // Mark unread messages as read — skipped in the admin moderation view,
+      // where the admin is not a participant (the writes would be no-ops under
+      // RLS anyway, and must not mark the real recipient's messages read).
+      if (!adminView) {
+        const unreadIds = sorted
+          .filter((m) => !m.is_read && m.sender_id !== profile!.id)
+          .map((m) => m.id)
 
-      if (unreadIds.length > 0) {
-        await supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
+        if (unreadIds.length > 0) {
+          await supabase.from('messages').update({ is_read: true }).in('id', unreadIds)
+        }
+
+        // NAV-005 — also mark the corresponding DM notifications as read so
+        // they stop showing as unread on /notifications.
+        await supabase
+          .from('notifications')
+          .update({ read_at: new Date().toISOString() })
+          .eq('user_id', profile!.id)
+          .eq('kind', 'dm_received')
+          .eq('link', `/messages/${id}`)
+          .is('read_at', null)
       }
-
-      // NAV-005 — also mark the corresponding DM notifications as read so
-      // they stop showing as unread on /notifications.
-      await supabase
-        .from('notifications')
-        .update({ read_at: new Date().toISOString() })
-        .eq('user_id', profile!.id)
-        .eq('kind', 'dm_received')
-        .eq('link', `/messages/${id}`)
-        .is('read_at', null)
     }
 
     load()
@@ -168,7 +200,7 @@ export default function Conversation() {
             return [...prev, newMsg]
           })
           // Auto-mark as read if the other person sent it while we're viewing
-          if (newMsg.sender_id !== profile.id) {
+          if (!adminView && newMsg.sender_id !== profile.id) {
             await supabase
               .from('messages')
               .update({ is_read: true })
@@ -268,19 +300,41 @@ export default function Conversation() {
 
   const initials = initialsOf(otherProfile?.full_name)
 
+  if (notFound && !loading) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <p className="text-ink-muted">This conversation couldn't be found, or you don't have access to it.</p>
+        <Link
+          to={adminView ? '/admin/messages' : '/messages'}
+          className="mt-4 inline-block text-sm font-medium"
+          style={{ color: 'var(--color-primary)' }}
+        >
+          ← Back to messages
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-2xl mx-auto flex flex-col" style={{ flex: 1, minHeight: 0, height: 'calc(100vh - 8rem)' }}>
       {/* Header */}
       <div className="flex items-center gap-4 mb-4 pb-4 border-b border-border shrink-0">
         <Link
-          to="/messages"
+          to={adminView ? '/admin/messages' : '/messages'}
           className="flex items-center gap-1 text-sm text-ink-secondary hover:text-ink"
         >
           <ChevronLeft size={16} />
-          <span className="hidden sm:inline">Messages</span>
+          <span className="hidden sm:inline">{adminView ? 'All threads' : 'Messages'}</span>
         </Link>
 
-        {otherProfile && (
+        {adminView ? (
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Moderation view</p>
+            <p className="font-semibold text-ink text-sm leading-tight truncate">
+              {(adminParticipants[0]?.full_name ?? '—')} ⇄ {(adminParticipants[1]?.full_name ?? '—')}
+            </p>
+          </div>
+        ) : otherProfile && (
           // M-06 — header avatar / name navigates to the participant's profile.
           <Link
             to={`/people/${otherProfile.id}`}
@@ -313,7 +367,7 @@ export default function Conversation() {
             </div>
             <p className="text-sm font-medium text-ink">{otherProfile?.full_name}</p>
             <p className="text-xs text-ink-muted mt-1">
-              Send a message to start the conversation.
+              {adminView ? 'No messages in this thread.' : 'Send a message to start the conversation.'}
             </p>
           </div>
         ) : (
@@ -335,11 +389,17 @@ export default function Conversation() {
             )}
 
             {messages.map((msg, i) => {
-              const isMine = msg.sender_id === profile?.id
+              const groupStart = i === 0 || messages[i - 1].sender_id !== msg.sender_id
+              // In the admin moderation view nobody is "mine"; align by the
+              // first participant so the two parties sit on opposite sides.
+              const isMine = adminView ? msg.sender_id === firstPartyId : msg.sender_id === profile?.id
               const prev = messages[i - 1]
               const showDivider = shouldShowDivider(msg, prev)
-              const showAvatar =
-                !isMine && (i === 0 || messages[i - 1].sender_id !== msg.sender_id)
+              const senderProfile = adminView
+                ? (adminParticipants.find((p) => p.id === msg.sender_id) ?? null)
+                : otherProfile
+              const bubbleInitials = adminView ? initialsOf(senderProfile?.full_name) : initials
+              const showAvatar = !isMine && groupStart
 
               // P1-4 — system messages (auto-posted on application accept /
               // reverse) render centered + italic + neutral, no avatar /
@@ -376,12 +436,17 @@ export default function Conversation() {
                     <div className="w-7 shrink-0">
                       {showAvatar && !isMine && (
                         <div className="w-7 h-7 rounded-full bg-primary-muted flex items-center justify-center text-primary text-[11px] font-bold">
-                          {initials}
+                          {bubbleInitials}
                         </div>
                       )}
                     </div>
 
                     <div className={`max-w-[72%] group ${isMine ? 'items-end' : 'items-start'} flex flex-col`}>
+                      {adminView && groupStart && (
+                        <span className="text-[11px] text-ink-muted mb-0.5 px-1">
+                          {senderProfile?.full_name ?? 'Unknown'}
+                        </span>
+                      )}
                       <div
                         className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap
                           ${isMine

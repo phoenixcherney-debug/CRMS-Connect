@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
 import { friendlyError } from '../lib/errors'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { validateExternalUrl, safeExternalHref } from '../lib/url'
 import { sanitizeUserText } from '../lib/sanitize'
 import { containsBlockedTerms } from '../lib/textFilter'
@@ -43,6 +44,9 @@ export default function JobDetail() {
   const [job, setJob] = useState<Job | null>(null)
   const [loading, setLoading] = useState(true)
   const [myApplication, setMyApplication] = useState<Application | null>(null)
+  // contact_email is column-revoked on jobs; fetch it via the RPC, which only
+  // returns it to the poster, an admin, or an accepted applicant.
+  const [contactEmail, setContactEmail] = useState<string | null>(null)
 
   // Apply modal state
   const [applying, setApplying] = useState(false)
@@ -92,12 +96,22 @@ export default function JobDetail() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data } = await supabase
+      // maybeSingle so a genuine "not found" (no rows, no error) is
+      // distinguishable from a network/RLS error, which we surface as a toast
+      // rather than silently rendering the "could not be found" state.
+      const { data, error } = await supabase
         .from('jobs')
-        .select('*, profiles!jobs_posted_by_fkey(id, full_name, preferred_name, role, graduation_year)')
+        .select(`${JOB_COLUMNS}, profiles!jobs_posted_by_fkey(id, full_name, preferred_name, role, graduation_year)`)
         .eq('id', id!)
-        .single()
-      setJob(data as Job)
+        .maybeSingle()
+      if (error) toast(friendlyError(error, 'Could not load this opportunity. Please try again.'), { kind: 'error' })
+      setJob(data as unknown as Job)
+
+      if (data && profile) {
+        // Returns null unless the caller is the poster / admin / accepted applicant.
+        const { data: ce } = await supabase.rpc('job_contact_email', { job_uuid: id })
+        setContactEmail((ce as string | null) ?? null)
+      }
 
       if (profile?.role === 'student') {
         const { data: app } = await supabase
@@ -171,13 +185,17 @@ export default function JobDetail() {
 
     // Normalize order so (A,B) and (B,A) always produce the same row
     const [p1, p2] = [profile.id, job.posted_by].sort()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .insert({ participant_one: p1, participant_two: p2 })
       .select()
       .single()
 
-    if (data) navigate(`/messages/${data.id}`)
+    if (error || !data) {
+      toast(friendlyError(error, 'Could not message the poster.'), { kind: 'error' })
+      return
+    }
+    navigate(`/messages/${data.id}`)
   }
 
   async function handleWithdraw() {
@@ -189,12 +207,15 @@ export default function JobDetail() {
       .eq('id', myApplication.id)
       .eq('applicant_id', profile.id)
     setWithdrawing(false)
-    if (!error) {
-      setMyApplication(null)
-      setApplySuccess(false)
-      setCoverNote('')
-      setResumeLink('')
+    if (error) {
+      toast(friendlyError(error, 'Could not withdraw your application. Please try again.'), { kind: 'error' })
+      return
     }
+    setMyApplication(null)
+    setApplySuccess(false)
+    setCoverNote('')
+    setResumeLink('')
+    toast('Application withdrawn.')
   }
 
   async function handleApply() {
@@ -608,14 +629,14 @@ export default function JobDetail() {
                       {/* P1-5 — surface the employer's contact email after
                           acceptance (and only after). Privacy doc promises
                           this; previously it was nowhere in the UI. */}
-                      {isAccepted && job.contact_email && (
+                      {isAccepted && contactEmail && (
                         <p className="text-xs text-ink-secondary mt-2">
                           Contact:{' '}
                           <a
-                            href={`mailto:${job.contact_email}`}
+                            href={`mailto:${contactEmail}`}
                             className="text-primary hover:text-primary-light font-medium underline break-all"
                           >
-                            {job.contact_email}
+                            {contactEmail}
                           </a>
                         </p>
                       )}
@@ -646,7 +667,7 @@ export default function JobDetail() {
                             </dd>
                           </div>
                         )}
-                        {profile?.grade && (
+                        {profile?.grade && profile?.share_grade_with_employers && (
                           <div className="flex gap-2">
                             <dt className="text-ink-muted w-36 shrink-0">Grade</dt>
                             <dd className="text-ink">{profile.grade}</dd>

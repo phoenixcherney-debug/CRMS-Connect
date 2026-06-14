@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ExternalLink, Calendar, MessageSquare, CheckCircle2, X, Clock, Download } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { safeExternalHref } from '../lib/url'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
@@ -126,7 +127,8 @@ export default function Applicants() {
       // Load the job first so we can authorize before fetching applicants.
       // Non-owners (and non-admins) get a 404 — not 403, not an empty inbox —
       // so this URL doesn't leak job metadata or imply zero applications.
-      const { data: jobData } = await supabase.from('jobs').select('*').eq('id', id!).maybeSingle()
+      const { data: jobRaw } = await supabase.from('jobs').select(JOB_COLUMNS).eq('id', id!).maybeSingle()
+      const jobData = jobRaw as unknown as Job | null
       const isOwner = !!profile && !!jobData && jobData.posted_by === profile.id
       const isAdmin = profile?.role === 'admin'
       if (!jobData || (!isOwner && !isAdmin)) {
@@ -143,14 +145,15 @@ export default function Applicants() {
         .eq('job_id', id!)
         .order('created_at', { ascending: true })
 
-      setJob(jobData as Job)
+      setJob(jobData)
       setApplications((appData as Application[]) ?? [])
       setLoading(false)
     }
     if (id) load()
   }, [id, profile])
 
-  async function updateStatus(appId: string, status: ApplicationStatus) {
+  async function updateStatus(appId: string, status: ApplicationStatus, opts?: { silent?: boolean }): Promise<boolean> {
+    const silent = opts?.silent ?? false
     setUpdatingId(appId)
     setUpdateError(null)
     const app = applications.find((a) => a.id === appId)
@@ -161,15 +164,19 @@ export default function Applicants() {
       .eq('id', appId)
     if (error) {
       setUpdateError('Failed to update status. Please try again.')
-      toast('Could not update the application.', { kind: 'error' })
+      if (!silent) toast('Could not update the application.', { kind: 'error' })
+      setUpdatingId(null)
+      return false
     } else {
       setApplications((prev) =>
         prev.map((a) => (a.id === appId ? { ...a, status } : a))
       )
-      // Audit task 6 — success toasts.
-      if      (status === 'accepted') toast('Application accepted.')
-      else if (status === 'rejected') toast('Application declined.')
-      else if (status === 'pending')  toast('Decision reversed.')
+      // Audit task 6 — success toasts (suppressed during bulk runs).
+      if (!silent) {
+        if      (status === 'accepted') toast('Application accepted.')
+        else if (status === 'rejected') toast('Application declined.')
+        else if (status === 'pending')  toast('Decision reversed.')
+      }
 
       const applicantId = (app?.profiles as { id?: string } | null)?.id
       // Notify applicant of status update (best-effort)
@@ -208,6 +215,7 @@ export default function Applicants() {
       }
     }
     setUpdatingId(null)
+    return true
   }
 
   // P2-17 — toggle a single applicant's selection.
@@ -229,10 +237,11 @@ export default function Applicants() {
     setBulkRunning(true)
     let ok = 0, fail = 0
     for (const id of selectedIds) {
-      try {
-        await updateStatus(id, status)
-        ok++
-      } catch { fail++ }
+      // silent: count from the returned result instead of per-row toasts, so
+      // the summary is accurate (updateStatus handles its own errors and never
+      // throws, so the previous try/catch always counted success).
+      const succeeded = await updateStatus(id, status, { silent: true })
+      if (succeeded) ok++; else fail++
     }
     setBulkRunning(false)
     setSelectedIds(new Set())

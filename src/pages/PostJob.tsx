@@ -4,10 +4,11 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ChevronLeft, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/ToastProvider'
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard'
-import type { JobType, LocationType, CustomQuestion, CustomQuestionType } from '../types'
+import type { Job, JobType, LocationType, CustomQuestion, CustomQuestionType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS, EXPECTED_HOURS_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
 import { friendlyError } from '../lib/errors'
@@ -123,8 +124,11 @@ export default function PostJob() {
   useEffect(() => {
     if (!isEdit) return
     async function load() {
-      const { data } = await supabase.from('jobs').select('*').eq('id', id!).single()
+      const { data: raw } = await supabase.from('jobs').select(JOB_COLUMNS).eq('id', id!).single()
+      const data = raw as unknown as Job | null
       if (data) {
+        // contact_email is column-revoked; the poster reads it via the RPC.
+        const { data: ce } = await supabase.rpc('job_contact_email', { job_uuid: id })
         const next: JobForm = {
           title: data.title,
           company: data.company,
@@ -134,7 +138,7 @@ export default function PostJob() {
           job_type: data.job_type,
           description: data.description,
           how_to_apply: data.how_to_apply ?? '',
-          contact_email: data.contact_email ?? '',
+          contact_email: (ce as string | null) ?? '',
           deadline: data.deadline ?? '',
           start_date: data.start_date ?? '',
           end_date: data.end_date ?? '',
@@ -157,8 +161,11 @@ export default function PostJob() {
     if (!fromId || isEdit) return
     let cancelled = false
     async function prefill() {
-      const { data } = await supabase.from('jobs').select('*').eq('id', fromId!).single()
+      const { data: raw } = await supabase.from('jobs').select(JOB_COLUMNS).eq('id', fromId!).single()
+      const data = raw as unknown as Job | null
       if (cancelled || !data) return
+      const { data: ce } = await supabase.rpc('job_contact_email', { job_uuid: fromId })
+      if (cancelled) return
       const next: JobForm = {
         title: data.title ?? '',
         company: data.company ?? '',
@@ -168,7 +175,7 @@ export default function PostJob() {
         job_type: data.job_type,
         description: data.description ?? '',
         how_to_apply: data.how_to_apply ?? '',
-        contact_email: data.contact_email ?? '',
+        contact_email: (ce as string | null) ?? '',
         deadline: '',
         start_date: '',
         end_date: '',
@@ -251,6 +258,7 @@ export default function PostJob() {
       ['description',   description] as const,
       ['how_to_apply',  form.how_to_apply.trim()] as const,
       ['company',       company] as const,
+      ['compensation',  form.compensation.trim()] as const,
     ]) {
       const term = containsBlockedTerms(value)
       if (term.blocked) {
@@ -320,11 +328,11 @@ export default function PostJob() {
     })
 
     try {
-      let result: { error: { message: string } | null }
+      let result: { data?: { id: string }[] | null; error: { message: string } | null }
       if (isEdit) {
         const { posted_by: _omit, ...updatePayload } = payload
         result = await Promise.race([
-          supabase.from('jobs').update(updatePayload).eq('id', id!),
+          supabase.from('jobs').update(updatePayload).eq('id', id!).select('id'),
           timeout,
         ]) as typeof result
       } else {
@@ -336,6 +344,12 @@ export default function PostJob() {
 
       if (result.error) {
         setError(friendlyError(result.error, SAVE_FAIL_MSG))
+        return
+      }
+      // RLS silently matches zero rows when editing a job you don't own — without
+      // this guard the UI would falsely report "Saved." and redirect.
+      if (isEdit && (!result.data || result.data.length === 0)) {
+        setError('You can only edit opportunities you posted.')
         return
       }
 

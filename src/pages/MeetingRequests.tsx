@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Calendar, CheckCircle2, XCircle, Clock, User } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../components/ToastProvider'
+import { friendlyError } from '../lib/errors'
 import { useAuth } from '../contexts/AuthContext'
 import Spinner from '../components/Spinner'
 
@@ -39,6 +41,7 @@ const STATUS_CLASS: Record<MeetingRequest['status'], string> = {
 
 export default function MeetingRequests() {
   const { profile } = useAuth()
+  const toast = useToast()
   const [requests, setRequests] = useState<MeetingRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [actioning, setActioning] = useState<string | null>(null)
@@ -109,18 +112,24 @@ export default function MeetingRequests() {
       .update({ status })
       .eq('id', id)
     setActioning(null)
-    if (!error) {
-      setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status } : r))
+    if (error) {
+      toast(friendlyError(error, `Could not ${status === 'accepted' ? 'accept' : 'decline'} that request.`), { kind: 'error' })
+      return
     }
+    setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status } : r))
+    toast(status === 'accepted' ? 'Meeting accepted.' : 'Request declined.')
   }
 
   async function handleCancel(id: string) {
     setActioning(id)
     const { error } = await supabase.from('meeting_requests').delete().eq('id', id)
     setActioning(null)
-    if (!error) {
-      setRequests((prev) => prev.filter((r) => r.id !== id))
+    if (error) {
+      toast(friendlyError(error, 'Could not cancel that request.'), { kind: 'error' })
+      return
     }
+    setRequests((prev) => prev.filter((r) => r.id !== id))
+    toast('Request canceled.')
   }
 
   const incoming = requests.filter((r) => r.recipient_id === profile?.id)

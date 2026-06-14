@@ -37,10 +37,10 @@ section. Any drift between expected and live is something to investigate.
 
 | Policy | Cmd | Roles | Using | With check | Source |
 |---|---|---|---|---|---|
-| `jobs_select_authenticated` | `SELECT` | `authenticated` | `true` | — | 025 |
+| `jobs_select_authenticated` | `SELECT` | `authenticated` | `is_draft IS NOT TRUE OR posted_by = auth.uid() OR is_admin()` | — | 083 |
 | `jobs_insert_employer_mentor` | `INSERT` | `authenticated` | — | `auth.uid() = posted_by AND role = 'employer_mentor'` | 021 |
 | `jobs_update_own` | `UPDATE` | `authenticated` | `auth.uid() = posted_by` | `auth.uid() = posted_by` | 001 |
-| `jobs_delete_own` | `DELETE` | `authenticated` | `auth.uid() = posted_by` | — | 001 |
+| `jobs_delete_own_or_admin` | `DELETE` | `authenticated` | `auth.uid() = posted_by OR is_admin()` | — | 000 |
 
 **Audit notes:**
 - Migration 025 widened SELECT from "own posts only" to all-authenticated so

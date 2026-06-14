@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Building2, Globe, MapPin, Users, ChevronLeft, ExternalLink, Briefcase } from 'lucide-react'
 import { isPast, parseISO, format } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
@@ -52,7 +53,7 @@ export default function Company() {
           .maybeSingle(),
         supabase
           .from('jobs')
-          .select('*, applications(id, status), profiles!jobs_posted_by_fkey(id, full_name)')
+          .select(`${JOB_COLUMNS}, applications(id, status), profiles!jobs_posted_by_fkey(id, full_name)`)
           .ilike('company', slug)
           .order('created_at', { ascending: false }),
       ])
@@ -189,8 +190,15 @@ export default function Company() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 text-center">
         <Stat icon={Briefcase} value={jobs.length} label={jobs.length === 1 ? 'opportunity' : 'opportunities'} />
         <Stat icon={Briefcase} value={activeJobs.length} label="active" />
-        <Stat icon={Users} value={totalApplicants} label={totalApplicants === 1 ? 'applicant' : 'applicants'} />
-        <Stat icon={Users} value={totalAccepted} label="accepted" />
+        {/* Applicant/accepted counts are only accurate (and only meant) for the
+            company's own posters/admins — RLS limits the applications a visitor
+            can see, so showing these to others would be wrong or misleading. */}
+        {canEdit && (
+          <>
+            <Stat icon={Users} value={totalApplicants} label={totalApplicants === 1 ? 'applicant' : 'applicants'} />
+            <Stat icon={Users} value={totalAccepted} label="accepted" />
+          </>
+        )}
       </div>
 
       {/* People */}
@@ -230,7 +238,7 @@ export default function Company() {
                     <p className="text-sm font-medium text-ink truncate">{job.title}</p>
                     <p className="text-xs text-ink-muted mt-0.5">
                       {job.location}
-                      {job.applications && job.applications.length > 0 && (
+                      {canEdit && job.applications && job.applications.length > 0 && (
                         <span className="ml-2">· {job.applications.length} {job.applications.length === 1 ? 'applicant' : 'applicants'}</span>
                       )}
                     </p>

@@ -1,73 +1,64 @@
-# React + TypeScript + Vite
+# CRMS Connect
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A career-connections platform for **Colorado Rocky Mountain School** (Carbondale, CO)
+that links students, employer/mentors, and administrators. Students discover and
+apply to opportunities, post what they're looking for, and connect with mentors;
+employer/mentors post opportunities, review applicants, and offer mentorship;
+admins moderate users, content, and reports.
 
-Currently, two official plugins are available:
+## Tech stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend:** React 19 + TypeScript, Vite 7, React Router v7, Tailwind CSS v4
+- **PWA:** `vite-plugin-pwa` (injectManifest) with a custom service worker (`src/sw.ts`)
+- **Backend:** Supabase (Postgres + Auth + Edge Functions), `@supabase/supabase-js` v2
+- **Hosting:** Vercel (SPA rewrites + security headers in `vercel.json`)
+- **Tests:** Vitest (unit, co-located `*.test.ts`) and Playwright (`e2e/`)
 
-## React Compiler
+## Roles
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+`student | employer_mentor | admin` (see `src/types/index.ts`). The Postgres
+`role_type` enum also carries legacy `alumni`/`parent` values that are no longer
+exposed (migrated to `employer_mentor` in migration 019). Admins are provisioned
+via SQL, not signup. Authorization is centralized in
+`src/components/ProtectedRoute.tsx` and enforced server-side by Supabase RLS.
 
-## Expanding the ESLint configuration
+## Getting started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env        # fill in the VITE_SUPABASE_* values
+npm run dev                 # start the dev server
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Environment variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Client (Vite): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`.
+Edge-function secrets (set in the Supabase dashboard): `SUPABASE_SERVICE_ROLE_KEY`,
+`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. See `.env.example`.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Type-check (`tsc -b`) + production build |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest unit tests |
+| `npm run e2e` | Playwright end-to-end tests |
+| `npm run check:links` | Verify public footer links resolve |
+
+## Project layout
+
+- `src/pages/` — route components
+- `src/components/` — shared UI (incl. `ProtectedRoute`, layout, nav)
+- `src/lib/` — helpers (Supabase client, sanitization, CSV, etc.)
+- `src/contexts/` — `AuthContext`, `ThemeContext`
+- `supabase/migrations/` — ordered SQL migrations
+- `supabase/functions/` — Deno edge functions (`send-push`, `validate-signup`)
+- `e2e/` — Playwright specs
+
+## Database & migrations
+
+Schema and RLS live in `supabase/migrations/`. Apply with the Supabase CLI
+(`supabase db push`) or your deploy pipeline. `db/policies-snapshot.md` documents
+the intended RLS posture (treat the live database as the source of truth).

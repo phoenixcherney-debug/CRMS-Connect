@@ -129,7 +129,9 @@ export interface Job {
   job_type: JobType
   description: string
   how_to_apply: string
-  contact_email: string
+  /** Column-revoked at the DB level; only present when fetched via the
+   *  job_contact_email() RPC (poster / admin / accepted applicant). */
+  contact_email?: string
   location_type: LocationType
   industry?: string | null
   deadline: string | null

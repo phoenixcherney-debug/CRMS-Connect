@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, MessageSquare, X, SlidersHorizontal, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../components/ToastProvider'
+import { friendlyError } from '../lib/errors'
 import { initialsOf } from '../lib/initials'
 import { firstNameOf } from '../lib/preferredName'
 import { useAuth } from '../contexts/AuthContext'
@@ -15,6 +17,7 @@ import Spinner from '../components/Spinner'
 export default function StudentPosts() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
 
   const [posts, setPosts] = useState<StudentPost[]>([])
   const [loading, setLoading] = useState(true)
@@ -69,14 +72,18 @@ export default function StudentPosts() {
     }
 
     const [p1, p2] = [profile.id, studentId].sort()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .insert({ participant_one: p1, participant_two: p2 })
       .select('id')
       .single()
 
     setCreatingFor(null)
-    if (data) navigate(`/messages/${data.id}`)
+    if (error || !data) {
+      toast(friendlyError(error, "Could not message this student. They may not be open to outreach."), { kind: 'error' })
+      return
+    }
+    navigate(`/messages/${data.id}`)
   }
 
   const hasActiveFilters = filterInterests.length > 0 || filterAvailability || filterGrade || filterSeeking

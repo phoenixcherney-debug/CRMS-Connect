@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { MessageSquare, Clock, SquarePen, Search, X, User } from 'lucide-react'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../components/ToastProvider'
+import { friendlyError } from '../lib/errors'
 import { useAuth } from '../contexts/AuthContext'
 import type { Conversation, Message, Profile } from '../types'
 import { ROLE_LABELS } from '../types'
@@ -18,6 +20,7 @@ type ConvWithMeta = Conversation & {
 export default function Messages() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [conversations, setConversations] = useState<ConvWithMeta[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -140,11 +143,14 @@ export default function Messages() {
       // Task 2 — for E/M searchers, hide students who haven't opted into
       // outreach. They'd hit the DB trigger anyway; this saves the round-
       // trip and avoids surfacing kids who don't want to be contacted.
+      // Same-role DMs are allowed (migration 057 dropped the same-role block),
+      // so we only exclude admins and self here; EM→student consent is applied
+      // below.
       let query = supabase
         .from('profiles')
         .select('id, full_name, avatar_url, role, student_outreach_consent')
         .neq('id', profile.id)
-        .neq('role', profile.role)
+        .neq('role', 'admin')
         .ilike('full_name', `%${q}%`)
         .limit(10)
       if (profile.role === 'employer_mentor') {
@@ -181,15 +187,19 @@ export default function Messages() {
     }
 
     const [p1, p2] = [profile.id, otherId].sort()
-    const { data: created } = await supabase
+    const { data: created, error } = await supabase
       .from('conversations')
       .insert({ participant_one: p1, participant_two: p2 })
       .select('id')
       .single()
 
     setCreatingFor(null)
+    if (error || !created) {
+      toast(friendlyError(error, 'Could not start that conversation.'), { kind: 'error' })
+      return
+    }
     setComposeOpen(false)
-    if (created) navigate(`/messages/${created.id}`)
+    navigate(`/messages/${created.id}`)
   }
 
   function closeCompose() {
@@ -362,29 +372,22 @@ export default function Messages() {
                 <div className="flex flex-col items-center py-10 text-center px-5">
                   <User size={28} className="text-ink-muted mb-2" />
                   <p className="text-sm text-ink-muted">
-                    {profile?.role === 'student'
-                      ? 'Search for an employer or mentor by name.'
-                      : 'Search for a student by name.'}
+                    Search for someone by name to start a conversation.
                   </p>
-                  <p className="mt-2 text-xs text-ink-muted">
-                    {profile?.role === 'student' ? (
-                      <>
-                        You can only start conversations with employers and mentors. To reach another student, leave a comment on their listing on the{' '}
-                        <Link to="/student-posts" className="text-primary hover:text-primary-light font-medium">Student Posts</Link>{' '}page.
-                      </>
-                    ) : (
-                      'You can only start conversations with students. To talk to other employers/mentors, post or comment on the activity feed.'
-                    )}
-                  </p>
+                  {profile?.role === 'employer_mentor' && (
+                    <p className="mt-2 text-xs text-ink-muted">
+                      Students appear here only if they've opted into being contacted.
+                    </p>
+                  )}
                 </div>
               ) : searchResults.length === 0 ? (
                 <div className="py-10 text-center px-5">
                   <p className="text-sm text-ink-muted">No users found for "{searchQuery}".</p>
-                  <p className="mt-2 text-xs text-ink-muted">
-                    {profile?.role === 'student'
-                      ? 'You can only start conversations with employers and mentors.'
-                      : 'You can only start conversations with students.'}
-                  </p>
+                  {profile?.role === 'employer_mentor' && (
+                    <p className="mt-2 text-xs text-ink-muted">
+                      Students appear here only if they've opted into being contacted.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="divide-y divide-border">

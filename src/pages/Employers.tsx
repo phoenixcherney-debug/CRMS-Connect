@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Search, Building2, Briefcase, X, ChevronDown, ChevronUp, ExternalLink, MapPin } from 'lucide-react'
 import { isPast, parseISO, format } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import type { Job } from '../types'
 import { JOB_TYPE_LABELS, INDUSTRY_OPTIONS } from '../types'
 import Spinner from '../components/Spinner'
@@ -47,11 +48,11 @@ export default function Employers() {
       setFetchError(false)
       const { data, error } = await supabase
         .from('jobs')
-        .select('*, profiles!jobs_posted_by_fkey(id, full_name)')
+        .select(`${JOB_COLUMNS}, profiles!jobs_posted_by_fkey(id, full_name)`)
         .order('created_at', { ascending: false })
 
       if (error) { setFetchError(true); setLoading(false); return }
-      const jobs = (data as Job[]) ?? []
+      const jobs = (data as unknown as Job[]) ?? []
 
       // Group by company
       const map = new Map<string, EmployerEntry>()

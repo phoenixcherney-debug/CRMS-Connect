@@ -27,10 +27,15 @@ export default function MentorVisibilityCard() {
   async function gotIt() {
     if (!profile) return
     setBusy('got-it')
-    await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({ seen_mentor_visibility_card: true })
       .eq('id', profile.id)
+    if (error) {
+      toast('Something went wrong. Please try again.', { kind: 'error' })
+      setBusy(null)
+      return
+    }
     await refreshProfile()
     setBusy(null)
   }
@@ -38,13 +43,18 @@ export default function MentorVisibilityCard() {
   async function hideMe() {
     if (!profile) return
     setBusy('hide')
-    await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({
         seen_mentor_visibility_card: true,
         open_to_mentorship: false,
       })
       .eq('id', profile.id)
+    if (error) {
+      toast('Could not update your visibility. Please try again.', { kind: 'error' })
+      setBusy(null)
+      return
+    }
     await refreshProfile()
     toast("We've hidden your profile. You can turn it back on any time from Edit Profile.")
     setBusy(null)
