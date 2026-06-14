@@ -275,6 +275,18 @@ export default function Jobs() {
               : undefined
           }
         />
+      ) : activeJobs.length === 0 && closedJobs.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title="All matching opportunities are closed."
+          description="Try adjusting or clearing your filters to see open opportunities."
+          ctaLabel={search || filter || locFilter || indFilter ? 'Clear filters' : undefined}
+          ctaOnClick={
+            search || filter || locFilter || indFilter
+              ? () => { setSearch(''); setFilter(''); setLocFilter(''); setIndFilter('') }
+              : undefined
+          }
+        />
       ) : (
         <div className="space-y-8">
           {/* Active jobs */}
