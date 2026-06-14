@@ -258,6 +258,7 @@ export default function PostJob() {
       ['description',   description] as const,
       ['how_to_apply',  form.how_to_apply.trim()] as const,
       ['company',       company] as const,
+      ['compensation',  form.compensation.trim()] as const,
     ]) {
       const term = containsBlockedTerms(value)
       if (term.blocked) {
@@ -327,11 +328,11 @@ export default function PostJob() {
     })
 
     try {
-      let result: { error: { message: string } | null }
+      let result: { data?: { id: string }[] | null; error: { message: string } | null }
       if (isEdit) {
         const { posted_by: _omit, ...updatePayload } = payload
         result = await Promise.race([
-          supabase.from('jobs').update(updatePayload).eq('id', id!),
+          supabase.from('jobs').update(updatePayload).eq('id', id!).select('id'),
           timeout,
         ]) as typeof result
       } else {
@@ -343,6 +344,12 @@ export default function PostJob() {
 
       if (result.error) {
         setError(friendlyError(result.error, SAVE_FAIL_MSG))
+        return
+      }
+      // RLS silently matches zero rows when editing a job you don't own — without
+      // this guard the UI would falsely report "Saved." and redirect.
+      if (isEdit && (!result.data || result.data.length === 0)) {
+        setError('You can only edit opportunities you posted.')
         return
       }
 

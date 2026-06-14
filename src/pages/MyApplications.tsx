@@ -267,8 +267,13 @@ export default function MyApplications() {
           >
             <option value="all">All statuses</option>
             <option value="pending">Submitted</option>
+            <option value="interview_scheduled">Interview scheduled</option>
+            <option value="offer_sent">Offer sent</option>
             <option value="accepted">Accepted</option>
+            <option value="started">Started</option>
+            <option value="completed">Completed</option>
             <option value="rejected">Not selected</option>
+            <option value="withdrawn_by_employer">Withdrawn</option>
           </select>
         </div>
       )}
