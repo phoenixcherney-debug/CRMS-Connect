@@ -64,19 +64,18 @@ export default function MyStudentPosts() {
     // is just for nicer UX.
     const cleaned = sanitizeUserText(pitch.trim())
     if (cleaned.rejected) {
-      setSubmitting(false)
-      window.alert(cleaned.reason ?? 'That text contains characters we don\'t allow.')
+      toast(cleaned.reason ?? 'That text contains characters we don\'t allow.', { kind: 'error' })
       return
     }
     // Task 1 — blocked-term check before the DB trigger.
     const term = containsBlockedTerms(cleaned.clean)
     if (term.blocked) {
-      window.alert(term.reason ?? 'Please revise your post.')
+      toast(term.reason ?? 'Please revise your post.', { kind: 'error' })
       return
     }
     const seekingOtherClean = seeking === 'other' ? sanitizeUserText(seekingOther.trim()) : null
     if (seekingOtherClean?.rejected) {
-      window.alert(seekingOtherClean.reason ?? 'That text contains characters we don\'t allow.')
+      toast(seekingOtherClean.reason ?? 'That text contains characters we don\'t allow.', { kind: 'error' })
       return
     }
 
@@ -105,22 +104,25 @@ export default function MyStudentPosts() {
       setInterests([])
       setAvailability('')
       setShowForm(false)
-      toast('Post updated.')
+      toast('Post created.')
     } else if (error) {
       toast('Could not save your post.', { kind: 'error' })
     }
   }
 
-  async function handleUpdate(postId: string, updates: Partial<StudentPost>) {
+  async function handleUpdate(postId: string, updates: Partial<StudentPost>): Promise<boolean> {
     const { data, error } = await supabase
       .from('student_posts')
       .update(updates)
       .eq('id', postId)
       .select()
       .single()
-    if (!error && data) {
-      setPosts((prev) => prev.map((p) => p.id === postId ? (data as StudentPost) : p))
+    if (error || !data) {
+      toast('Could not update your post.', { kind: 'error' })
+      return false
     }
+    setPosts((prev) => prev.map((p) => p.id === postId ? (data as StudentPost) : p))
+    return true
   }
 
   async function toggleClosed(post: StudentPost) {
@@ -128,17 +130,21 @@ export default function MyStudentPosts() {
       .from('student_posts')
       .update({ is_closed: !post.is_closed })
       .eq('id', post.id)
-    if (!error) {
-      setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, is_closed: !p.is_closed } : p))
+    if (error) {
+      toast('Could not update your post.', { kind: 'error' })
+      return
     }
+    setPosts((prev) => prev.map((p) => p.id === post.id ? { ...p, is_closed: !p.is_closed } : p))
   }
 
   async function handleDelete(postId: string) {
     const { error } = await supabase.from('student_posts').delete().eq('id', postId)
-    if (!error) {
-      setPosts((prev) => prev.filter((p) => p.id !== postId))
-      setDeleteId(null)
+    if (error) {
+      toast('Could not delete your post.', { kind: 'error' })
+      return
     }
+    setPosts((prev) => prev.filter((p) => p.id !== postId))
+    setDeleteId(null)
   }
 
   const openPosts   = posts.filter((p) => !p.is_closed)
@@ -344,13 +350,15 @@ interface PostCardProps {
   post: StudentPost
   onToggle: (post: StudentPost) => void
   onDelete: (id: string) => void
-  onUpdate: (id: string, updates: Partial<StudentPost>) => Promise<void>
+  onUpdate: (id: string, updates: Partial<StudentPost>) => Promise<boolean>
 }
 
 function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
+  const toast = useToast()
   const [editing, setEditing] = useState(false)
   const [editPitch, setEditPitch] = useState(post.pitch)
   const [editSeeking, setEditSeeking] = useState<StudentSeeking | ''>(post.seeking)
+  const [editSeekingOther, setEditSeekingOther] = useState(post.seeking_other ?? '')
   const [editAvailability, setEditAvailability] = useState(post.availability ?? '')
   const [editInterests, setEditInterests] = useState<string[]>(post.interests)
   const [saving, setSaving] = useState(false)
@@ -360,15 +368,40 @@ function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
 
   async function saveEdit() {
     if (!editSeeking) return
+    if (editSeeking === 'other' && !editSeekingOther.trim()) return
+
+    // Mirror the create flow: sanitize + blocked-term check before the DB
+    // trigger, and only close the editor once the save actually succeeds.
+    const cleaned = sanitizeUserText(editPitch.trim())
+    if (cleaned.rejected) {
+      toast(cleaned.reason ?? 'That text contains characters we don\'t allow.', { kind: 'error' })
+      return
+    }
+    const term = containsBlockedTerms(cleaned.clean)
+    if (term.blocked) {
+      toast(term.reason ?? 'Please revise your post.', { kind: 'error' })
+      return
+    }
+    let seekingOtherClean: string | null = null
+    if (editSeeking === 'other') {
+      const so = sanitizeUserText(editSeekingOther.trim())
+      if (so.rejected) {
+        toast(so.reason ?? 'That text contains characters we don\'t allow.', { kind: 'error' })
+        return
+      }
+      seekingOtherClean = so.clean || null
+    }
+
     setSaving(true)
-    await onUpdate(post.id, {
-      pitch: editPitch.trim(),
+    const ok = await onUpdate(post.id, {
+      pitch: cleaned.clean,
       seeking: editSeeking,
+      seeking_other: editSeeking === 'other' ? seekingOtherClean : null,
       interests: editInterests,
       availability: editAvailability || null,
     })
     setSaving(false)
-    setEditing(false)
+    if (ok) setEditing(false)
   }
 
   if (editing) {
@@ -389,6 +422,19 @@ function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
               ))}
             </div>
           </div>
+          {editSeeking === 'other' && (
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">Tell us what you're looking for</label>
+              <input
+                type="text"
+                value={editSeekingOther}
+                onChange={(e) => setEditSeekingOther(e.target.value)}
+                maxLength={100}
+                placeholder="e.g. a research collaborator"
+                className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-ink text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-xs font-medium text-ink mb-1">About you</label>
             <textarea rows={3} value={editPitch} onChange={(e) => setEditPitch(e.target.value)}
@@ -418,7 +464,7 @@ function PostCard({ post, onToggle, onDelete, onUpdate }: PostCardProps) {
             </div>
           </div>
           <div className="flex gap-2 pt-1">
-            <button type="button" onClick={saveEdit} disabled={saving || !editSeeking} className="btn-gold px-4 py-1.5 text-xs">
+            <button type="button" onClick={saveEdit} disabled={saving || !editSeeking || (editSeeking === 'other' && !editSeekingOther.trim())} className="btn-gold px-4 py-1.5 text-xs">
               {saving ? 'Saving…' : 'Save'}
             </button>
             <button type="button" onClick={() => setEditing(false)} className="px-3 py-1.5 rounded-lg border border-border text-xs text-ink-secondary hover:bg-primary-faint transition-colors">Cancel</button>

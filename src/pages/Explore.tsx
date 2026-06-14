@@ -355,9 +355,10 @@ export default function Explore() {
                 .toUpperCase()
                 .slice(0, 2)
               return (
-                <div
+                <Link
                   key={person.id}
-                  className="bg-surface rounded-xl border border-border p-4 text-center"
+                  to={`/people/${person.id}`}
+                  className="bg-surface rounded-xl border border-border p-4 text-center block hover:border-primary transition-colors"
                   style={{ boxShadow: 'var(--shadow-card)' }}
                 >
                   <div className="w-12 h-12 rounded-full bg-primary-muted flex items-center justify-center text-primary font-bold text-sm mx-auto mb-2 overflow-hidden">
@@ -374,10 +375,12 @@ export default function Explore() {
                   <p className="text-xs text-ink-muted capitalize mt-0.5">
                     {ROLE_LABELS[person.role]}
                   </p>
-                  {person.graduation_year && (
+                  {/* Only show class year for students who opted into sharing it,
+                      matching every other directory surface. */}
+                  {person.graduation_year && person.share_grade_with_employers && (
                     <p className="text-xs text-ink-muted">Class of {person.graduation_year}</p>
                   )}
-                </div>
+                </Link>
               )
             })}
           </div>

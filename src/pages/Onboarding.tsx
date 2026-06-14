@@ -12,6 +12,7 @@ import {
 } from '../types'
 import type { MentorType, StudentSeeking, StudentGrade } from '../types'
 import { containsBlockedTerms } from '../lib/textFilter'
+import { sanitizeUserText } from '../lib/sanitize'
 import Spinner from '../components/Spinner'
 
 const CRMS_LOGO = 'https://www.crms.org/wp-content/uploads/2020/09/Vector-Smart-Object-copy.png'
@@ -170,8 +171,14 @@ export default function Onboarding() {
         return
       }
     }
-    // Task 1 — bio + company text-filter check before save.
-    const bioTerm = containsBlockedTerms(bio)
+    // Task 1 — bio sanitize + text-filter check before save (mirrors the DB
+    // trigger; previously bio skipped sanitizeUserText).
+    const bioClean = sanitizeUserText(bio.trim())
+    if (bioClean.rejected) {
+      setSaveError(bioClean.reason ?? 'That text contains characters we don\'t allow.')
+      return
+    }
+    const bioTerm = containsBlockedTerms(bioClean.clean)
     if (bioTerm.blocked) {
       setSaveError(bioTerm.reason ?? 'Please revise your bio.')
       return
@@ -189,7 +196,7 @@ export default function Onboarding() {
 
     const updates: Record<string, unknown> = {
       onboarding_complete: true,
-      bio: bio.trim() || null,
+      bio: bioClean.clean || null,
       avatar_url: avatarUrl.trim() || null,
     }
 
@@ -210,6 +217,9 @@ export default function Onboarding() {
       updates.mentor_type_other = mentorType === 'other' ? mentorTypeOther.trim() || null : null
       // P2-12 — capture mentorship + alum-year intent at onboarding.
       updates.open_to_mentorship = openToMentorship
+      // Stamp the consent time so the yearly mentor-reconfirm clock starts now.
+      // Without this it stays null and MentorReconfirmPrompt fires on day one.
+      if (openToMentorship) updates.mentor_consent_confirmed_at = new Date().toISOString()
       const ay = parseInt(alumGradYear, 10)
       if (!isNaN(ay) && ay >= 1900 && ay <= 2100) updates.graduation_year = ay
     }
