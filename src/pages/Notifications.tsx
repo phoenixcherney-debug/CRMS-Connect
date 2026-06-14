@@ -82,19 +82,22 @@ export default function Notifications() {
       // notification-worthy — they did it themselves (audit task 15).
       const { data: apps } = await supabase
         .from('applications')
-        .select('id, created_at, status, job_id, jobs(title, company)')
+        .select('id, created_at, status_changed_at, status, job_id, jobs(title, company)')
         .eq('applicant_id', profile.id)
         .in('status', ['accepted', 'rejected'])
-        .order('created_at', { ascending: false })
+        .order('status_changed_at', { ascending: false })
         .limit(30)
 
       for (const a of apps ?? []) {
         const jobTitle   = (a.jobs as any)?.title   ?? 'a position'
         const jobCompany = (a.jobs as any)?.company ?? ''
+        // Key freshness off when the status changed, not submission time, so a
+        // later accept/reject surfaces as new.
+        const ts = (a as any).status_changed_at ?? a.created_at
         notifs.push({
           id:       `app-${a.id}`,
           type:     'app_out',
-          ts:       a.created_at,
+          ts,
           unread:   true,
           link:     `/opportunities/${a.job_id}`,
           title:    `Application: ${jobTitle}${jobCompany ? ` at ${jobCompany}` : ''}`,
