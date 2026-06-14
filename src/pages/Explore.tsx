@@ -5,6 +5,7 @@ import {
   Heart, CalendarClock, ClipboardList, PlusSquare,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { initialsOf } from '../lib/initials'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Profile } from '../types'
@@ -46,7 +47,7 @@ export default function Explore() {
       ] = await Promise.all([
         supabase
           .from('jobs')
-          .select('*, profiles!jobs_posted_by_fkey(id, full_name, role)')
+          .select(`${JOB_COLUMNS}, profiles!jobs_posted_by_fkey(id, full_name, role)`)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(4),
@@ -63,7 +64,7 @@ export default function Explore() {
 
       if (peopleError) console.error('Explore: profiles query failed', peopleError)
 
-      const jobList = ((jobs as Job[]) ?? []).filter(
+      const jobList = ((jobs as unknown as Job[]) ?? []).filter(
         (j) => !j.deadline || !isPast(parseISO(j.deadline))
       )
       const peopleList = (people as Profile[]) ?? []

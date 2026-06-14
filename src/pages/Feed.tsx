@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Briefcase, Bell, RefreshCw, MessageSquare, UserCheck, BookOpen } from 'lucide-react'
 import { format, formatDistanceToNow, parseISO, isPast, differenceInDays } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Application, StudentPost } from '../types'
 import { JOB_TYPE_LABELS, STUDENT_SEEKING_LABELS } from '../types'
@@ -44,12 +45,12 @@ export default function Feed() {
     {
       const { data: jobs } = await supabase
         .from('jobs')
-        .select('*, profiles!jobs_posted_by_fkey(id, full_name, role)')
+        .select(`${JOB_COLUMNS}, profiles!jobs_posted_by_fkey(id, full_name, role)`)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(40)
 
-      for (const j of (jobs as Job[]) ?? []) {
+      for (const j of (jobs as unknown as Job[]) ?? []) {
         if (j.deadline && isPast(parseISO(j.deadline))) continue
         // Don't show employer/mentors their own posts in their feed.
         if (isEmployerMentor && j.posted_by === profile.id) continue

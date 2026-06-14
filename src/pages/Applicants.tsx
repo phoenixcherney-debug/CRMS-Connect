@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ExternalLink, Calendar, MessageSquare, CheckCircle2, X, Clock, Download } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { safeExternalHref } from '../lib/url'
 import { useAuth } from '../contexts/AuthContext'
 import { sendPushToUser } from '../lib/sendPush'
@@ -126,7 +127,8 @@ export default function Applicants() {
       // Load the job first so we can authorize before fetching applicants.
       // Non-owners (and non-admins) get a 404 — not 403, not an empty inbox —
       // so this URL doesn't leak job metadata or imply zero applications.
-      const { data: jobData } = await supabase.from('jobs').select('*').eq('id', id!).maybeSingle()
+      const { data: jobRaw } = await supabase.from('jobs').select(JOB_COLUMNS).eq('id', id!).maybeSingle()
+      const jobData = jobRaw as unknown as Job | null
       const isOwner = !!profile && !!jobData && jobData.posted_by === profile.id
       const isAdmin = profile?.role === 'admin'
       if (!jobData || (!isOwner && !isAdmin)) {
@@ -143,7 +145,7 @@ export default function Applicants() {
         .eq('job_id', id!)
         .order('created_at', { ascending: true })
 
-      setJob(jobData as Job)
+      setJob(jobData)
       setApplications((appData as Application[]) ?? [])
       setLoading(false)
     }

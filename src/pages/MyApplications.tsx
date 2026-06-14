@@ -81,6 +81,9 @@ export default function MyApplications() {
   // Audit task 14 — map of posterId → conversationId so each application
   // card can either deep-link to an existing thread or start a new one.
   const [convMap, setConvMap] = useState<Record<string, string>>({})
+  // job_id → contact_email, fetched via RPC for accepted applications only
+  // (contact_email is column-revoked on jobs).
+  const [contactEmails, setContactEmails] = useState<Record<string, string>>({})
   const [openingConvFor, setOpeningConvFor] = useState<string | null>(null)
   // NAV-007 — decline-offer confirm.
   const [declineId, setDeclineId] = useState<string | null>(null)
@@ -95,7 +98,7 @@ export default function MyApplications() {
       .from('applications')
       .select(`
         *,
-        jobs(id, title, company, location, job_type, deadline, is_active, contact_email,
+        jobs(id, title, company, location, job_type, deadline, is_active,
           profiles!jobs_posted_by_fkey(id, full_name))
       `)
       .eq('applicant_id', profile.id)
@@ -103,7 +106,24 @@ export default function MyApplications() {
     if (error) {
       setFetchError(true)
     } else {
-      setApplications((data as Application[]) ?? [])
+      const apps = (data as Application[]) ?? []
+      setApplications(apps)
+
+      // For accepted applications, fetch the poster's contact email via the
+      // RPC (the column is no longer readable through the jobs embed).
+      const acceptedJobIds = Array.from(
+        new Set(apps.filter((a) => a.status === 'accepted' && a.job_id).map((a) => a.job_id)),
+      )
+      if (acceptedJobIds.length > 0) {
+        const emails: Record<string, string> = {}
+        await Promise.all(
+          acceptedJobIds.map(async (jid) => {
+            const { data: ce } = await supabase.rpc('job_contact_email', { job_uuid: jid })
+            if (ce) emails[jid] = ce as string
+          }),
+        )
+        setContactEmails(emails)
+      }
 
       // Audit task 14 — build a posterId → conversationId map so the row
       // can render "Open conversation" without a per-row query.
@@ -322,14 +342,14 @@ export default function MyApplications() {
                   {/* P1-5 — surface contact email after acceptance only.
                       Privacy doc promises this and it lived nowhere in the
                       UI before. */}
-                  {app.status === 'accepted' && (job as { contact_email?: string }).contact_email && (
+                  {app.status === 'accepted' && contactEmails[app.job_id] && (
                     <p className="mt-2 text-xs text-ink-secondary">
                       Contact:{' '}
                       <a
-                        href={`mailto:${(job as { contact_email?: string }).contact_email}`}
+                        href={`mailto:${contactEmails[app.job_id]}`}
                         className="text-primary hover:text-primary-light font-medium underline break-all"
                       >
-                        {(job as { contact_email?: string }).contact_email}
+                        {contactEmails[app.job_id]}
                       </a>
                     </p>
                   )}

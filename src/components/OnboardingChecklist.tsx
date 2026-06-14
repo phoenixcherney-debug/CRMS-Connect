@@ -50,7 +50,7 @@ export default function OnboardingChecklist() {
     async function check() {
       if (!profile) return
       const [{ count: jobCount }, { count: careerCount }] = await Promise.all([
-        supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('posted_by', profile.id),
+        supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('posted_by', profile.id),
         supabase.from('career_history').select('*', { count: 'exact', head: true }).eq('profile_id', profile.id),
       ])
       if (!cancelled) setHasJobOrCareer((jobCount ?? 0) + (careerCount ?? 0) > 0)

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Search, Plus, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react'
 import { isPast, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, JobType, LocationType } from '../types'
 import { JOB_TYPE_LABELS, LOCATION_TYPE_LABELS, INDUSTRY_OPTIONS } from '../types'
@@ -38,13 +39,13 @@ export default function Jobs() {
       setFetchError(false)
       const { data, error } = await supabase
         .from('jobs')
-        .select('*, profiles!jobs_posted_by_fkey(id, full_name, role)')
+        .select(`${JOB_COLUMNS}, profiles!jobs_posted_by_fkey(id, full_name, role)`)
         .order('created_at', { ascending: false })
 
       if (error) {
         setFetchError(true)
       } else if (data) {
-        setJobs(data as Job[])
+        setJobs(data as unknown as Job[])
       }
       setLoading(false)
     }

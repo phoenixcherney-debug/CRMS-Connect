@@ -14,6 +14,7 @@ import {
 import Spinner from '../components/Spinner'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { friendlyError } from '../lib/errors'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { useToast } from '../components/ToastProvider'
 
 export default function AdminUserView() {
@@ -74,7 +75,7 @@ export default function AdminUserView() {
       const [jobsRes, careerRes] = await Promise.all([
         supabase
           .from('jobs')
-          .select('*')
+          .select(JOB_COLUMNS)
           .eq('posted_by', userId)
           .order('created_at', { ascending: false }),
         supabase
@@ -84,7 +85,7 @@ export default function AdminUserView() {
           .order('is_current', { ascending: false })
           .order('start_year', { ascending: false }),
       ])
-      setJobs((jobsRes.data as Job[]) ?? [])
+      setJobs((jobsRes.data as unknown as Job[]) ?? [])
       setCareerHistory((careerRes.data as CareerHistory[]) ?? [])
     }
 

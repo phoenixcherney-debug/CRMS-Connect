@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Building2, Globe, MapPin, Users, ChevronLeft, ExternalLink, Briefcase } from 'lucide-react'
 import { isPast, parseISO, format } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
@@ -52,7 +53,7 @@ export default function Company() {
           .maybeSingle(),
         supabase
           .from('jobs')
-          .select('*, applications(id, status), profiles!jobs_posted_by_fkey(id, full_name)')
+          .select(`${JOB_COLUMNS}, applications(id, status), profiles!jobs_posted_by_fkey(id, full_name)`)
           .ilike('company', slug)
           .order('created_at', { ascending: false }),
       ])

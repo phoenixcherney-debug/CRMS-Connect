@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Edit3, Trash2, Users, Eye, ToggleLeft, ToggleRight, RotateCcw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { JOB_COLUMNS } from '../lib/jobColumns'
 import { useAuth } from '../contexts/AuthContext'
 import type { Job, Application } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
@@ -34,10 +35,10 @@ export default function MyPostings() {
     setLoading(true)
     const { data } = await supabase
       .from('jobs')
-      .select('*, applications(id, status, applicant_id)')
+      .select(`${JOB_COLUMNS}, applications(id, status, applicant_id)`)
       .eq('posted_by', profile.id)
       .order('created_at', { ascending: false })
-    const rows = (data as PostingWithApplicants[]) ?? []
+    const rows = (data as unknown as PostingWithApplicants[]) ?? []
     setPostings(rows)
     setLoading(false)
 
