@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { useToast } from '../components/ToastProvider'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 interface UserReport {
   id: string
@@ -32,6 +33,7 @@ export default function AdminReports() {
   const [reports, setReports] = useState<UserReport[]>([])
   const [loading, setLoading] = useState(true)
   const [actingId, setActingId] = useState<string | null>(null)
+  const [confirmDisable, setConfirmDisable] = useState<{ id: string; reportedId: string; name: string } | null>(null)
 
   async function load() {
     setLoading(true)
@@ -74,8 +76,9 @@ export default function AdminReports() {
       .update({ status: 'actioned', reviewed_at: new Date().toISOString() })
       .eq('id', id)
     setActingId(null)
+    setConfirmDisable(null)
     if (e2) { toast('Account disabled but report not flipped.', { kind: 'error' }); return }
-    setReports((prev) => prev.map((r) => r.id === id ? { ...r, status: 'actioned' } : r))
+    setReports((prev) => prev.map((r) => r.id === id ? { ...r, status: 'actioned', reported: r.reported ? { ...r.reported, account_status: 'disabled' } : r.reported } : r))
     toast(`Disabled ${name} and closed the report.`)
   }
 
@@ -125,13 +128,21 @@ export default function AdminReports() {
                           <AlertTriangle size={16} className="text-error shrink-0 mt-0.5" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm">
-                              <Link to={`/admin/users/${r.reporter?.id}`} className="font-semibold text-ink hover:text-primary">
-                                {r.reporter?.full_name ?? 'Unknown'}
-                              </Link>
+                              {r.reporter?.id ? (
+                                <Link to={`/admin/users/${r.reporter.id}`} className="font-semibold text-ink hover:text-primary">
+                                  {r.reporter.full_name}
+                                </Link>
+                              ) : (
+                                <span className="font-semibold text-ink-muted">{r.reporter?.full_name ?? 'Unknown (deleted)'}</span>
+                              )}
                               <span className="text-ink-muted">{' reported '}</span>
-                              <Link to={`/admin/users/${r.reported?.id}`} className="font-semibold text-ink hover:text-primary">
-                                {r.reported?.full_name ?? 'Unknown'}
-                              </Link>
+                              {r.reported?.id ? (
+                                <Link to={`/admin/users/${r.reported.id}`} className="font-semibold text-ink hover:text-primary">
+                                  {r.reported.full_name}
+                                </Link>
+                              ) : (
+                                <span className="font-semibold text-ink-muted">{r.reported?.full_name ?? 'Unknown (deleted)'}</span>
+                              )}
                               {r.reported?.account_status === 'disabled' && (
                                 <span className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium ${badge}`}>
                                   account disabled
@@ -157,7 +168,7 @@ export default function AdminReports() {
                             {r.reported?.id && r.reported.account_status !== 'disabled' && (
                               <button
                                 type="button"
-                                onClick={() => actionAccount(r.id, r.reported!.id, r.reported!.full_name)}
+                                onClick={() => setConfirmDisable({ id: r.id, reportedId: r.reported!.id, name: r.reported!.full_name })}
                                 disabled={acting}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-rejected-bg text-status-rejected-text border border-status-rejected-border hover:opacity-80 disabled:opacity-40 transition-opacity"
                               >
@@ -183,6 +194,17 @@ export default function AdminReports() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDisable !== null}
+        title={`Disable ${confirmDisable?.name ?? 'this account'}?`}
+        description={'This sets the account to disabled and bans it — the user is signed out and blocked from the app. You can re-enable it later from the admin panel.'}
+        confirmLabel={actingId && confirmDisable && actingId === confirmDisable.id ? 'Disabling…' : 'Disable account'}
+        confirmDisabled={actingId !== null}
+        destructive
+        onConfirm={() => { if (confirmDisable) actionAccount(confirmDisable.id, confirmDisable.reportedId, confirmDisable.name) }}
+        onCancel={() => { if (actingId === null) setConfirmDisable(null) }}
+      />
     </div>
   )
 }

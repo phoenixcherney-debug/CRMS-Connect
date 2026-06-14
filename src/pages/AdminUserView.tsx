@@ -30,6 +30,8 @@ export default function AdminUserView() {
   const [loading, setLoading] = useState(true)
   const [actionError, setActionError] = useState<string | null>(null)
   const [confirmDeleteJob, setConfirmDeleteJob] = useState<string | null>(null)
+  const [confirmBan, setConfirmBan] = useState(false)
+  const [banBusy, setBanBusy] = useState(false)
   const [messagingLoading, setMessagingLoading] = useState(false)
   // Account-delete flow (mirrors AdminPanel): typed email confirms.
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false)
@@ -90,19 +92,24 @@ export default function AdminUserView() {
   }
 
   async function handleBan() {
-    if (!id) return
-    setActionError(null)
+    if (!id || banBusy) return
+    setBanBusy(true)
     const { error } = await supabase.rpc('admin_ban_user', { target_id: id })
-    if (error) { setActionError(error.message); return }
+    setBanBusy(false)
+    if (error) { toast(friendlyError(error, 'Could not ban that user.'), { kind: 'error' }); return }
+    setConfirmBan(false)
     setPerson(prev => prev ? { ...prev, banned_at: new Date().toISOString() } : prev)
+    toast(`${person?.full_name || 'User'} banned.`)
   }
 
   async function handleUnban() {
-    if (!id) return
-    setActionError(null)
+    if (!id || banBusy) return
+    setBanBusy(true)
     const { error } = await supabase.rpc('admin_unban_user', { target_id: id })
-    if (error) { setActionError(error.message); return }
+    setBanBusy(false)
+    if (error) { toast(friendlyError(error, 'Could not unban that user.'), { kind: 'error' }); return }
     setPerson(prev => prev ? { ...prev, banned_at: null } : prev)
+    toast(`${person?.full_name || 'User'} unbanned.`)
   }
 
   async function handleDeleteAccount() {
@@ -121,7 +128,7 @@ export default function AdminUserView() {
   async function handleDeleteJob(jobId: string) {
     setActionError(null)
     const { error } = await supabase.from('jobs').delete().eq('id', jobId)
-    if (error) { setActionError(error.message); return }
+    if (error) { setActionError(friendlyError(error, 'Could not delete that posting.')); return }
     setJobs(prev => prev.filter(j => j.id !== jobId))
     setConfirmDeleteJob(null)
   }
@@ -144,13 +151,17 @@ export default function AdminUserView() {
     }
 
     const [p1, p2] = [adminProfile.id, person.id].sort()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .insert({ participant_one: p1, participant_two: p2 })
       .select('id')
       .single()
     setMessagingLoading(false)
-    if (data) navigate(`/messages/${data.id}`)
+    if (error || !data) {
+      toast(friendlyError(error, 'Could not start that conversation.'), { kind: 'error' })
+      return
+    }
+    navigate(`/messages/${data.id}`)
   }
 
   if (loading) {
@@ -243,16 +254,18 @@ export default function AdminUserView() {
         {person.banned_at ? (
           <button type="button"
             onClick={handleUnban}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:bg-surface-raised"
+            disabled={banBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:bg-surface-raised disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ borderColor: 'var(--color-success)', color: 'var(--color-success)' }}
           >
-            <RotateCcw size={13} />
+            {banBusy ? <Spinner size="sm" /> : <RotateCcw size={13} />}
             Unban
           </button>
         ) : (
           <button type="button"
-            onClick={handleBan}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors"
+            onClick={() => setConfirmBan(true)}
+            disabled={banBusy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ borderColor: 'var(--color-error)', color: 'var(--color-error)' }}
           >
             <Ban size={13} />
@@ -620,6 +633,17 @@ export default function AdminUserView() {
           className="w-full mb-3 px-3.5 py-2.5 rounded-lg border border-border bg-surface text-ink text-sm placeholder:text-ink-placeholder focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
         />
       </ConfirmDialog>
+
+      <ConfirmDialog
+        open={confirmBan}
+        title={`Ban ${person?.full_name ?? 'this user'}?`}
+        description={'They will be signed out and blocked from the app until you unban them. Their content stays in place.'}
+        confirmLabel={banBusy ? 'Banning…' : 'Ban user'}
+        confirmDisabled={banBusy}
+        destructive
+        onConfirm={handleBan}
+        onCancel={() => { if (!banBusy) setConfirmBan(false) }}
+      />
     </div>
   )
 }
