@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Heart, MessageSquare, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../components/ToastProvider'
+import { friendlyError } from '../lib/errors'
 import { useAuth } from '../contexts/AuthContext'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
@@ -20,6 +22,7 @@ interface ShortlistRow {
 export default function Shortlist() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [rows, setRows]       = useState<ShortlistRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -68,12 +71,16 @@ export default function Shortlist() {
       .maybeSingle()
     if (existing) { navigate(`/messages/${existing.id}`); return }
     const [p1, p2] = [profile.id, studentId].sort()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .insert({ participant_one: p1, participant_two: p2 })
       .select('id')
       .single()
-    if (data) navigate(`/messages/${data.id}`)
+    if (error || !data) {
+      toast(friendlyError(error, 'Could not message this candidate. They may not be open to outreach.'), { kind: 'error' })
+      return
+    }
+    navigate(`/messages/${data.id}`)
   }
 
   if (loading) {

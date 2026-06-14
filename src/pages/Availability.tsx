@@ -9,6 +9,7 @@ import {
   isAfter, isBefore, isSameMonth,
 } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { friendlyError } from '../lib/errors'
 import { useAuth } from '../contexts/AuthContext'
 import Spinner from '../components/Spinner'
 
@@ -174,15 +175,18 @@ function SlotModal({
       : supabase.from('availability_slots').insert(payload).select().single()
     const { data, error } = await q
     setSaving(false)
-    if (error) { setErr(error.message); return }
+    if (error) { setErr(friendlyError(error, 'Could not save that slot.')); return }
     onSaved(data as AvailSlot)
   }
 
   async function del() {
     if (!slot) return
     setDeleting(true)
-    await supabase.from('availability_slots').delete().eq('id', slot.id)
+    const { error } = await supabase.from('availability_slots').delete().eq('id', slot.id)
     setDeleting(false)
+    // A slot with a pending meeting request can't be deleted (FK). Surface that
+    // instead of optimistically removing it from the UI and having it reappear.
+    if (error) { setErr(friendlyError(error, 'Could not delete this slot — it may have a pending meeting request.')); return }
     onDeleted(slot.id)
   }
 
@@ -222,7 +226,7 @@ function SlotModal({
           {/* Date */}
           <div>
             <label className="block text-xs font-medium text-ink mb-1">Date</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} className={INPUT_CLS} />
+            <input type="date" value={date} min={slot ? undefined : TODAY} onChange={e => setDate(e.target.value)} className={INPUT_CLS} />
           </div>
 
           {/* Phase 3.1 — picker now spans 24h; tz is explicit. Slots outside
@@ -757,6 +761,10 @@ export default function Availability() {
       .order('date', { ascending: true })
       .then(({ data }) => {
         setSlots((data as AvailSlot[]) ?? [])
+        setLoading(false)
+      }, () => {
+        // Never leave the page stuck on a spinner if the fetch rejects.
+        setSlots([])
         setLoading(false)
       })
   }, [profile?.id])

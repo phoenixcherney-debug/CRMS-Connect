@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Search, MessageSquare, X, Heart, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../components/ToastProvider'
+import { friendlyError } from '../lib/errors'
 import { initialsOf } from '../lib/initials'
 import { pluralize } from '../lib/pluralize'
 import { disambiguateNames } from '../lib/disambiguateNames'
@@ -28,6 +30,7 @@ interface PeopleProps {
 export default function People({ directory }: PeopleProps = {}) {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
 
   const [people, setPeople] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
@@ -109,14 +112,18 @@ export default function People({ directory }: PeopleProps = {}) {
     }
 
     const [p1, p2] = [profile.id, otherId].sort()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .insert({ participant_one: p1, participant_two: p2 })
       .select('id')
       .single()
 
     setCreatingFor(null)
-    if (data) navigate(`/messages/${data.id}`)
+    if (error || !data) {
+      toast(friendlyError(error, 'Could not start that conversation.'), { kind: 'error' })
+      return
+    }
+    navigate(`/messages/${data.id}`)
   }
 
   const hasActiveFilters = filterInterests.length > 0 || filterAvailability || filterGrade || filterLooking

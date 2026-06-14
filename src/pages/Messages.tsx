@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { MessageSquare, Clock, SquarePen, Search, X, User } from 'lucide-react'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../components/ToastProvider'
+import { friendlyError } from '../lib/errors'
 import { useAuth } from '../contexts/AuthContext'
 import type { Conversation, Message, Profile } from '../types'
 import { ROLE_LABELS } from '../types'
@@ -18,6 +20,7 @@ type ConvWithMeta = Conversation & {
 export default function Messages() {
   const { profile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [conversations, setConversations] = useState<ConvWithMeta[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -181,15 +184,19 @@ export default function Messages() {
     }
 
     const [p1, p2] = [profile.id, otherId].sort()
-    const { data: created } = await supabase
+    const { data: created, error } = await supabase
       .from('conversations')
       .insert({ participant_one: p1, participant_two: p2 })
       .select('id')
       .single()
 
     setCreatingFor(null)
+    if (error || !created) {
+      toast(friendlyError(error, 'Could not start that conversation.'), { kind: 'error' })
+      return
+    }
     setComposeOpen(false)
-    if (created) navigate(`/messages/${created.id}`)
+    navigate(`/messages/${created.id}`)
   }
 
   function closeCompose() {

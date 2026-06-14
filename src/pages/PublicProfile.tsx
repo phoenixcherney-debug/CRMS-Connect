@@ -4,6 +4,8 @@ import { useParams, Link, useNavigate, Navigate } from 'react-router-dom'
 import { ChevronLeft, MessageSquare, User, Briefcase, Heart, Calendar, Clock, Send, Github, Globe, Linkedin, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { useToast } from '../components/ToastProvider'
+import { friendlyError } from '../lib/errors'
 import { useAuth } from '../contexts/AuthContext'
 import type { Profile, CareerHistory } from '../types'
 import { ROLE_LABELS, MENTOR_TYPE_LABELS, STUDENT_SEEKING_PUBLIC } from '../types'
@@ -32,6 +34,7 @@ export default function PublicProfile() {
   const { id } = useParams<{ id: string }>()
   const { profile: myProfile } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
   const [person, setPerson] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [careerHistory, setCareerHistory] = useState<CareerHistory[]>([])
@@ -130,12 +133,16 @@ export default function PublicProfile() {
     }
 
     const [p1, p2] = [myProfile.id, person.id].sort()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .insert({ participant_one: p1, participant_two: p2 })
       .select('id')
       .single()
-    if (data) navigate(`/messages/${data.id}`)
+    if (error || !data) {
+      toast(friendlyError(error, 'Could not start that conversation.'), { kind: 'error' })
+      return
+    }
+    navigate(`/messages/${data.id}`)
   }
 
   async function handleMeetingRequest(e: React.FormEvent) {

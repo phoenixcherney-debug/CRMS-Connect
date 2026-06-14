@@ -92,11 +92,15 @@ export default function JobDetail() {
   useEffect(() => {
     async function load() {
       setLoading(true)
-      const { data } = await supabase
+      // maybeSingle so a genuine "not found" (no rows, no error) is
+      // distinguishable from a network/RLS error, which we surface as a toast
+      // rather than silently rendering the "could not be found" state.
+      const { data, error } = await supabase
         .from('jobs')
         .select('*, profiles!jobs_posted_by_fkey(id, full_name, preferred_name, role, graduation_year)')
         .eq('id', id!)
-        .single()
+        .maybeSingle()
+      if (error) toast(friendlyError(error, 'Could not load this opportunity. Please try again.'), { kind: 'error' })
       setJob(data as Job)
 
       if (profile?.role === 'student') {
@@ -171,13 +175,17 @@ export default function JobDetail() {
 
     // Normalize order so (A,B) and (B,A) always produce the same row
     const [p1, p2] = [profile.id, job.posted_by].sort()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('conversations')
       .insert({ participant_one: p1, participant_two: p2 })
       .select()
       .single()
 
-    if (data) navigate(`/messages/${data.id}`)
+    if (error || !data) {
+      toast(friendlyError(error, 'Could not message the poster.'), { kind: 'error' })
+      return
+    }
+    navigate(`/messages/${data.id}`)
   }
 
   async function handleWithdraw() {
@@ -189,12 +197,15 @@ export default function JobDetail() {
       .eq('id', myApplication.id)
       .eq('applicant_id', profile.id)
     setWithdrawing(false)
-    if (!error) {
-      setMyApplication(null)
-      setApplySuccess(false)
-      setCoverNote('')
-      setResumeLink('')
+    if (error) {
+      toast(friendlyError(error, 'Could not withdraw your application. Please try again.'), { kind: 'error' })
+      return
     }
+    setMyApplication(null)
+    setApplySuccess(false)
+    setCoverNote('')
+    setResumeLink('')
+    toast('Application withdrawn.')
   }
 
   async function handleApply() {
