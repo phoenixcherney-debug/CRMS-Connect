@@ -66,7 +66,7 @@ export default function PublicProfile() {
             grade, share_grade_with_employers, student_outreach_consent,
             mentor_type, mentor_type_other,
             student_seeking, student_seeking_other,
-            skills, projects, links, default_resume_path
+            skills, projects, links, default_resume_path, banned_at
           `)
           .eq('id', id)
           .single(),
@@ -173,6 +173,19 @@ export default function PublicProfile() {
 
   if (loading) {
     return <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+  }
+
+  // C2/C3 — a blocked (banned) user's profile is hidden from everyone except
+  // admins, who still need to view it to moderate.
+  if (person?.banned_at && myProfile?.role !== 'admin') {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <p className="text-ink-muted">This account has been removed.</p>
+        <Link to="/" className="mt-4 inline-block text-sm font-medium" style={{ color: 'var(--color-primary)' }}>
+          ← Back home
+        </Link>
+      </div>
+    )
   }
 
   // Same-role privacy guard. Audit M11 lifts this for students-students so

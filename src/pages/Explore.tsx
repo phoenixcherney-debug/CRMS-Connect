@@ -59,6 +59,7 @@ export default function Explore() {
           .from('profiles')
           .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, share_grade_with_employers, grade, created_at')
           .neq('role', 'admin')
+          .is('banned_at', null)
           .order('created_at', { ascending: false })
           .limit(12),
       ])

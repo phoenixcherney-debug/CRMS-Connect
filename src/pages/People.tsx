@@ -70,6 +70,7 @@ export default function People({ directory }: PeopleProps = {}) {
         .from('profiles')
         .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, mentorship_paused_until, interests, weekly_availability, mentor_type, student_seeking, grade, share_grade_with_employers, student_outreach_consent, created_at')
         .eq('role', targetRole)
+        .is('banned_at', null)
         .order('full_name', { ascending: true })
       if (directory === 'mentors') q = q.eq('open_to_mentorship', true)
       const { data, error } = await q
