@@ -59,6 +59,16 @@ export default function Shortlist() {
     await supabase.from('mentor_shortlist').delete().eq('id', id)
   }
 
+  async function saveNote(id: string, value: string) {
+    const note = value.trim().slice(0, 200) || null
+    const current = rows.find((r) => r.id === id)?.note ?? null
+    if (note === current) return
+    const { error } = await supabase.from('mentor_shortlist').update({ note }).eq('id', id)
+    if (error) { toast(friendlyError(error, 'Could not save your note.'), { kind: 'error' }); return }
+    setRows((prev) => prev.map((r) => r.id === id ? { ...r, note } : r))
+    toast('Note saved.')
+  }
+
   async function openConversation(studentId: string) {
     if (!profile) return
     const { data: existing } = await supabase
@@ -154,6 +164,16 @@ export default function Shortlist() {
                     {s.bio && (
                       <p className="text-xs text-ink-secondary mt-1 line-clamp-2 leading-relaxed">{s.bio}</p>
                     )}
+
+                    <textarea
+                      defaultValue={row.note ?? ''}
+                      onBlur={(e) => saveNote(row.id, e.target.value)}
+                      placeholder="Add a private note about this candidate…"
+                      rows={2}
+                      maxLength={200}
+                      className="mt-2 w-full px-2.5 py-1.5 rounded-lg border border-border bg-surface text-ink text-xs
+                        placeholder:text-ink-placeholder resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    />
 
                     <div className="mt-2 flex gap-2">
                       <button

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, MailCheck } from 'lucide-react'
 import { useAuth, validateEmailForRole } from '../contexts/AuthContext'
 import type { Role } from '../types'
 import { ROLE_LABELS } from '../types'
@@ -40,6 +40,10 @@ export default function Signup() {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [logoError, setLogoError] = useState(false)
+  // K5 — when email confirmation is enabled, signUp returns no session; show a
+  // "check your email" screen instead of routing into onboarding (which would
+  // bounce to /login with no session).
+  const [confirmSent, setConfirmSent] = useState(false)
 
   // Re-validate when role changes after field was already touched
   useEffect(() => {
@@ -57,11 +61,15 @@ export default function Signup() {
     setFormError(null)
     setSubmitting(true)
 
-    const { error } = await signUp({ email, password, fullName, role, invitedBy, preferredName })
+    const { error, needsConfirmation } = await signUp({ email, password, fullName, role, invitedBy, preferredName })
     setSubmitting(false)
 
     if (error) {
       setFormError(error)
+      return
+    }
+    if (needsConfirmation) {
+      setConfirmSent(true)
       return
     }
     navigate('/onboarding', { replace: true })
@@ -82,6 +90,26 @@ export default function Signup() {
     confirmOk &&
     !emailError &&
     !submitting
+
+  if (confirmSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center rounded-2xl border border-border bg-surface p-8" style={{ boxShadow: 'var(--shadow-card)' }}>
+          <div className="w-14 h-14 rounded-full bg-primary-muted mx-auto mb-4 flex items-center justify-center">
+            <MailCheck size={26} className="text-primary" />
+          </div>
+          <h1 className="text-xl font-bold text-ink mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
+            Check your email
+          </h1>
+          <p className="text-sm text-ink-secondary leading-relaxed mb-6">
+            We sent a confirmation link to <span className="font-medium text-ink">{email.trim().toLowerCase()}</span>.
+            Click it to activate your account, then sign in.
+          </p>
+          <Link to="/login" className="btn-gold inline-flex px-5 py-2.5">Go to sign in</Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex relative">
