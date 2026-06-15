@@ -10,7 +10,7 @@ import { sendPushToUser } from '../lib/sendPush'
 import { toCsv, downloadCsv } from '../lib/csv'
 import { initialsOf } from '../lib/initials'
 import { useToast } from '../components/ToastProvider'
-import type { Application, ApplicationStatus, Job, StudentSeeking, OpportunityType } from '../types'
+import type { Application, ApplicationStatus, Job, StudentSeeking } from '../types'
 import { JOB_TYPE_LABELS } from '../types'
 import Spinner from '../components/Spinner'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -33,18 +33,6 @@ interface ApplicantProfile {
 }
 
 /** Returns true if student's seeking aligns with the opportunity type */
-function isCompatibleApplicant(job: Job, applicant: ApplicantProfile | null): boolean {
-  if (!applicant) return true
-  const seeking = applicant.student_seeking
-  const oppType = job.opportunity_type as OpportunityType | null | undefined
-  if (!seeking || !oppType) return true
-  if (seeking === 'both' || seeking === 'other') return true
-  if (oppType === 'job_internship' && seeking === 'job') return true
-  if (oppType === 'mentorship' && seeking === 'mentor') return true
-  if (oppType === 'volunteer' || oppType === 'shadow' || oppType === 'other') return true
-  return false
-}
-
 // P2-18 — accepted / rejected got intermediate siblings. The pill style
 // is shared across the accepted-family states; only the label changes.
 const INTERMEDIATE_STATUSES: ApplicationStatus[] = [
@@ -402,10 +390,7 @@ export default function Applicants() {
     )
   }
 
-  // Split inbox by compatibility: compatible first, then incompatible ("Other applicants")
   const allPending  = applications.filter((a) => a.status === 'pending')
-  const compatible  = allPending.filter((a) => isCompatibleApplicant(job, a.profiles as ApplicantProfile | null))
-  const incompatible = allPending.filter((a) => !isCompatibleApplicant(job, a.profiles as ApplicantProfile | null))
 
   // P2-18 — Decided tab also collects all the intermediate post-decision states.
   const decided  = applications.filter((a) =>
@@ -449,8 +434,7 @@ export default function Applicants() {
     return true
   }
   const filteredTabApps = tabApps.filter(applicantPasses)
-  const filteredCompatible = compatible.filter(applicantPasses)
-  const filteredIncompatible = incompatible.filter(applicantPasses)
+  const filteredInbox = inbox.filter(applicantPasses)
   const hasActiveFilter = !!(filterClassYear || filterAvailability || filterInterest)
 
   return (
@@ -577,21 +561,8 @@ export default function Applicants() {
           </p>
         </div>
       ) : activeTab === 'inbox' ? (
-        /* Inbox: compatible applicants first, then "Other applicants" dimmed */
-        <div className="space-y-6">
-          {filteredCompatible.length > 0 && (
-            <div className="space-y-4">
-              {filteredCompatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} isSelected={selectedIds.has(app.id)} onToggleSelected={() => toggleSelected(app.id)} />)}
-            </div>
-          )}
-          {filteredIncompatible.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-3">Other applicants</p>
-              <div className="space-y-4 opacity-60">
-                {filteredIncompatible.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} isSelected={selectedIds.has(app.id)} onToggleSelected={() => toggleSelected(app.id)} />)}
-              </div>
-            </div>
-          )}
+        <div className="space-y-4">
+          {filteredInbox.map((app) => <ApplicantCard key={app.id} app={app} activeTab={activeTab} expandedId={expandedId} setExpandedId={setExpandedId} updatingId={updatingId} updateStatus={updateStatus} profile={profile} navigate={navigate} isSelected={selectedIds.has(app.id)} onToggleSelected={() => toggleSelected(app.id)} />)}
         </div>
       ) : (
         <div className="space-y-4">
@@ -752,6 +723,7 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
   // confirm. null = idle. 'accepted' | 'rejected' = waiting for the second
   // click. 'reverse' = on the Decided tab, waiting to flip back to pending.
   const [confirming, setConfirming] = useState<'accepted' | 'rejected' | 'reverse' | null>(null)
+  const [withdrawConfirm, setWithdrawConfirm] = useState(false)
   const isExpanded = expandedId === app.id
   const isUpdating = updatingId === app.id
   const initials = initialsOf(applicant?.full_name)
@@ -948,7 +920,12 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
               {app.status !== 'rejected' && (
                 <select
                   value={app.status}
-                  onChange={(e) => updateStatus(app.id, e.target.value as ApplicationStatus)}
+                  onChange={(e) => {
+                    const next = e.target.value as ApplicationStatus
+                    // Withdrawing notifies the applicant the role is gone — confirm first.
+                    if (next === 'withdrawn_by_employer') { setWithdrawConfirm(true); return }
+                    updateStatus(app.id, next)
+                  }}
                   disabled={isUpdating}
                   aria-label="Change status"
                   className="text-[11px] px-2 py-1 rounded-md border border-border bg-surface text-ink-secondary hover:bg-primary-faint disabled:opacity-50"
@@ -983,6 +960,17 @@ function ApplicantCard({ app, activeTab, expandedId, setExpandedId, updatingId, 
         confirmDisabled={isUpdating}
         onConfirm={() => { updateStatus(app.id, 'pending'); setConfirming(null) }}
         onCancel={() => setConfirming(null)}
+      />
+
+      <ConfirmDialog
+        open={withdrawConfirm}
+        title="Withdraw this opportunity?"
+        description={`${applicant?.full_name ?? 'The applicant'} will be notified that the role has been withdrawn by the employer.`}
+        confirmLabel={isUpdating ? 'Withdrawing…' : 'Yes, withdraw'}
+        confirmDisabled={isUpdating}
+        destructive
+        onConfirm={() => { updateStatus(app.id, 'withdrawn_by_employer'); setWithdrawConfirm(false) }}
+        onCancel={() => setWithdrawConfirm(false)}
       />
 
       {/* Cover note */}

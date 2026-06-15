@@ -274,14 +274,15 @@ export default function AdminPanel() {
                     </button>
                   )}
 
-                  {/* Delete — disabled for the admin acting on themselves */}
+                  {/* Delete — disabled for self and for other admins (demote
+                      first), matching the rule on the user-detail view. */}
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setPendingDelete(user); setTypedConfirm('') }}
-                    disabled={isSelf}
+                    disabled={isSelf || user.role === 'admin'}
                     className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg border border-status-rejected-border text-error hover:bg-error-bg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     aria-label={`Delete ${user.full_name}`}
-                    title={isSelf ? 'You can\'t delete yourself' : 'Delete account'}
+                    title={isSelf ? 'You can\'t delete yourself' : user.role === 'admin' ? 'Demote this admin before deleting' : 'Delete account'}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -333,7 +334,26 @@ export default function AdminPanel() {
         destructive={pendingRole?.newRole === 'admin'}
         onConfirm={() => { if (pendingRole) void setRole(pendingRole.user, pendingRole.newRole) }}
         onCancel={() => { if (!savingRole) setPendingRole(null) }}
-      />
+      >
+        {pendingRole && pendingRole.newRole !== 'admin' && (
+          <div className="mb-3">
+            <p className="block text-xs font-medium text-ink mb-1.5">Demote to:</p>
+            <div className="flex gap-2">
+              {(['student', 'employer_mentor'] as const).map((r) => (
+                <button
+                  type="button"
+                  key={r}
+                  onClick={() => setPendingRole((prev) => prev ? { ...prev, newRole: r } : prev)}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${pendingRole.newRole === r ? 'border-primary text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}
+                  style={pendingRole.newRole === r ? { backgroundColor: 'var(--color-primary-muted)' } : {}}
+                >
+                  {r === 'student' ? 'Student' : 'Employer / Mentor'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </ConfirmDialog>
     </div>
   )
 }
