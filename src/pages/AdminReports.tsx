@@ -16,7 +16,7 @@ interface UserReport {
   status: 'open' | 'reviewed' | 'actioned'
   created_at: string
   reporter: { id: string; full_name: string } | null
-  reported: { id: string; full_name: string; account_status: string } | null
+  reported: { id: string; full_name: string; banned_at: string | null } | null
 }
 
 /**
@@ -42,7 +42,7 @@ export default function AdminReports() {
       .select(`
         id, reporter_id, reported_id, reason, status, created_at,
         reporter:profiles!user_reports_reporter_id_fkey(id, full_name),
-        reported:profiles!user_reports_reported_id_fkey(id, full_name, account_status)
+        reported:profiles!user_reports_reported_id_fkey(id, full_name, banned_at)
       `)
       .order('created_at', { ascending: false })
     setReports((data as unknown as UserReport[]) ?? [])
@@ -65,21 +65,20 @@ export default function AdminReports() {
 
   async function actionAccount(id: string, reportedId: string, name: string) {
     setActingId(id)
-    // Disable the reported account.
-    const { error: e1 } = await supabase
-      .from('profiles')
-      .update({ account_status: 'disabled', banned_at: new Date().toISOString() })
-      .eq('id', reportedId)
-    if (e1) { setActingId(null); toast(`Could not disable ${name}.`, { kind: 'error' }); return }
+    // Block the reported account via the canonical ban path (sets banned_at and
+    // writes an audit-log entry).
+    const { error: e1 } = await supabase.rpc('admin_ban_user', { target_id: reportedId })
+    if (e1) { setActingId(null); toast(`Could not block ${name}.`, { kind: 'error' }); return }
+    const nowIso = new Date().toISOString()
     const { error: e2 } = await supabase
       .from('user_reports')
-      .update({ status: 'actioned', reviewed_at: new Date().toISOString() })
+      .update({ status: 'actioned', reviewed_at: nowIso })
       .eq('id', id)
     setActingId(null)
     setConfirmDisable(null)
-    if (e2) { toast('Account disabled but report not flipped.', { kind: 'error' }); return }
-    setReports((prev) => prev.map((r) => r.id === id ? { ...r, status: 'actioned', reported: r.reported ? { ...r.reported, account_status: 'disabled' } : r.reported } : r))
-    toast(`Disabled ${name} and closed the report.`)
+    if (e2) { toast('Account blocked but report not flipped.', { kind: 'error' }); return }
+    setReports((prev) => prev.map((r) => r.id === id ? { ...r, status: 'actioned', reported: r.reported ? { ...r.reported, banned_at: nowIso } : r.reported } : r))
+    toast(`Blocked ${name} and closed the report.`)
   }
 
   const open      = reports.filter((r) => r.status === 'open')
@@ -143,9 +142,9 @@ export default function AdminReports() {
                               ) : (
                                 <span className="font-semibold text-ink-muted">{r.reported?.full_name ?? 'Unknown (deleted)'}</span>
                               )}
-                              {r.reported?.account_status === 'disabled' && (
+                              {r.reported?.banned_at && (
                                 <span className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium ${badge}`}>
-                                  account disabled
+                                  account blocked
                                 </span>
                               )}
                             </p>
@@ -165,14 +164,14 @@ export default function AdminReports() {
                             >
                               <Eye size={13} /> Mark reviewed
                             </button>
-                            {r.reported?.id && r.reported.account_status !== 'disabled' && (
+                            {r.reported?.id && !r.reported.banned_at && (
                               <button
                                 type="button"
                                 onClick={() => setConfirmDisable({ id: r.id, reportedId: r.reported!.id, name: r.reported!.full_name })}
                                 disabled={acting}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-rejected-bg text-status-rejected-text border border-status-rejected-border hover:opacity-80 disabled:opacity-40 transition-opacity"
                               >
-                                <AlertTriangle size={13} /> Disable account
+                                <AlertTriangle size={13} /> Block account
                               </button>
                             )}
                             {r.reported?.id && (
@@ -197,9 +196,9 @@ export default function AdminReports() {
 
       <ConfirmDialog
         open={confirmDisable !== null}
-        title={`Disable ${confirmDisable?.name ?? 'this account'}?`}
-        description={'This sets the account to disabled and bans it — the user is signed out and blocked from the app. You can re-enable it later from the admin panel.'}
-        confirmLabel={actingId && confirmDisable && actingId === confirmDisable.id ? 'Disabling…' : 'Disable account'}
+        title={`Block ${confirmDisable?.name ?? 'this account'}?`}
+        description={'The user is signed out and blocked from the app. You can unban them later from the admin panel.'}
+        confirmLabel={actingId && confirmDisable && actingId === confirmDisable.id ? 'Blocking…' : 'Block account'}
         confirmDisabled={actingId !== null}
         destructive
         onConfirm={() => { if (confirmDisable) actionAccount(confirmDisable.id, confirmDisable.reportedId, confirmDisable.name) }}

@@ -49,6 +49,7 @@ export default function Feed() {
       const { data: jobs } = await supabase
         .from('jobs')
         .select(`${JOB_COLUMNS}, profiles!jobs_posted_by_fkey(id, full_name, role)`)
+        .is('hidden_by_admin_at', null)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(40)
@@ -69,6 +70,7 @@ export default function Feed() {
       const { data: posts } = await supabase
         .from('student_posts')
         .select('*, profiles!student_posts_student_id_fkey(id, full_name, avatar_url, role, grade)')
+        .is('hidden_by_admin_at', null)
         .eq('is_closed', false)
         .order('created_at', { ascending: false })
         .limit(20)

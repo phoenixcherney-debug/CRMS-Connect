@@ -49,6 +49,7 @@ export default function Employers() {
       const { data, error } = await supabase
         .from('jobs')
         .select(`${JOB_COLUMNS}, profiles!jobs_posted_by_fkey(id, full_name)`)
+        .is('hidden_by_admin_at', null)
         .order('created_at', { ascending: false })
 
       if (error) { setFetchError(true); setLoading(false); return }
