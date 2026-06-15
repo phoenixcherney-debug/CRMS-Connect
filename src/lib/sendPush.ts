@@ -10,6 +10,7 @@ export type PushEvent =
   | 'application_in'
   | 'application_status'
   | 'meeting_request'
+  | 'meeting_response'
   | 'student_post_match'
 
 export async function sendPushToUser(

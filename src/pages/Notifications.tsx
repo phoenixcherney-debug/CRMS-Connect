@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, MessageSquare, FileText, UserPlus, CheckCircle2, CheckCheck } from 'lucide-react'
+import { Bell, MessageSquare, FileText, UserPlus, CheckCircle2, CheckCheck, CalendarClock } from 'lucide-react'
 import { differenceInDays, formatDistanceToNow, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,7 +8,7 @@ import { useToast } from '../components/ToastProvider'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 
-type NotifType = 'message' | 'app_out' | 'app_in'
+type NotifType = 'message' | 'app_out' | 'app_in' | 'meeting'
 
 interface NotifItem {
   id:       string
@@ -67,6 +67,27 @@ export default function Notifications() {
       notifs.push({
         id:       `dm-${n.id}`,
         type:     'message',
+        ts:       n.created_at,
+        unread:   !n.read_at,
+        link:     n.link,
+        title:    n.title,
+        subtitle: n.subtitle ?? '',
+      })
+    }
+
+    // ── Meeting notifications (H1) ────────────────────────────────────────────
+    const { data: meetingRows } = await supabase
+      .from('notifications')
+      .select('id, link, title, subtitle, read_at, created_at')
+      .eq('user_id', profile.id)
+      .in('kind', ['meeting_request', 'meeting_response'])
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    for (const n of (meetingRows ?? []) as { id: string; link: string; title: string; subtitle: string | null; read_at: string | null; created_at: string }[]) {
+      notifs.push({
+        id:       `meeting-${n.id}`,
+        type:     'meeting',
         ts:       n.created_at,
         unread:   !n.read_at,
         link:     n.link,
@@ -216,11 +237,13 @@ export default function Notifications() {
     message: MessageSquare,
     app_out: FileText,
     app_in:  UserPlus,
+    meeting: CalendarClock,
   }
   const ICON_BG: Record<NotifType, string> = {
     message: 'bg-primary-muted text-primary',
     app_out: 'bg-notif-app-out-bg text-notif-app-out-text',
     app_in:  'bg-success-bg text-success',
+    meeting: 'bg-accent-muted text-accent-dark',
   }
 
   return (
@@ -283,17 +306,21 @@ export default function Notifications() {
                     const handleClick = () => {
                       if (!isNew(item) || !profile) return
                       setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, unread: false } : i))
-                      // Only dm_received items are real rows in the notifications
-                      // table; their synthetic id is `dm-<rowId>`. App-status items
-                      // are derived from the applications table and have no row to
-                      // mark (the global notifications_seen_at stamp covers them),
-                      // so the previous `.eq('id', item.id)` matched nothing.
-                      if (item.id.startsWith('dm-')) {
+                      // dm_received + meeting_* items are real rows in the
+                      // notifications table (synthetic id `dm-<rowId>` /
+                      // `meeting-<rowId>`). App-status items are derived from the
+                      // applications table and have no row to mark (the global
+                      // notifications_seen_at stamp covers them).
+                      const realId =
+                        item.id.startsWith('dm-') ? item.id.slice(3)
+                        : item.id.startsWith('meeting-') ? item.id.slice(8)
+                        : null
+                      if (realId) {
                         const now = new Date().toISOString()
                         void supabase
                           .from('notifications')
                           .update({ read_at: now })
-                          .eq('id', item.id.slice(3))
+                          .eq('id', realId)
                           .eq('user_id', profile.id)
                       }
                     }

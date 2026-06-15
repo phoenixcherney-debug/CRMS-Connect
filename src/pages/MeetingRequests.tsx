@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Calendar, CheckCircle2, XCircle, Clock, User } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { sendPushToUser } from '../lib/sendPush'
 import { useToast } from '../components/ToastProvider'
 import { friendlyError } from '../lib/errors'
 import { useAuth } from '../contexts/AuthContext'
@@ -106,6 +107,7 @@ export default function MeetingRequests() {
   }, [profile?.id])
 
   async function handleAction(id: string, status: 'accepted' | 'declined') {
+    const req = requests.find((r) => r.id === id)
     setActioning(id)
     const { error } = await supabase
       .from('meeting_requests')
@@ -118,6 +120,16 @@ export default function MeetingRequests() {
     }
     setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status } : r))
     toast(status === 'accepted' ? 'Meeting accepted.' : 'Request declined.')
+    // Push to the requester (in-app notification is enqueued by the DB trigger).
+    if (req) {
+      sendPushToUser(
+        req.requester_id,
+        `Meeting ${status}`,
+        `${profile?.full_name ?? 'Someone'} ${status} your meeting request.`,
+        '/meetings',
+        'meeting_response',
+      )
+    }
   }
 
   async function handleCancel(id: string) {
