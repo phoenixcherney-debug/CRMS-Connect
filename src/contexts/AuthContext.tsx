@@ -36,7 +36,7 @@ interface AuthContextType {
     invitedBy?: string | null
     /** Task 24 — optional preferred first name. */
     preferredName?: string | null
-  }) => Promise<{ error: string | null }>
+  }) => Promise<{ error: string | null; needsConfirmation?: boolean }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -164,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role: Role
     invitedBy?: string | null
     preferredName?: string | null
-  }): Promise<{ error: string | null }> {
+  }): Promise<{ error: string | null; needsConfirmation?: boolean }> {
     const clientError = validateEmailForRole(email, role)
     if (clientError) return { error: clientError }
 
@@ -195,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Task 24 — pass preferred_name through the metadata payload so
       // handle_new_user can write it onto the new profile row.
       const cleanedPreferred = (preferredName ?? '').trim().slice(0, 40)
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: {
@@ -209,7 +209,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (error) return { error: friendlyError(error) }
-      return { error: null }
+      // When email confirmation is enabled, signUp returns no session — the user
+      // must confirm before they can sign in, so there's nothing to onboard yet.
+      return { error: null, needsConfirmation: !data.session }
     } catch (err) {
       return { error: friendlyError(err) }
     }
