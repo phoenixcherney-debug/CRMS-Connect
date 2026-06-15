@@ -48,6 +48,7 @@ export default function Explore() {
         supabase
           .from('jobs')
           .select(`${JOB_COLUMNS}, profiles!jobs_posted_by_fkey(id, full_name, role)`)
+          .is('hidden_by_admin_at', null)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(4),
@@ -58,6 +59,7 @@ export default function Explore() {
           .from('profiles')
           .select('id, full_name, role, graduation_year, bio, avatar_url, company, industry, open_to_mentorship, share_grade_with_employers, grade, created_at')
           .neq('role', 'admin')
+          .is('banned_at', null)
           .order('created_at', { ascending: false })
           .limit(12),
       ])

@@ -58,6 +58,7 @@ export default function Company() {
         supabase
           .from('jobs')
           .select(`${JOB_COLUMNS}, applications(id, status), profiles!jobs_posted_by_fkey(id, full_name)`)
+          .is('hidden_by_admin_at', null)
           .ilike('company', slug)
           .order('created_at', { ascending: false }),
       ])

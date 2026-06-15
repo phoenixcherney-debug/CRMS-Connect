@@ -105,7 +105,11 @@ export default function JobDetail() {
         .eq('id', id!)
         .maybeSingle()
       if (error) toast(friendlyError(error, 'Could not load this opportunity. Please try again.'), { kind: 'error' })
-      setJob(data as unknown as Job)
+      // Admin-hidden opportunities are invisible to everyone except the poster
+      // and admins (treated as not-found for others).
+      const hidden = !!(data as { hidden_by_admin_at?: string | null } | null)?.hidden_by_admin_at
+      const ownerOrAdmin = !!(data && profile && (data.posted_by === profile.id || profile.role === 'admin'))
+      setJob(hidden && !ownerOrAdmin ? null : (data as unknown as Job))
 
       if (data && profile) {
         // Returns null unless the caller is the poster / admin / accepted applicant.

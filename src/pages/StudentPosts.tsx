@@ -40,6 +40,7 @@ export default function StudentPosts() {
       const { data, error } = await supabase
         .from('student_posts')
         .select('*, profiles!student_posts_student_id_fkey(id, full_name, role, avatar_url, graduation_year, grade, share_grade_with_employers, interests, weekly_availability, student_seeking)')
+        .is('hidden_by_admin_at', null)
         .eq('is_closed', false)
         .order('created_at', { ascending: false })
       if (error) {

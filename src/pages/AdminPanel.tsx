@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Shield, AlertCircle, Trash2, ShieldCheck, ShieldOff, MessageSquare } from 'lucide-react'
+import { Search, Shield, AlertCircle, Trash2, ShieldCheck, ShieldOff, MessageSquare, ScrollText } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { friendlyError } from '../lib/errors'
@@ -182,8 +182,14 @@ export default function AdminPanel() {
           </button>
         ))}
         <Link
-          to="/admin/messages"
+          to="/admin/audit"
           className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border text-ink-secondary hover:bg-primary-faint"
+        >
+          <ScrollText size={11} /> Audit log
+        </Link>
+        <Link
+          to="/admin/messages"
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border text-ink-secondary hover:bg-primary-faint"
         >
           <MessageSquare size={11} /> Conversations
         </Link>

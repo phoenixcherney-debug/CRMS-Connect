@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Ban, RotateCcw, Briefcase, FileText, BookOpen,
-  AlertCircle, Trash2, User, MessageSquare, Heart, Shield,
+  AlertCircle, Trash2, User, MessageSquare, Heart, Shield, Eye, EyeOff,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -132,6 +132,18 @@ export default function AdminUserView() {
     if (error) { setActionError(friendlyError(error, 'Could not delete that posting.')); return }
     setJobs(prev => prev.filter(j => j.id !== jobId))
     setConfirmDeleteJob(null)
+  }
+
+  async function handleToggleHidden(table: 'jobs' | 'student_posts', rowId: string, hide: boolean) {
+    const { error } = await supabase.rpc('admin_set_hidden', { target_table: table, target_id: rowId, hidden: hide })
+    if (error) { toast(friendlyError(error, 'Could not update visibility.'), { kind: 'error' }); return }
+    const nowIso = hide ? new Date().toISOString() : null
+    if (table === 'student_posts') {
+      setStudentPosts(prev => prev.map(p => p.id === rowId ? { ...p, hidden_by_admin_at: nowIso } : p))
+    } else {
+      setJobs(prev => prev.map(j => j.id === rowId ? { ...j, hidden_by_admin_at: nowIso } : j))
+    }
+    toast(hide ? 'Hidden from everyone else.' : 'Restored to public view.')
   }
 
   async function openConversation() {
@@ -513,9 +525,23 @@ export default function AdminUserView() {
                       >
                         {post.is_closed ? 'Closed' : 'Open'}
                       </span>
-                      <span className="text-xs text-ink-muted">
-                        {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {post.hidden_by_admin_at && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error)' }}>Hidden</span>
+                        )}
+                        <span className="text-xs text-ink-muted">
+                          {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleHidden('student_posts', post.id, !post.hidden_by_admin_at)}
+                          className="text-ink-muted hover:text-ink transition-colors"
+                          title={post.hidden_by_admin_at ? 'Restore to public view' : 'Hide from everyone'}
+                          aria-label={post.hidden_by_admin_at ? 'Unhide post' : 'Hide post'}
+                        >
+                          {post.hidden_by_admin_at ? <Eye size={14} /> : <EyeOff size={14} />}
+                        </button>
+                      </div>
                     </div>
                     <p className="text-sm text-ink leading-relaxed line-clamp-3">{post.pitch}</p>
                   </div>
@@ -559,6 +585,18 @@ export default function AdminUserView() {
                     >
                       {job.is_active ? 'Active' : 'Closed'}
                     </span>
+                    {job.hidden_by_admin_at && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error)' }}>Hidden</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleHidden('jobs', job.id, !job.hidden_by_admin_at)}
+                      className="shrink-0 text-ink-muted hover:text-ink transition-colors"
+                      title={job.hidden_by_admin_at ? 'Restore to public view' : 'Hide from everyone'}
+                      aria-label={job.hidden_by_admin_at ? 'Unhide opportunity' : 'Hide opportunity'}
+                    >
+                      {job.hidden_by_admin_at ? <Eye size={14} /> : <EyeOff size={14} />}
+                    </button>
                     {/* Delete */}
                     <div className="shrink-0">
                       {confirmDeleteJob === job.id ? (

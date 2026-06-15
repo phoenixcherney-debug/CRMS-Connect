@@ -151,6 +151,8 @@ export interface Job {
   custom_questions_v2?: CustomQuestion[] | null
   /** P1-4 — drafts skip not-blank checks; never show in directory. */
   is_draft?: boolean
+  /** Set by admin_set_hidden; hidden rows are filtered from public lists. */
+  hidden_by_admin_at?: string | null
   // Joined
   profiles?: Profile | null
 }
@@ -165,6 +167,8 @@ export interface StudentPost {
   availability?: string | null
   is_closed: boolean
   created_at: string
+  /** Set by admin_set_hidden; hidden rows are filtered from public lists. */
+  hidden_by_admin_at?: string | null
   // Joined
   profiles?: Profile | null
 }

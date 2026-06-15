@@ -138,11 +138,14 @@ export default function Conversation() {
         return
       }
 
-      // Load most recent PAGE_SIZE messages (descending, then reverse for display)
-      const { data: msgs, count } = await supabase
+      // Load most recent PAGE_SIZE messages (descending, then reverse for display).
+      // Participants don't see admin-hidden messages; the moderation view does.
+      let msgQuery = supabase
         .from('messages')
         .select('*', { count: 'exact' })
         .eq('conversation_id', id!)
+      if (!adminView) msgQuery = msgQuery.is('hidden_by_admin_at', null)
+      const { data: msgs, count } = await msgQuery
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE)
 
@@ -234,11 +237,13 @@ export default function Conversation() {
     setLoadingMore(true)
     const oldestTs = messages[0].created_at
 
-    const { data: older } = await supabase
+    let olderQuery = supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', id!)
       .lt('created_at', oldestTs)
+    if (!adminView) olderQuery = olderQuery.is('hidden_by_admin_at', null)
+    const { data: older } = await olderQuery
       .order('created_at', { ascending: false })
       .limit(PAGE_SIZE)
 
