@@ -97,6 +97,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/banned': 'Account suspended',
   '/admin': 'Admin Panel',
   '/admin/reports': 'Reports',
+  '/admin/audit': 'Audit log',
   '/admin/messages': 'All conversations',
   '/about': 'About',
   '/privacy': 'Privacy',
@@ -168,6 +169,7 @@ const NotFound          = lazy(() => import('./pages/NotFound'))
 const Contact           = lazy(() => import('./pages/Contact'))
 const SavedJobs         = lazy(() => import('./pages/SavedJobs'))
 const AdminReports      = lazy(() => import('./pages/AdminReports'))
+const AdminAudit        = lazy(() => import('./pages/AdminAudit'))
 const Landing           = lazy(() => import('./pages/Landing'))
 const ForMentors        = lazy(() => import('./pages/ForMentors'))
 const ForEmployers      = lazy(() => import('./pages/ForEmployers'))
@@ -382,6 +384,11 @@ export default function App() {
             <Route path="/admin/reports" element={
               <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
                 <Layout><AdminReports /></Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/audit" element={
+              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
+                <Layout><AdminAudit /></Layout>
               </ProtectedRoute>
             } />
             <Route path="/admin/messages" element={
