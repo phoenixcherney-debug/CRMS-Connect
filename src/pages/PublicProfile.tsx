@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate, Navigate } from 'react-router-dom'
 import { ChevronLeft, MessageSquare, User, Briefcase, Heart, Calendar, Clock, Send, Github, Globe, Linkedin, ExternalLink, FileText, ShieldCheck } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
+import { sendPushToUser } from '../lib/sendPush'
 import { useToast } from '../components/ToastProvider'
 import { friendlyError } from '../lib/errors'
 import { useAuth } from '../contexts/AuthContext'
@@ -44,6 +45,9 @@ export default function PublicProfile() {
   const [meetingSubmitting, setMeetingSubmitting] = useState(false)
   const [meetingSuccess, setMeetingSuccess] = useState(false)
   const [meetingError, setMeetingError] = useState<string | null>(null)
+  // H6 — an employer/mentor may propose a meeting to a student who is an
+  // accepted applicant on one of their opportunities.
+  const [canProposeMeeting, setCanProposeMeeting] = useState(false)
   // Phase 2.1 — signed URL for the student's default resume PDF, only for
   // viewers permitted by storage RLS (owner / poster of accepted application).
   const [resumeUrl, setResumeUrl] = useState<string | null>(null)
@@ -91,10 +95,21 @@ export default function PublicProfile() {
         setCareerHistory((career as CareerHistory[]) ?? [])
         setSlots((slotData as AvailSlot[]) ?? [])
       }
+      // H6 — can this employer/mentor propose a meeting to this student?
+      // Only if the student is an accepted applicant on one of their jobs.
+      if (data && data.role === 'student' && myProfile?.role === 'employer_mentor' && data.id !== myProfile.id) {
+        const { count } = await supabase
+          .from('applications')
+          .select('id, jobs!inner(posted_by)', { count: 'exact', head: true })
+          .eq('applicant_id', data.id)
+          .eq('status', 'accepted')
+          .eq('jobs.posted_by', myProfile.id)
+        setCanProposeMeeting((count ?? 0) > 0)
+      }
       setLoading(false)
     }
     load()
-  }, [id])
+  }, [id, myProfile?.id, myProfile?.role])
 
   useEffect(() => {
     if (person?.full_name) {
@@ -169,6 +184,13 @@ export default function PublicProfile() {
     setMeetingSuccess(true)
     setSelectedSlot(null)
     setMeetingNote('')
+    sendPushToUser(
+      person.id,
+      'New meeting request',
+      `${myProfile.full_name} requested a meeting.`,
+      '/meetings',
+      'meeting_request',
+    )
   }
 
   if (loading) {
@@ -569,6 +591,7 @@ export default function PublicProfile() {
                       })
                       if (error) return { error: 'Failed to send request. Please try again.' }
                       setMeetingSuccess(true)
+                      sendPushToUser(person.id, 'New meeting request', `${myProfile.full_name} requested a meeting.`, '/meetings', 'meeting_request')
                       return { error: null }
                     }}
                   />
@@ -655,6 +678,42 @@ export default function PublicProfile() {
                       </form>
                     )}
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* H6 — employer/mentor proposes a meeting to an accepted applicant
+                (free-form date/time; the student then accepts/declines). */}
+            {canProposeMeeting && !isSelf && (
+              <div>
+                <p className="text-sm font-medium text-ink mb-2 flex items-center gap-1.5">
+                  <Calendar size={14} className="text-ink-muted" />
+                  Propose a meeting
+                </p>
+                {meetingSuccess ? (
+                  <div className="flex items-center gap-2 rounded-lg bg-success-bg border border-status-accepted-border px-4 py-3">
+                    <Send size={14} className="text-success shrink-0" />
+                    <p className="text-sm text-success font-medium">Meeting proposal sent!</p>
+                  </div>
+                ) : (
+                  <FlexibleMeetingForm
+                    onSubmit={async ({ date, start, end, note }) => {
+                      if (!myProfile || !person) return { error: 'Sign in to send a proposal.' }
+                      const { error } = await supabase.from('meeting_requests').insert({
+                        requester_id: myProfile.id,
+                        recipient_id: person.id,
+                        slot_id: null,
+                        requested_date: date,
+                        requested_start_time: start,
+                        requested_end_time: end,
+                        note: note || null,
+                      })
+                      if (error) return { error: 'Failed to send proposal. Please try again.' }
+                      setMeetingSuccess(true)
+                      sendPushToUser(person.id, 'New meeting proposal', `${myProfile.full_name} proposed a meeting time.`, '/meetings', 'meeting_request')
+                      return { error: null }
+                    }}
+                  />
                 )}
               </div>
             )}
