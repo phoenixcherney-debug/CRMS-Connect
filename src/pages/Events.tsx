@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Calendar, MapPin, Clock, Plus, X, Users, Trash2, Edit3, ExternalLink } from 'lucide-react'
+import { Calendar, MapPin, Clock, Plus, X, Users, Trash2, Edit3, ExternalLink, Check } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
+import { useToast } from '../components/ToastProvider'
+import { friendlyError } from '../lib/errors'
 import { validateExternalUrl, safeExternalHref } from '../lib/url'
 
 interface DBEvent {
@@ -61,9 +63,14 @@ const BLANK_FORM: EventForm = {
 
 export default function Events() {
   const { profile } = useAuth()
+  const toast = useToast()
   const isPoster = profile?.role === 'employer_mentor'
 
   const [events, setEvents] = useState<DBEvent[]>([])
+  const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({})
+  const [myRsvps, setMyRsvps] = useState<Set<string>>(new Set())
+  const [rsvpBusy, setRsvpBusy] = useState<string | null>(null)
+  const [showMine, setShowMine] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -80,15 +87,51 @@ export default function Events() {
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase
-      .from('events')
-      .select('*, profiles!events_host_id_fkey(full_name)')
-      .order('date', { ascending: true })
+    const [{ data }, { data: countsData }, mineRes] = await Promise.all([
+      supabase
+        .from('events')
+        .select('*, profiles!events_host_id_fkey(full_name)')
+        .order('date', { ascending: true }),
+      supabase.rpc('event_rsvp_counts'),
+      profile
+        ? supabase.from('event_rsvps').select('event_id').eq('user_id', profile.id)
+        : Promise.resolve({ data: [] as { event_id: string }[] }),
+    ])
     setEvents((data as DBEvent[]) ?? [])
+    const counts: Record<string, number> = {}
+    for (const c of (countsData ?? []) as { event_id: string; attendee_count: number }[]) {
+      counts[c.event_id] = Number(c.attendee_count)
+    }
+    setRsvpCounts(counts)
+    setMyRsvps(new Set(((mineRes.data ?? []) as { event_id: string }[]).map((r) => r.event_id)))
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [profile?.id])
+
+  async function toggleRsvp(ev: DBEvent) {
+    if (!profile || rsvpBusy) return
+    setRsvpBusy(ev.id)
+    const going = myRsvps.has(ev.id)
+    if (going) {
+      const { error } = await supabase.from('event_rsvps').delete().eq('event_id', ev.id).eq('user_id', profile.id)
+      setRsvpBusy(null)
+      if (error) { toast(friendlyError(error, 'Could not update your RSVP.'), { kind: 'error' }); return }
+      setMyRsvps((prev) => { const n = new Set(prev); n.delete(ev.id); return n })
+      setRsvpCounts((prev) => ({ ...prev, [ev.id]: Math.max(0, (prev[ev.id] ?? 1) - 1) }))
+    } else {
+      const { error } = await supabase.from('event_rsvps').insert({ event_id: ev.id, user_id: profile.id })
+      setRsvpBusy(null)
+      if (error) {
+        const full = /full/i.test(error.message ?? '')
+        toast(full ? 'This event is full.' : friendlyError(error, 'Could not RSVP.'), { kind: 'error' })
+        return
+      }
+      setMyRsvps((prev) => new Set(prev).add(ev.id))
+      setRsvpCounts((prev) => ({ ...prev, [ev.id]: (prev[ev.id] ?? 0) + 1 }))
+      toast("You're going!")
+    }
+  }
 
   function buildPayload(f: EventForm): { ok: true; payload: Partial<DBEvent> } | { ok: false; error: string } {
     if (!f.title.trim()) return { ok: false, error: 'Title is required.' }
@@ -196,8 +239,9 @@ export default function Events() {
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const upcoming = events.filter((e) => e.date >= today)
-  const past     = events.filter((e) => e.date <  today).reverse()
+  const visible  = showMine ? events.filter((e) => myRsvps.has(e.id)) : events
+  const upcoming = visible.filter((e) => e.date >= today)
+  const past     = visible.filter((e) => e.date <  today).reverse()
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -225,6 +269,23 @@ export default function Events() {
           {deleteError}
         </div>
       )}
+
+      {/* My-events filter */}
+      <div className="mb-4 flex items-center gap-2 text-xs">
+        {([
+          { v: false, l: 'All events' },
+          { v: true,  l: `My events${myRsvps.size > 0 ? ` (${myRsvps.size})` : ''}` },
+        ] as const).map((opt) => (
+          <button
+            key={String(opt.v)}
+            type="button"
+            onClick={() => setShowMine(opt.v)}
+            className={`px-2.5 py-1 rounded-md border transition-colors ${showMine === opt.v ? 'border-primary bg-primary-muted text-primary' : 'border-border text-ink-secondary hover:bg-primary-faint'}`}
+          >
+            {opt.l}
+          </button>
+        ))}
+      </div>
 
       {/* Create event modal */}
       {showForm && (
@@ -310,6 +371,11 @@ export default function Events() {
                     canManage={ev.host_id === profile?.id}
                     onEdit={() => openEdit(ev)}
                     onDelete={() => setConfirmDeleteId(ev.id)}
+                    attendeeCount={rsvpCounts[ev.id] ?? 0}
+                    isGoing={myRsvps.has(ev.id)}
+                    rsvpBusy={rsvpBusy === ev.id}
+                    canRsvp={!!profile}
+                    onToggleRsvp={() => toggleRsvp(ev)}
                   />
                 ))}
               </div>
@@ -328,6 +394,12 @@ export default function Events() {
                     canManage={ev.host_id === profile?.id}
                     onEdit={() => openEdit(ev)}
                     onDelete={() => setConfirmDeleteId(ev.id)}
+                    attendeeCount={rsvpCounts[ev.id] ?? 0}
+                    isGoing={myRsvps.has(ev.id)}
+                    rsvpBusy={false}
+                    canRsvp={false}
+                    onToggleRsvp={() => {}}
+                    isPast
                   />
                 ))}
               </div>
@@ -527,12 +599,20 @@ function EventModal({
   )
 }
 
-function EventCard({ event, canManage, onEdit, onDelete }: {
+function EventCard({ event, canManage, onEdit, onDelete, attendeeCount, isGoing, rsvpBusy, canRsvp, onToggleRsvp, isPast = false }: {
   event: DBEvent
   canManage: boolean
   onEdit: () => void
   onDelete: () => void
+  attendeeCount: number
+  isGoing: boolean
+  rsvpBusy: boolean
+  canRsvp: boolean
+  onToggleRsvp: () => void
+  isPast?: boolean
 }) {
+  const spotsLeft = event.capacity != null ? Math.max(0, event.capacity - attendeeCount) : null
+  const isFull = spotsLeft === 0 && !isGoing
   const dateObj = new Date(event.date + 'T12:00:00')
   const hostName = event.profiles?.full_name ?? 'Unknown'
   const timeLabel = event.all_day
@@ -589,9 +669,14 @@ function EventCard({ event, canManage, onEdit, onDelete }: {
             {event.location && (
               <span className="flex items-center gap-1"><MapPin size={11} />{event.location}</span>
             )}
-            {event.capacity && (
-              <span className="flex items-center gap-1"><Users size={11} />Cap. {event.capacity}</span>
-            )}
+            {event.capacity != null ? (
+              <span className="flex items-center gap-1">
+                <Users size={11} />
+                {attendeeCount}/{event.capacity} going{spotsLeft != null && spotsLeft > 0 ? ` · ${spotsLeft} left` : ''}
+              </span>
+            ) : attendeeCount > 0 ? (
+              <span className="flex items-center gap-1"><Users size={11} />{attendeeCount} going</span>
+            ) : null}
             <span className="flex items-center gap-1">
               <Users size={11} />
               Hosted by {hostName}
@@ -609,6 +694,22 @@ function EventCard({ event, canManage, onEdit, onDelete }: {
             >
               Register / RSVP <ExternalLink size={11} />
             </a>
+          )}
+          {!isPast && canRsvp && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={onToggleRsvp}
+                disabled={rsvpBusy || (isFull && !isGoing)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isGoing
+                    ? 'border-status-accepted-border bg-success-bg text-success'
+                    : 'border-border text-ink-secondary hover:bg-primary-faint'
+                }`}
+              >
+                {isGoing ? <><Check size={13} /> Going — tap to cancel</> : isFull ? 'Event full' : 'RSVP'}
+              </button>
+            </div>
           )}
         </div>
       </div>
