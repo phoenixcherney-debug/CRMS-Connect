@@ -1,420 +1,96 @@
-import { lazy, Suspense, useEffect, useLayoutEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { ThemeProvider } from './contexts/ThemeContext'
-import ProtectedRoute from './components/ProtectedRoute'
-import Layout from './components/Layout'
-import ToastProvider from './components/ToastProvider'
+import { ToastProvider } from './components/ui/Toast'
+import { Layout } from './components/Layout'
+import { Gate, RequireRole } from './components/guards'
 
-/** NAV-002: rename redirects that need to preserve a dynamic :id param.
- *  Pass a template like "/opportunities/:id/edit" — :id is filled in from
- *  useParams. Append `?…` query strings get carried over by the router. */
-function ParamRedirect({ to }: { to: string }) {
-  const params = useParams()
-  let dest = to
-  for (const [key, val] of Object.entries(params)) {
-    if (val) dest = dest.replace(`:${key}`, val)
-  }
-  return <Navigate to={dest} replace />
-}
+import { Landing } from './pages/public/Landing'
+import { Login } from './pages/public/Login'
+import { Signup } from './pages/public/Signup'
+import { ResetPassword } from './pages/public/ResetPassword'
+import { Privacy } from './pages/public/Privacy'
+import { NotFound } from './pages/public/NotFound'
 
-/** P1-12 — students hitting /student-posts (the EM-facing directory)
- *  used to bounce silently to /opportunities. Send them to their own
- *  /student-posts/mine instead so they see something coherent. */
-function StudentPostsByRole({ DirectoryComponent }: { DirectoryComponent: React.ComponentType }) {
-  const { profile, loading } = useAuth()
-  if (loading) return null
-  if (profile?.role === 'student') return <Navigate to="/student-posts/mine" replace />
-  return <DirectoryComponent />
-}
+import { Waiting } from './pages/shared/Waiting'
+import { Disabled } from './pages/shared/Disabled'
+import { Board } from './pages/shared/Board'
+import { OfferDetail } from './pages/shared/OfferDetail'
+import { Thread } from './pages/shared/Thread'
+import { PersonProfile } from './pages/shared/PersonProfile'
+import { Notifications } from './pages/shared/Notifications'
+import { ProfileEdit } from './pages/shared/ProfileEdit'
 
-/** Route at `/`. Signed-out users see the public landing page; signed-in
- *  users are bounced to /explore so the welcome dashboard is still their
- *  default home. While auth is loading we render nothing (no flash of
- *  authenticated UI before the redirect resolves). */
-function HomeRouter() {
-  const { user, loading } = useAuth()
-  if (loading) return null
-  if (user) return <Navigate to="/explore" replace />
-  return <Landing />
-}
+import { StudentHome } from './pages/student/StudentHome'
+import { MyRequests } from './pages/student/MyRequests'
 
-/** D.2 — top-level /people redirect that runs without waiting for auth.
- *  Previously this was role-aware (students → /mentors, EM → /students)
- *  but that needed `useAuth().loading` to settle, which produced a
- *  visible URL flicker for signed-out visitors going through the
- *  /login?next=/people round-trip. /students is reachable from /students
- *  → /mentors via the directory-toggle anyway, so the small UX loss
- *  buys us a flicker-free redirect at the route layer.
- */
-function PeopleRedirect() {
-  return <Navigate to="/students" replace />
-}
+import { MemberHome } from './pages/member/MemberHome'
+import { OfferForm } from './pages/member/OfferForm'
+import { OfferManage } from './pages/member/OfferManage'
 
-// Disable browser scroll restoration so we control it ourselves
-if ('scrollRestoration' in history) {
-  history.scrollRestoration = 'manual'
-}
+import { AdminDashboard } from './pages/admin/AdminDashboard'
+import { AdminPeople } from './pages/admin/AdminPeople'
+import { AdminOffers } from './pages/admin/AdminOffers'
+import { AdminRequests } from './pages/admin/AdminRequests'
+import { AdminReports } from './pages/admin/AdminReports'
+import { AdminAudit } from './pages/admin/AdminAudit'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
-  useLayoutEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
+  useEffect(() => window.scrollTo(0, 0), [pathname])
   return null
 }
 
-// Per-route document.title so multi-tab users and screen readers can tell pages
-// apart. Falls back to the default brand title.
-const ROUTE_TITLES: Record<string, string> = {
-  '/login': 'Sign in',
-  '/signup': 'Create account',
-  '/reset-password': 'Reset password',
-  '/onboarding': 'Welcome',
-  '/explore': 'Explore',
-  '/activity': 'Activity',
-  '/events': 'Events',
-  '/people': 'People',
-  '/students': 'Students',
-  '/mentors': 'Mentors',
-  '/notifications': 'Notifications',
-  '/employers': 'Companies',
-  '/opportunities': 'Opportunities',
-  '/opportunities/new': 'Post an Opportunity',
-  '/my-opportunities': 'My Opportunities',
-  '/student-posts': 'Student Posts',
-  '/student-posts/mine': 'My Listing',
-  '/applications': 'Applications',
-  '/saved': 'Saved',
-  '/shortlist': 'Saved candidates',
-  '/availability': 'Availability',
-  '/my-bookings': 'My Bookings',
-  '/meetings': 'Meetings',
-  '/messages': 'Messages',
-  '/profile': 'Profile',
-  '/profile/edit': 'Edit profile',
-  '/settings/notifications': 'Notification preferences',
-  '/banned': 'Account suspended',
-  '/admin': 'Admin Panel',
-  '/admin/reports': 'Reports',
-  '/admin/audit': 'Audit log',
-  '/admin/messages': 'All conversations',
-  '/about': 'About',
-  '/privacy': 'Privacy',
-  '/contact': 'Contact',
-  // P0-2 — these routes existed but weren't in the title map, so the
-  // fallback "Page not found · CRMS Connect" was rendering even though
-  // the routes resolve correctly. Wrong-tab title broke link-share
-  // previews and SEO.
-  '/for-mentors': 'For Mentors',
-  '/for-employers': 'For Employers',
+/** /home fans out by role — each role's landing view is different on purpose. */
+function HomeSwitch() {
+  const { profile } = useAuth()
+  if (!profile) return null
+  if (profile.role === 'member') return <MemberHome />
+  if (profile.role === 'admin') return <Navigate to="/admin" replace />
+  return <StudentHome />
 }
-
-function DocumentTitle() {
-  const { pathname } = useLocation()
-  useEffect(() => {
-    const exact = ROUTE_TITLES[pathname]
-    let title = exact
-    if (!title) {
-      // Match dynamic routes by their best-fitting prefix.
-      if (pathname.startsWith('/opportunities/') && pathname.endsWith('/applicants')) title = 'Applicants'
-      else if (pathname.startsWith('/opportunities/') && pathname.endsWith('/edit')) title = 'Edit opportunity'
-      else if (pathname.startsWith('/opportunities/')) title = 'Opportunity'
-      else if (pathname.startsWith('/messages/')) title = 'Conversation'
-      else if (pathname.startsWith('/people/')) title = 'Profile'
-      else if (pathname.startsWith('/admin/users/')) title = 'User · Admin'
-    }
-    // Catch-all paths fall through to NotFound — set the title here so the
-    // browser tab matches the page (audit M6).
-    if (!title && pathname !== '/' && !ROUTE_TITLES[pathname]) title = 'Page not found'
-    document.title = title ? `${title} · CRMS Connect` : 'CRMS Connect'
-  }, [pathname])
-  return null
-}
-
-
-// Pages
-const Explore           = lazy(() => import('./pages/Explore'))
-const Feed              = lazy(() => import('./pages/Feed'))
-const Jobs              = lazy(() => import('./pages/Jobs'))
-const Events            = lazy(() => import('./pages/Events'))
-const People            = lazy(() => import('./pages/People'))
-const Employers         = lazy(() => import('./pages/Employers'))
-const Notifications     = lazy(() => import('./pages/Notifications'))
-const Login             = lazy(() => import('./pages/Login'))
-const Signup            = lazy(() => import('./pages/Signup'))
-const ResetPassword     = lazy(() => import('./pages/ResetPassword'))
-const Onboarding        = lazy(() => import('./pages/Onboarding'))
-const JobDetail         = lazy(() => import('./pages/JobDetail'))
-const PostJob           = lazy(() => import('./pages/PostJob'))
-const MyPostings        = lazy(() => import('./pages/MyPostings'))
-const Applicants        = lazy(() => import('./pages/Applicants'))
-const MyApplications    = lazy(() => import('./pages/MyApplications'))
-const Availability      = lazy(() => import('./pages/Availability'))
-const MyBookings        = lazy(() => import('./pages/MyBookings'))
-const Messages          = lazy(() => import('./pages/Messages'))
-const Conversation      = lazy(() => import('./pages/Conversation'))
-const Profile           = lazy(() => import('./pages/Profile'))
-const PublicProfile     = lazy(() => import('./pages/PublicProfile'))
-const StudentPosts      = lazy(() => import('./pages/StudentPosts'))
-const MyStudentPosts    = lazy(() => import('./pages/MyStudentPosts'))
-const MeetingRequests   = lazy(() => import('./pages/MeetingRequests'))
-const AdminPanel        = lazy(() => import('./pages/AdminPanel'))
-const AdminUserView     = lazy(() => import('./pages/AdminUserView'))
-const AdminConversations = lazy(() => import('./pages/AdminConversations'))
-const BannedPage        = lazy(() => import('./pages/BannedPage'))
-const About             = lazy(() => import('./pages/About'))
-const Privacy           = lazy(() => import('./pages/Privacy'))
-const NotFound          = lazy(() => import('./pages/NotFound'))
-const Contact           = lazy(() => import('./pages/Contact'))
-const SavedJobs         = lazy(() => import('./pages/SavedJobs'))
-const AdminReports      = lazy(() => import('./pages/AdminReports'))
-const AdminAudit        = lazy(() => import('./pages/AdminAudit'))
-const Landing           = lazy(() => import('./pages/Landing'))
-const ForMentors        = lazy(() => import('./pages/ForMentors'))
-const ForEmployers      = lazy(() => import('./pages/ForEmployers'))
-const Company           = lazy(() => import('./pages/Company'))
-const NotificationSettings = lazy(() => import('./pages/NotificationSettings'))
-const Shortlist            = lazy(() => import('./pages/Shortlist'))
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-      <AuthProvider>
+    <AuthProvider>
       <ToastProvider>
-        <ScrollToTop />
-        <DocumentTitle />
-        <Suspense fallback={
-          <div className="flex items-center justify-center min-h-screen">
-            <div className="w-10 h-10 border-[3px] rounded-full border-primary-muted border-t-primary animate-spin" />
-          </div>
-        }>
+        <BrowserRouter>
+          <ScrollToTop />
           <Routes>
-
-            {/* ── Public ───────────────────────────────────────────────── */}
-            <Route path="/login"          element={<Login />} />
-            {/* C.3 — dedicated /login/reset URL. Same component, mode is
-                derived from pathname so deep-linking + browser-back work. */}
-            <Route path="/login/reset"    element={<Login />} />
-            <Route path="/signup"         element={<Signup />} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/about"          element={<Layout><About /></Layout>} />
-            <Route path="/privacy"        element={<Layout><Privacy /></Layout>} />
-            <Route path="/contact"        element={<Layout><Contact /></Layout>} />
-            {/* P2-20 — public pitch pages, no Layout/Nav (signed-out friendly). */}
-            <Route path="/for-mentors"    element={<ForMentors />} />
-            <Route path="/for-employers"  element={<ForEmployers />} />
+            <Route path="/privacy" element={<Privacy />} />
 
-            {/* ── Onboarding (auth required, onboarding check skipped) ── */}
-            <Route
-              path="/onboarding"
-              element={
-                <ProtectedRoute skipOnboarding>
-                  <Onboarding />
-                </ProtectedRoute>
-              }
-            />
+            <Route element={<Gate />}>
+              <Route path="/waiting" element={<Waiting />} />
+              <Route path="/disabled" element={<Disabled />} />
+              <Route element={<Layout />}>
+                <Route path="/home" element={<HomeSwitch />} />
+                <Route path="/board" element={<Board />} />
+                <Route path="/board/:id" element={<OfferDetail />} />
+                <Route path="/requests" element={<RequireRole roles={['student']}><MyRequests /></RequireRole>} />
+                <Route path="/requests/:id" element={<Thread />} />
+                <Route path="/offers/new" element={<RequireRole roles={['member']}><OfferForm /></RequireRole>} />
+                <Route path="/offers/:id/edit" element={<RequireRole roles={['member', 'admin']}><OfferForm /></RequireRole>} />
+                <Route path="/offers/:id/manage" element={<RequireRole roles={['member', 'admin']}><OfferManage /></RequireRole>} />
+                <Route path="/people/:id" element={<PersonProfile />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/profile" element={<ProfileEdit />} />
+                <Route path="/admin" element={<RequireRole roles={['admin']}><AdminDashboard /></RequireRole>} />
+                <Route path="/admin/people" element={<RequireRole roles={['admin']}><AdminPeople /></RequireRole>} />
+                <Route path="/admin/offers" element={<RequireRole roles={['admin']}><AdminOffers /></RequireRole>} />
+                <Route path="/admin/requests" element={<RequireRole roles={['admin']}><AdminRequests /></RequireRole>} />
+                <Route path="/admin/reports" element={<RequireRole roles={['admin']}><AdminReports /></RequireRole>} />
+                <Route path="/admin/audit" element={<RequireRole roles={['admin']}><AdminAudit /></RequireRole>} />
+              </Route>
+            </Route>
 
-            {/* ── Nav pages (all authenticated) ────────────────────────── */}
-            <Route path="/explore" element={
-              <ProtectedRoute><Layout><Explore /></Layout></ProtectedRoute>
-            } />
-            {/* NAV-002 — /activity is canonical; /feed redirects. */}
-            <Route path="/activity" element={
-              <ProtectedRoute><Layout><Feed /></Layout></ProtectedRoute>
-            } />
-            <Route path="/feed" element={<Navigate to="/activity" replace />} />
-            <Route path="/events" element={
-              <ProtectedRoute><Layout><Events /></Layout></ProtectedRoute>
-            } />
-            <Route path="/people" element={
-              <ProtectedRoute><PeopleRedirect /></ProtectedRoute>
-            } />
-            <Route path="/students" element={
-              <ProtectedRoute><Layout><People directory="students" /></Layout></ProtectedRoute>
-            } />
-            <Route path="/mentors" element={
-              <ProtectedRoute><Layout><People directory="mentors" /></Layout></ProtectedRoute>
-            } />
-            <Route path="/notifications" element={
-              <ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>
-            } />
-
-            {/* ── Employers & Mentors (students only) ──────────────────── */}
-            <Route path="/employers" element={
-              <ProtectedRoute roles={['student']}>
-                <Layout><Employers /></Layout>
-              </ProtectedRoute>
-            } />
-            {/* P1-2 — public company page; reachable for any authenticated user. */}
-            <Route path="/companies/:id" element={
-              <ProtectedRoute>
-                <Layout><Company /></Layout>
-              </ProtectedRoute>
-            } />
-
-            {/* ── Opportunities (NAV-002 — canonical names; /jobs/* redirect) */}
-            <Route path="/opportunities" element={
-              <ProtectedRoute><Layout><Jobs /></Layout></ProtectedRoute>
-            } />
-            <Route path="/opportunities/new" element={
-              <ProtectedRoute roles={['employer_mentor']}>
-                <Layout><PostJob /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/opportunities/:id" element={
-              <ProtectedRoute><Layout><JobDetail /></Layout></ProtectedRoute>
-            } />
-            <Route path="/opportunities/:id/edit" element={
-              <ProtectedRoute roles={['employer_mentor']}>
-                <Layout><PostJob /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/opportunities/:id/applicants" element={
-              <ProtectedRoute roles={['employer_mentor']}>
-                <Layout><Applicants /></Layout>
-              </ProtectedRoute>
-            } />
-            {/* Legacy /jobs/* — preserve params via ParamRedirect. */}
-            <Route path="/jobs"                    element={<Navigate to="/opportunities" replace />} />
-            <Route path="/jobs/new"                element={<Navigate to="/opportunities/new" replace />} />
-            <Route path="/jobs/:id"                element={<ParamRedirect to="/opportunities/:id" />} />
-            <Route path="/jobs/:id/edit"           element={<ParamRedirect to="/opportunities/:id/edit" />} />
-            <Route path="/jobs/:id/applicants"     element={<ParamRedirect to="/opportunities/:id/applicants" />} />
-
-            {/* M-13 — nav copy used these labels but the routes 404'd. */}
-            <Route path="/post-opportunity" element={<Navigate to="/opportunities/new" replace />} />
-            <Route path="/my-post"          element={<Navigate to="/student-posts/mine" replace />} />
-
-            {/* S2.7 — old /employers-mentors path used in earlier copy. */}
-            <Route path="/employers-mentors" element={<Navigate to="/employers" replace />} />
-
-            {/* ── Employer/mentor: my postings + student posts feed ────── */}
-            <Route path="/my-opportunities" element={
-              <ProtectedRoute roles={['employer_mentor']}>
-                <Layout><MyPostings /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/my-postings" element={<Navigate to="/my-opportunities" replace />} />
-            <Route path="/student-posts" element={
-              <ProtectedRoute>
-                <Layout><StudentPostsByRole DirectoryComponent={StudentPosts} /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/postings" element={<Navigate to="/student-posts" replace />} />
-
-            {/* ── Student: applications + my posts ─────────────────────── */}
-            <Route path="/applications" element={
-              <ProtectedRoute roles={['student']}>
-                <Layout><MyApplications /></Layout>
-              </ProtectedRoute>
-            } />
-            {/* P2-37 — bookmarked opportunities. Open to any authed user. */}
-            <Route path="/saved" element={
-              <ProtectedRoute><Layout><SavedJobs /></Layout></ProtectedRoute>
-            } />
-            <Route path="/student-posts/mine" element={
-              <ProtectedRoute roles={['student']}>
-                <Layout><MyStudentPosts /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/my-applications" element={<Navigate to="/applications" replace />} />
-            <Route path="/my-posts" element={<Navigate to="/student-posts/mine" replace />} />
-
-            {/* ── Availability / Bookings / Meetings ───────────────────── */}
-            <Route path="/availability" element={
-              <ProtectedRoute roles={['employer_mentor']}><Layout><Availability /></Layout></ProtectedRoute>
-            } />
-            <Route path="/my-bookings" element={
-              <ProtectedRoute><Layout><MyBookings /></Layout></ProtectedRoute>
-            } />
-            <Route path="/meetings" element={
-              <ProtectedRoute><Layout><MeetingRequests /></Layout></ProtectedRoute>
-            } />
-
-            {/* ── Inbox / Messages ─────────────────────────────────────── */}
-            <Route path="/messages" element={
-              <ProtectedRoute><Layout><Messages /></Layout></ProtectedRoute>
-            } />
-            <Route path="/messages/:id" element={
-              <ProtectedRoute><Layout><Conversation /></Layout></ProtectedRoute>
-            } />
-
-            {/* ── Profile ──────────────────────────────────────────────── */}
-            <Route path="/profile" element={
-              <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>
-            } />
-
-            {/* Audit task 23 — bookmarkable edit URL. Profile reads
-                useLocation().pathname and opens the edit form when it
-                matches /profile/edit. */}
-            <Route path="/profile/edit" element={
-              <ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>
-            } />
-            {/* P1-12 — push notification preferences. */}
-            <Route path="/settings/notifications" element={
-              <ProtectedRoute><Layout><NotificationSettings /></Layout></ProtectedRoute>
-            } />
-            {/* Phase 2.4 — mentor shortlist (employer/mentor only — page redirects others). */}
-            <Route path="/shortlist" element={
-              <ProtectedRoute><Layout><Shortlist /></Layout></ProtectedRoute>
-            } />
-            <Route path="/people/:id" element={
-              <ProtectedRoute><Layout><PublicProfile /></Layout></ProtectedRoute>
-            } />
-
-            {/* ── Banned (no ProtectedRoute — avoids redirect loop) ────── */}
-            <Route path="/banned" element={<BannedPage />} />
-
-            {/* ── Admin ─────────────────────────────────────────────────── */}
-            {/* hideOnRoleMismatch — non-admins get the normal 404 here
-                so the route's existence isn't advertised. */}
-            <Route path="/admin" element={
-              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
-                <Layout><AdminPanel /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/users/:id" element={
-              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
-                <Layout><AdminUserView /></Layout>
-              </ProtectedRoute>
-            } />
-            {/* SEC-003 — staff triage queue for user reports. */}
-            <Route path="/admin/reports" element={
-              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
-                <Layout><AdminReports /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/audit" element={
-              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
-                <Layout><AdminAudit /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/messages" element={
-              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
-                <Layout><AdminConversations /></Layout>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/messages/:id" element={
-              <ProtectedRoute roles={['admin']} hideOnRoleMismatch>
-                <Layout><Conversation /></Layout>
-              </ProtectedRoute>
-            } />
-
-            {/* ── Legacy URL aliases (NAV-001 / NAV-002) ───────────────── */}
-            {/* /inbox doesn't have a canonical replacement — /messages is canonical. */}
-            <Route path="/inbox" element={<Navigate to="/messages" replace />} />
-
-            {/* ── Defaults ─────────────────────────────────────────────── */}
-            <Route path="/"  element={<HomeRouter />} />
-            <Route path="*"  element={<Layout><NotFound /></Layout>} />
-
+            <Route path="*" element={<NotFound />} />
           </Routes>
-        </Suspense>
+        </BrowserRouter>
       </ToastProvider>
-      </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    </AuthProvider>
   )
 }

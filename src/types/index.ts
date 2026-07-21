@@ -1,343 +1,87 @@
-export type Role = 'student' | 'employer_mentor' | 'admin'
-// Single taxonomy that covers what was previously split between job_type and
-// opportunity_type. The latter is being phased out; existing rows still
-// surface their opportunity_type label on detail pages.
-export type JobType =
-  | 'internship'
-  | 'part-time'
-  | 'full-time'
-  | 'volunteer'
-  | 'mentorship'
-  | 'shadow'
-  | 'other'
-export type LocationType = 'remote' | 'in-person' | 'hybrid'
-export type ApplicationStatus =
-  | 'pending'
-  | 'reviewed'
-  | 'accepted'
-  | 'rejected'
-  | 'waitlisted'
-  // P2-18 — intermediate hiring states (migration 052).
-  | 'interview_scheduled'
-  | 'offer_sent'
-  | 'started'
-  | 'completed'
-  | 'withdrawn_by_employer'
-export type MentorType = 'employer' | 'mentor' | 'both' | 'other'
-export type StudentSeeking = 'job' | 'mentor' | 'both' | 'other'
-export type OpportunityType = 'job_internship' | 'mentorship' | 'volunteer' | 'shadow' | 'other'
+// App-level type aliases and display metadata for the v2 domain model.
+// Enum → label/tint maps live here so every page renders the same vocabulary.
 
-export const STUDENT_GRADES = ['9th', '10th', '11th', '12th', 'Gap Year'] as const
-export type StudentGrade = typeof STUDENT_GRADES[number]
+import type { Database, Tables } from '../lib/database.types'
 
-export interface Profile {
-  id: string
-  full_name: string
-  /** Task 24 — optional preferred first name; defaults to first
-   *  whitespace-delimited token of full_name when null. */
-  preferred_name?: string | null
-  role: Role
-  graduation_year?: number | null
-  bio?: string | null
-  avatar_url?: string | null
-  company?: string | null
-  industry?: string | null
-  open_to_mentorship: boolean
-  onboarding_complete: boolean
-  interests: string[]
-  interests_other?: string | null
-  weekly_availability: string | null
-  mentor_type?: MentorType | null
-  mentor_type_other?: string | null
-  student_seeking?: StudentSeeking | null
-  student_seeking_other?: string | null
-  grade?: StudentGrade | null
-  /** Audit M9: students opt in before their grade is exposed to other roles. */
-  share_grade_with_employers?: boolean
-  /** Task 2 — students opt in before adult accounts can DM them
-   *  (existing threads where the student wrote first are unaffected). */
-  student_outreach_consent?: boolean
-  /** SEC-001 — staff-approval gate for employer/mentor signups. */
-  account_status?: 'pending' | 'active' | 'disabled'
-  /** P2-14 — for mentors with open_to_mentorship=true. */
-  meeting_request_mode?: 'flexible' | 'slots' | null
-  /** Task 3 — last time the mentor affirmed they're open to mentoring.
-   *  Stamped automatically on toggle-on; used to drive a yearly
-   *  reconfirmation prompt. */
-  mentor_consent_confirmed_at?: string | null
-  /** P1-10 — when set to a future date, hides the mentor from /mentors
-   *  even though open_to_mentorship is true (for parental leave / busy
-   *  season). Past dates are no-ops. */
-  mentorship_paused_until?: string | null
-  /** P1-12 — per-category push toggles. Missing keys default to "send". */
-  notification_preferences?: Record<string, boolean> | null
-  /** Phase 1.2 — gates the one-time post-signup mentor-visibility
-   *  interstitial. Server-stored so it's once-per-account, not
-   *  once-per-device. */
-  seen_mentor_visibility_card?: boolean | null
-  /** Phase 4.3 — opt-in display on public /about Mentor Wall. */
-  show_on_mentor_wall?: boolean | null
-  /** Phase 2.1 — student structured profile sections. */
-  skills?: string[] | null
-  projects?: { title: string; url?: string; description?: string }[] | null
-  links?: { github?: string; website?: string; linkedin?: string } | null
-  default_resume_path?: string | null
-  created_at: string
-  banned_at?: string | null
+export type Profile = Tables<'profiles'>
+export type Offer = Tables<'offers'>
+export type HandRaise = Tables<'requests'>
+export type Message = Tables<'messages'>
+export type Report = Tables<'reports'>
+export type AppNotification = Tables<'notifications'>
+export type AuditEntry = Tables<'audit_log'>
+
+export type UserRole = Database['public']['Enums']['user_role']
+export type AccountStatus = Database['public']['Enums']['account_status']
+export type MemberAffiliation = Database['public']['Enums']['member_affiliation']
+export type OfferKind = Database['public']['Enums']['offer_kind']
+export type OfferStatus = Database['public']['Enums']['offer_status']
+export type LocationMode = Database['public']['Enums']['location_mode']
+export type RequestStatus = Database['public']['Enums']['request_status']
+export type ReportStatus = Database['public']['Enums']['report_status']
+export type ReportTarget = Database['public']['Enums']['report_target']
+
+/** A profile with only the fields other users are meant to see. */
+export type PublicProfile = Pick<
+  Profile,
+  'id' | 'role' | 'full_name' | 'affiliation' | 'class_year' | 'title' | 'organization' | 'location' | 'bio' | 'tags' | 'account_status'
+>
+export const PUBLIC_PROFILE_COLUMNS =
+  'id, role, full_name, affiliation, class_year, title, organization, location, bio, tags, account_status'
+
+export const OFFER_KINDS: OfferKind[] = [
+  'internship', 'job', 'shadow_day', 'mentorship', 'project_help', 'career_chat', 'other',
+]
+
+export const OFFER_KIND_META: Record<OfferKind, { label: string; blurb: string; tint: string }> = {
+  internship: { label: 'Internship', blurb: 'A stretch of real work, often over a break', tint: 'bg-meadow text-pine' },
+  job: { label: 'Job', blurb: 'Part-time or seasonal paid work', tint: 'bg-meadow text-pine' },
+  shadow_day: { label: 'Shadow day', blurb: 'Follow someone through a real workday', tint: 'bg-gold-soft text-clay-deep' },
+  mentorship: { label: 'Mentorship', blurb: 'Ongoing check-ins with someone in the field', tint: 'bg-clay-soft text-clay-deep' },
+  project_help: { label: 'Project', blurb: 'Work on something real together', tint: 'bg-gold-soft text-clay-deep' },
+  career_chat: { label: 'Career chat', blurb: 'One conversation, zero commitment', tint: 'bg-meadow text-pine' },
+  other: { label: 'Something else', blurb: 'An open door that fits no box', tint: 'bg-paper text-faint' },
 }
 
-export interface CareerHistory {
-  id: string
-  profile_id: string
-  company: string
-  title: string
-  start_year: number
-  end_year?: number | null
-  is_current: boolean
-  created_at: string
+export const OFFER_STATUS_LABEL: Record<OfferStatus, string> = {
+  draft: 'Draft',
+  open: 'Open',
+  filled: 'Filled',
+  closed: 'Closed',
 }
 
-export interface AvailabilitySlot {
-  id: string
-  user_id: string
-  title: string | null
-  date: string
-  start_time: string
-  end_time: string
-  is_recurring: boolean
-  recurrence_pattern: 'daily' | 'weekly' | 'monthly' | null
-  recurrence_end_date: string | null
-  created_at: string
-}
-
-/** Phase 3.6 — typed custom application question. */
-export type CustomQuestionType = 'short_text' | 'long_text' | 'single_select'
-export interface CustomQuestion {
-  text: string
-  type: CustomQuestionType
-  required: boolean
-  options?: string[]
-}
-
-export interface Job {
-  id: string
-  created_at: string
-  posted_by: string
-  title: string
-  company: string
-  location: string
-  job_type: JobType
-  description: string
-  how_to_apply: string
-  /** Column-revoked at the DB level; only present when fetched via the
-   *  job_contact_email() RPC (poster / admin / accepted applicant). */
-  contact_email?: string
-  location_type: LocationType
-  industry?: string | null
-  deadline: string | null
-  is_active: boolean
-  expected_weekly_hours?: string | null
-  /** P2-36 — optional free-text compensation ("$22/hr", "Unpaid", …). */
-  compensation?: string | null
-  opportunity_type?: OpportunityType | null
-  opportunity_type_other?: string | null
-  start_date?: string | null
-  end_date?: string | null
-  /** P1-7 — legacy free-text questions (read-only after migration 069
-   *  backfilled them into custom_questions_v2). New code reads v2. */
-  custom_questions?: string[] | null
-  /** Phase 3.6 — typed questions (≤5). Read this on the client; writes
-   *  go here, not to the legacy column. */
-  custom_questions_v2?: CustomQuestion[] | null
-  /** P1-4 — drafts skip not-blank checks; never show in directory. */
-  is_draft?: boolean
-  /** Set by admin_set_hidden; hidden rows are filtered from public lists. */
-  hidden_by_admin_at?: string | null
-  // Joined
-  profiles?: Profile | null
-}
-
-export interface StudentPost {
-  id: string
-  student_id: string
-  pitch: string
-  seeking: StudentSeeking
-  seeking_other?: string | null
-  interests: string[]
-  availability?: string | null
-  is_closed: boolean
-  created_at: string
-  /** Set by admin_set_hidden; hidden rows are filtered from public lists. */
-  hidden_by_admin_at?: string | null
-  // Joined
-  profiles?: Profile | null
-}
-
-export interface Application {
-  id: string
-  created_at: string
-  job_id: string
-  applicant_id: string
-  cover_note: string
-  resume_link?: string | null
-  /** P1-8 — storage path under the `resumes` bucket
-   *  (`resumes/<application_id>/<filename>.pdf`). Only the applicant +
-   *  the post owner with status='accepted' can read via storage RLS. */
-  resume_path?: string | null
-  status: ApplicationStatus
-  /** P1-7 — answers to opportunity.custom_questions, snapshotted at submit
-   *  so the applicant's record stays meaningful even if the poster later
-   *  edits or reorders the questions. */
-  custom_answers?: { question: string; answer: string }[] | null
-  // Joined
-  jobs?: Job | null
-  profiles?: Profile | null
-}
-
-export interface Conversation {
-  id: string
-  created_at: string
-  participant_one: string
-  participant_two: string
-  otherProfile?: Profile
-  lastMessage?: Message
-  unreadCount?: number
-}
-
-export interface Message {
-  id: string
-  created_at: string
-  conversation_id: string
-  sender_id: string
-  content: string
-  is_read: boolean
-  /** P1-4 — system-authored auto-messages (e.g. "Application accepted by …")
-   *  render with distinct styling. */
-  is_system?: boolean
-  profiles?: Profile | null
-}
-
-// ─── Label maps ─────────────────────────────────────────────────────────────
-
-export const JOB_TYPE_LABELS: Record<JobType, string> = {
-  internship: 'Internship',
-  'part-time': 'Part-Time',
-  'full-time': 'Full-Time',
-  volunteer: 'Volunteer',
-  mentorship: 'Mentorship',
-  shadow: 'Job Shadow',
-  other: 'Other',
-}
-
-export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {
-  job_internship: 'Job / Internship',
-  mentorship: 'Mentorship',
-  volunteer: 'Volunteer',
-  shadow: 'Shadow',
-  other: 'Other',
-}
-
-export const MENTOR_TYPE_LABELS: Record<MentorType, string> = {
-  employer: 'Employer',
-  mentor: 'Mentor',
-  // NAV-011 — match the signup-page button label and ROLE_LABELS, which
-  // both use the slash. (Earlier audit pass had this as ampersand to
-  // disambiguate from the student "Both", but the slash matches the rest
-  // of the platform.)
-  both: 'Employer / Mentor',
-  other: 'Other',
-}
-
-export const STUDENT_SEEKING_LABELS: Record<StudentSeeking, string> = {
-  job: 'A job / internship',
-  mentor: 'A mentor',
-  both: 'Both',
-  // Distinct label so it doesn't visually collide with the "Other" chip in
-  // the Areas-of-interest list on the same form (audit §18).
-  other: 'Something else',
-}
-
-/** P1-8 — public profile rendering uses the spelled-out form so "Looking
- *  for: Both" stops being context-free. The short form above is for
- *  buttons / chips where space is tight. */
-export const STUDENT_SEEKING_PUBLIC: Record<StudentSeeking, string> = {
-  job: 'A job or internship',
-  mentor: 'A mentor',
-  both: 'A job or internship and a mentor',
-  other: 'Something else (see bio)',
-}
-
-export const STATUS_LABELS: Record<ApplicationStatus, string> = {
-  pending: 'Pending',
-  reviewed: 'Reviewed',
-  accepted: 'Accepted',
-  rejected: 'Rejected',
-  waitlisted: 'Waitlisted',
-  // P2-18 — intermediate hiring states.
-  interview_scheduled: 'Interview scheduled',
-  offer_sent: 'Offer sent',
-  started: 'Started',
-  completed: 'Completed',
-  withdrawn_by_employer: 'Withdrawn',
-}
-
-export const WEEKLY_AVAILABILITY_OPTIONS = [
-  '< 5 hrs/week',
-  '5–10 hrs/week',
-  '10–20 hrs/week',
-  '20+ hrs/week',
-] as const
-
-export const EXPECTED_HOURS_OPTIONS = WEEKLY_AVAILABILITY_OPTIONS
-
-export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
+export const LOCATION_MODE_LABEL: Record<LocationMode, string> = {
+  in_person: 'In person',
   remote: 'Remote',
-  'in-person': 'In-Person',
-  hybrid: 'Hybrid',
+  flexible: 'Flexible',
 }
 
-export const ROLE_LABELS: Record<Role, string> = {
-  student: 'Student',
-  employer_mentor: 'Employer / Mentor',
-  admin: 'Admin',
+export const REQUEST_STATUS_META: Record<RequestStatus, { label: string; student: string; tint: string }> = {
+  sent: { label: 'Sent', student: 'Waiting for a reply', tint: 'bg-paper text-faint border border-line' },
+  in_conversation: { label: 'In conversation', student: 'In conversation', tint: 'bg-meadow text-pine' },
+  accepted: { label: 'Accepted', student: 'Accepted', tint: 'bg-pine text-white' },
+  declined: { label: 'Declined', student: 'Not this time', tint: 'bg-paper text-faint border border-line' },
+  withdrawn: { label: 'Withdrawn', student: 'Withdrawn', tint: 'bg-paper text-faint border border-line' },
 }
 
-export const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const
+/** "Class of '02", "CRMS parent", … — the trust badge next to every name. */
+export function affiliationLabel(p: Pick<PublicProfile, 'role' | 'affiliation' | 'class_year'>): string {
+  if (p.role === 'admin') return 'CRMS staff'
+  if (p.role === 'student') {
+    return p.class_year ? `Class of ${shortYear(p.class_year)} (student)` : 'Current student'
+  }
+  switch (p.affiliation) {
+    case 'alumni':
+      return p.class_year ? `Class of ${shortYear(p.class_year)}` : 'Alum'
+    case 'parent':
+      return 'CRMS parent'
+    case 'faculty_staff':
+      return 'Faculty & staff'
+    default:
+      return 'Friend of the school'
+  }
+}
 
-export const INDUSTRY_OPTIONS = [
-  'Technology',
-  'Finance & Banking',
-  'Healthcare & Medicine',
-  'Education',
-  'Law & Legal',
-  'Arts & Entertainment',
-  'Environmental & Sustainability',
-  'Non-Profit & Social Impact',
-  'Engineering',
-  'Marketing & Communications',
-  'Consulting',
-  'Government & Public Policy',
-  'Agriculture & Ranching',
-  'Hospitality & Tourism',
-  'Science & Research',
-  'Architecture & Design',
-  'Real Estate',
-  'Sports & Recreation',
-  'Other',
-] as const
-
-// Task 12 — student-facing taxonomy collapsed from the 19-entry
-// INDUSTRY_OPTIONS to 8 broad buckets. Existing rows are migrated by
-// SQL migration 077 (data/interest-migration.ts mirrors the mapping).
-// INDUSTRY_OPTIONS still drives the employer "Industry" select since
-// that field talks about a single company, not a personal interest.
-export const INTEREST_OPTIONS = [
-  'Technology & Engineering',
-  'Finance, Business & Government',
-  'Healthcare & Science',
-  'Arts, Media & Communications',
-  'Environment, Agriculture & Outdoors',
-  'Education & Social Impact',
-  'Hospitality, Sports & Recreation',
-  'Other',
-] as const
+function shortYear(year: number): string {
+  return `’${String(year).slice(-2)}`
+}

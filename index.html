@@ -2,30 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/pwa-192x192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#257200" />
-    <meta name="description" content="CRMS Connect — Colorado Rocky Mountain School's private platform connecting students with alumni and parent opportunities." />
-    <!-- PWA / Apple -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="CRMS Connect" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1e4d3b" />
+    <meta
+      name="description"
+      content="Internships, mentorships, and first jobs shared only within the Colorado Rocky Mountain School community."
+    />
+    <link rel="icon" href="/pwa-192x192.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&display=swap"
+      rel="stylesheet"
+    />
     <title>CRMS Connect</title>
   </head>
   <body>
-    <script>
-      // Task 20 — mirror ThemeContext at first paint so a system-light
-      // user doesn't get a dark flash before React mounts.
-      (function(){
-        var stored = localStorage.getItem('crms-theme') || localStorage.getItem('theme');
-        var theme = stored;
-        if (theme !== 'dark' && theme !== 'light') {
-          theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-        }
-        if (theme === 'dark') document.documentElement.setAttribute('data-theme','dark');
-      })();
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

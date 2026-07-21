@@ -1,4 +1,14 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig, devices } from '@playwright/test'
+
+// Minimal .env loader: e2e credentials (E2E_PASSWORD, E2E_STAFF_PASSWORD) live
+// in the gitignored .env because this repo is public.
+try {
+  for (const line of readFileSync(new URL('.env', import.meta.url), 'utf8').split('\n')) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2]
+  }
+} catch { /* no .env — rely on real env vars */ }
 
 /**
  * Playwright runs against either:

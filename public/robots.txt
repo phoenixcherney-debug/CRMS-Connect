@@ -1,24 +1,4 @@
-# CRMS Connect — Colorado Rocky Mountain School career connections platform
-# Authenticated app routes are intentionally not listed; only public marketing
-# and auth pages should be crawled.
 User-agent: *
 Allow: /$
-Allow: /about
-Allow: /contact
 Allow: /privacy
-Allow: /for-employers
-Allow: /for-mentors
-Allow: /login
-Allow: /signup
-Disallow: /explore
-Disallow: /activity
-Disallow: /opportunities
-Disallow: /messages
-Disallow: /people
-Disallow: /profile
-Disallow: /admin
-Disallow: /notifications
-Disallow: /applications
-Disallow: /settings
-
-Sitemap: https://crms-connect-sq6y.vercel.app/sitemap.xml
+Disallow: /
