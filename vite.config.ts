@@ -7,55 +7,30 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    // v2 uses the plain generateSW strategy: no push, no custom sw.ts. With
+    // autoUpdate the generated worker skips waiting + claims clients, so a
+    // deploy can't strand users on a stale shell pointing at gone chunks
+    // (the failure mode that motivated v1's hand-rolled worker).
     VitePWA({
-      strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.ts',
       registerType: 'autoUpdate',
-      // updateViaCache: 'none' tells the browser to bypass the HTTP cache when
-      // checking for an updated service worker — guards against the "stale
-      // shell + new JS bundle" combo that hung the cold-start loader.
-      injectRegister: 'auto',
-      injectManifest: {
-        // Don't precache the HTML shell — we serve it network-first from sw.ts.
-        // Precaching it together with NavigationRoute(NetworkFirst) was the
-        // setup that hung when the cached HTML referenced a JS chunk hash
-        // the user no longer had.
-        globPatterns: ['**/*.{js,css,svg,png,ico,webp,woff2}'],
-      },
+      includeAssets: ['pwa-192x192.png', 'pwa-512x512.png', 'pwa-512x512-maskable.png', 'apple-touch-icon.png'],
       workbox: {
-        // No-op for injectManifest mode but kept for documentation.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        navigateFallback: '/index.html',
       },
-      // Precache these assets in the app shell
-      includeAssets: ['pwa-192x192.png', 'pwa-512x512.png', 'pwa-512x512-maskable.png', 'apple-touch-icon.png', 'offline.html'],
       manifest: {
         name: 'CRMS Connect',
         short_name: 'CRMS',
-        description: 'Colorado Rocky Mountain School career connections platform',
-        theme_color: '#257200',
-        background_color: '#257200',
+        description: 'Opportunities shared only within the Colorado Rocky Mountain School community.',
+        theme_color: '#1e4d3b',
+        background_color: '#f7f4ed',
         display: 'standalone',
         scope: '/',
         start_url: '/',
         icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any',
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any',
-          },
-          {
-            src: 'pwa-512x512-maskable.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'pwa-512x512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),
