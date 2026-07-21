@@ -17,6 +17,9 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         navigateFallback: '/index.html',
+        // Pull the push/notificationclick handlers into the generated worker
+        // (see public/push-sw.js) without hand-rolling the caching worker.
+        importScripts: ['/push-sw.js'],
       },
       manifest: {
         name: 'CRMS Connect',

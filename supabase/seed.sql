@@ -47,7 +47,14 @@ values
    'miles.tanaka@crms.org', extensions.crypt(:'demo_password', extensions.gen_salt('bf')), now(),
    '{"role":"student"}'::jsonb || '{"provider":"email","providers":["email"]}'::jsonb,
    '{"role":"student","full_name":"Miles Tanaka","class_year":"2026"}',
-   now() - interval '28 days', now(), '', '', '', '', '', '', '', '');
+   now() - interval '28 days', now(), '', '', '', '', '', '', '', ''),
+  -- Dedicated demo admin, kept separate from any real staff email so its
+  -- password stays known for tests/handoff.
+  ('00000000-0000-0000-0000-000000000000', 'a0000000-0000-4000-8000-0000000000de', 'authenticated', 'authenticated',
+   'demo.admin@example.com', extensions.crypt(:'staff_password', extensions.gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}',
+   '{"role":"member","full_name":"Demo Staff","affiliation":"faculty_staff","title":"CRMS Connect Admin (demo)"}',
+   now() - interval '90 days', now(), '', '', '', '', '', '', '', '');
 
 insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
 select gen_random_uuid(), u.id,
@@ -59,7 +66,8 @@ from auth.users u;
 -- Profile touch-ups (runs as service context: guard triggers allow it)
 -- ---------------------------------------------------------------------------
 update public.profiles set role = 'admin', account_status = 'active', approved_at = now()
-where id = 'a0000000-0000-4000-8000-000000000001';
+where id in ('a0000000-0000-4000-8000-000000000001',   -- Phoenix Cherney (school staff)
+             'a0000000-0000-4000-8000-0000000000de');  -- Demo Staff (tests/handoff)
 
 -- Approve the established members; Robin stays pending to populate the queue.
 update public.profiles set account_status = 'active'

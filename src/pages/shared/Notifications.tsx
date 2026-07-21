@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
 import { Spinner } from '../../components/ui/Spinner'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { PushToggle } from '../../components/PushToggle'
 import { timeAgo } from '../../lib/format'
 import type { AppNotification } from '../../types'
 
@@ -34,6 +35,9 @@ export function Notifications() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="text-3xl">Notifications</h1>
+      <div className="mt-6">
+        <PushToggle />
+      </div>
       <div className="mt-6">
         {items.length === 0 ? (
           <EmptyState title="Nothing yet">

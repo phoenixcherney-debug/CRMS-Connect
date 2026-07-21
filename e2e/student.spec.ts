@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { ACCOUNTS, login } from './helpers'
 
-test.describe.configure({ mode: 'serial' })
+// Runs with the shared student session (see auth.setup.ts + the 'student'
+// project in playwright.config.ts) — no per-test login.
 
 test('student sees home, board, and poster identity', async ({ page }) => {
-  await login(page, ACCOUNTS.student)
+  await page.goto('/home')
   await expect(page.getByRole('heading', { name: 'Hey, Avery' })).toBeVisible()
 
   await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'The Board' }).click()
@@ -15,7 +15,6 @@ test('student sees home, board, and poster identity', async ({ page }) => {
 })
 
 test('student can open an offer and sees the raise-hand form', async ({ page }) => {
-  await login(page, ACCOUNTS.student)
   await page.goto('/board')
   await page.getByText('Paid summer internship: junior web developer').click()
   await expect(page.getByRole('heading', { name: 'Raise your hand' })).toBeVisible()
@@ -25,7 +24,6 @@ test('student can open an offer and sees the raise-hand form', async ({ page }) 
 })
 
 test('student thread shows staff-visibility notice and accepts a message', async ({ page }) => {
-  await login(page, ACCOUNTS.student)
   await page.goto('/requests')
   await page.getByText('Shadow a large-animal vet for a day').click()
   await expect(page.getByText('CRMS staff can read this thread')).toBeVisible()
@@ -37,8 +35,15 @@ test('student thread shows staff-visibility notice and accepts a message', async
   await expect(page.getByText(ping)).toBeVisible({ timeout: 10_000 })
 })
 
+test('notifications page loads', async ({ page }) => {
+  await page.goto('/notifications')
+  await expect(page.getByRole('heading', { name: 'Notifications', exact: true })).toBeVisible()
+  // The push toggle self-hides unless VITE_VAPID_PUBLIC_KEY is set and a service
+  // worker is available (built preview, not dev). Its opt-in state is verified
+  // against a built preview separately; here we just guard the page render.
+})
+
 test('student cannot reach the staff desk', async ({ page }) => {
-  await login(page, ACCOUNTS.student)
   await page.goto('/admin')
   await expect(page).toHaveURL(/\/home/)
   await expect(page.getByRole('heading', { name: 'Hey, Avery' })).toBeVisible()
