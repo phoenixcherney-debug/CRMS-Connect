@@ -35,3 +35,8 @@ dist-ssr
 playwright-report/
 test-results/
 .playwright-cache/
+
+# Playwright auth state + artifacts
+e2e/.auth/
+test-results/
+playwright-report/

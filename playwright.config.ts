@@ -34,7 +34,33 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Log in once per role (auth.setup.ts) and reuse the session across every
+    // test in that role's project — keeps the suite off Supabase's auth rate
+    // limit and makes runs deterministic.
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    {
+      name: 'public',
+      testMatch: /public\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'student',
+      testMatch: /student\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/student.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'member',
+      testMatch: /member\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/member.json' },
+      dependencies: ['setup'],
+    },
+    {
+      name: 'admin',
+      testMatch: /admin\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.auth/admin.json' },
+      dependencies: ['setup'],
+    },
   ],
   webServer: process.env.E2E_BASE_URL
     ? undefined

@@ -1,15 +1,16 @@
 import { test, expect } from '@playwright/test'
-import { ACCOUNTS, login } from './helpers'
+
+// Runs with the shared member session (Casey Ortega) — no per-test login.
 
 test('member home shows their offers and incoming hands', async ({ page }) => {
-  await login(page, ACCOUNTS.member)
+  await page.goto('/home')
   await expect(page.getByRole('heading', { name: 'Hey, Casey' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Your offers' })).toBeVisible()
   await expect(page.getByText('Shadow a large-animal vet for a day')).toBeVisible()
 })
 
 test('member sees hand-raises with the student note on the manage page', async ({ page }) => {
-  await login(page, ACCOUNTS.member)
+  await page.goto('/home')
   await page.getByText('Shadow a large-animal vet for a day').click()
   await expect(page).toHaveURL(/\/offers\/.+\/manage/)
   await expect(page.getByText('Avery Kim')).toBeVisible()
@@ -18,7 +19,6 @@ test('member sees hand-raises with the student note on the manage page', async (
 })
 
 test('the offer form is two required fields', async ({ page }) => {
-  await login(page, ACCOUNTS.member)
   await page.goto('/offers/new')
   await expect(page.getByRole('heading', { name: 'Open a door' })).toBeVisible()
   await expect(page.getByLabel('Title')).toBeVisible()
@@ -31,7 +31,6 @@ test('the offer form is two required fields', async ({ page }) => {
 })
 
 test('member cannot reach the staff desk', async ({ page }) => {
-  await login(page, ACCOUNTS.member)
   await page.goto('/admin/people')
   await expect(page).toHaveURL(/\/home/)
 })

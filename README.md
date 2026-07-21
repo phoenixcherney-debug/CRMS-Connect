@@ -37,7 +37,8 @@ React 19 + TypeScript · Vite 7 · React Router v7 · Tailwind CSS v4 · PWA
 (`vite-plugin-pwa`, generateSW) · Supabase (Postgres + Auth) · Vercel ·
 Vitest + Playwright.
 
-No edge functions, no push, no storage buckets — v2 deliberately has a small surface.
+One edge function (`send-push`), no storage buckets — v2 keeps a deliberately small
+surface. Notifications are in-app first; web push is an explicit opt-in (see below).
 
 ## Roles
 
@@ -63,6 +64,30 @@ npm run dev
 | `npm run e2e` | Playwright suite (`e2e/`); needs `E2E_PASSWORD` / `E2E_STAFF_PASSWORD` in `.env` |
 
 Run e2e against any deployment with `E2E_BASE_URL=https://… npm run e2e`.
+
+## Notifications & opt-in push
+
+Every meaningful event writes an in-app notification (a `notifications` row, created
+only by `SECURITY DEFINER` triggers — never the client). The bell polls the unread
+count; the list marks read on view.
+
+Web push is layered on top and is **off by default** — the app never requests
+notification permission on load. A user turns it on per device from the Notifications
+page ("Push notifications" card). When a notification is written, the `dispatch_push`
+trigger fires the `send-push` edge function *only* if that user has a subscription.
+
+**Enabling push (one-time, owner action — needs secret values this build never sets):**
+
+1. Generate a keypair: `npx web-push generate-vapid-keys`.
+2. Supabase → Edge Functions → `send-push` → Secrets, set:
+   - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (from step 1)
+   - `VAPID_SUBJECT` (e.g. `mailto:connect@crms.org`)
+   - `PUSH_HOOK_SECRET` — copy the value already generated in Vault:
+     `select decrypted_secret from vault.decrypted_secrets where name = 'push_hook_secret';`
+3. Vercel → project env: `VITE_VAPID_PUBLIC_KEY` = the same public key; redeploy.
+
+Until those are set the toggle stays hidden and `dispatch_push` no-ops safely — the
+trigger→function wiring is live (verified end-to-end), it just needs the keys.
 
 ## Project layout
 
