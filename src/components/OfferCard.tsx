@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
 import { Badge } from './ui/Badge'
-import { OFFER_KIND_META, LOCATION_MODE_LABEL, affiliationLabel } from '../types'
+import { OFFER_KIND_META, LOCATION_MODE_LABEL, affiliationLabel, FORMER_MEMBER } from '../types'
 import type { Offer, PublicProfile } from '../types'
 import { timeAgo } from '../lib/format'
 
 export type OfferWithPoster = Offer & {
-  poster: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'organization'>
+  // Null when the poster has been disabled (RLS hides their profile) but the
+  // offer row is still returned — guarded below so the board never crashes.
+  poster: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'organization'> | null
 }
 
 /** One row on the board. Poster identity is as prominent as the title —
@@ -14,6 +16,9 @@ export function OfferCard({ offer }: { offer: OfferWithPoster }) {
   const kind = OFFER_KIND_META[offer.kind]
   const where = offer.location_text || LOCATION_MODE_LABEL[offer.location_mode]
   const facts = [where, offer.timeframe, offer.commitment].filter(Boolean)
+  const posterLine = offer.poster
+    ? `${offer.poster.full_name} · ${affiliationLabel(offer.poster)}${offer.poster.organization ? ` · ${offer.poster.organization}` : ''}`
+    : FORMER_MEMBER
   return (
     <Link
       to={`/board/${offer.id}`}
@@ -26,10 +31,7 @@ export function OfferCard({ offer }: { offer: OfferWithPoster }) {
         <span className="ml-auto text-xs text-faint">{timeAgo(offer.created_at)}</span>
       </div>
       <h3 className="mt-3 text-lg leading-snug text-ink">{offer.title}</h3>
-      <p className="mt-1 text-sm text-faint">
-        {offer.poster.full_name} · {affiliationLabel(offer.poster)}
-        {offer.poster.organization ? ` · ${offer.poster.organization}` : ''}
-      </p>
+      <p className="mt-1 text-sm text-faint">{posterLine}</p>
       {facts.length > 0 && (
         <p className="mt-3 text-xs text-faint">{facts.join('  ·  ')}</p>
       )}

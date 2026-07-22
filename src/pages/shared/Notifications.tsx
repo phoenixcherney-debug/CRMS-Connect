@@ -6,22 +6,25 @@ import { Spinner } from '../../components/ui/Spinner'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { PushToggle } from '../../components/PushToggle'
 import { timeAgo } from '../../lib/format'
+import { friendlyError } from '../../lib/errors'
 import type { AppNotification } from '../../types'
 
 export function Notifications() {
   const { user } = useAuth()
   const [items, setItems] = useState<AppNotification[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
     let cancelled = false
     async function load() {
-      const { data } = await supabase
+      const { data, error: err } = await supabase
         .from('notifications')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50)
       if (cancelled) return
+      if (err) { setError(friendlyError(err)); return }
       setItems(data ?? [])
       // Everything visible is now read.
       await supabase.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null)
@@ -30,6 +33,15 @@ export function Notifications() {
     return () => { cancelled = true }
   }, [user])
 
+  if (error) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <h1 className="text-3xl">Notifications</h1>
+        <div className="mt-6"><PushToggle /></div>
+        <div className="mt-6"><EmptyState title="We couldn’t load your notifications">{error}</EmptyState></div>
+      </div>
+    )
+  }
   if (items === null) return <Spinner page />
 
   return (

@@ -19,9 +19,13 @@ import { OFFER_KIND_META, LOCATION_MODE_LABEL, OFFER_STATUS_LABEL, REQUEST_STATU
 import type { Offer, HandRaise, PublicProfile } from '../../types'
 
 type OfferFull = Offer & {
-  poster: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'organization' | 'title'> & {
-    open_to_requests?: boolean
-  }
+  // Null if the poster has been disabled (RLS hides the profile) — guarded in
+  // render so the page degrades instead of white-screening.
+  poster:
+    | (Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'organization' | 'title'> & {
+        open_to_requests?: boolean
+      })
+    | null
 }
 
 export function OfferDetail() {
@@ -114,7 +118,7 @@ export function OfferDetail() {
   const isOwner = offer.posted_by === profile.id
   const isAdmin = profile.role === 'admin'
   const isStudent = profile.role === 'student'
-  const posterPaused = offer.poster.open_to_requests === false
+  const posterPaused = offer.poster?.open_to_requests === false
   const canRaise = isStudent && offer.status === 'open' && !offer.hidden_at && !myRequest && !posterPaused
 
   const facts: { icon: typeof MapPin; text: string }[] = [
@@ -140,7 +144,7 @@ export function OfferDetail() {
       <div className="mt-5">
         <PersonLink
           person={offer.poster}
-          sub={[offer.poster.title, offer.poster.organization].filter(Boolean).join(', ') || null}
+          sub={offer.poster ? [offer.poster.title, offer.poster.organization].filter(Boolean).join(', ') || null : null}
         />
       </div>
 

@@ -1,14 +1,35 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Spinner } from './ui/Spinner'
+import { Button } from './ui/Button'
 import type { UserRole } from '../types'
 
 /** Auth + account-status gate for everything behind login. RLS is the real
  *  enforcement; these redirects are UX. */
 export function Gate() {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, profileError, refreshProfile, signOut } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+
+  // A signed-in user whose profile failed to load: offer a way out instead of
+  // spinning forever behind an infinite loader.
+  if (user && !profile && profileError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-xl border border-line bg-card p-8 text-center">
+          <h1 className="text-2xl">We couldn’t load your account</h1>
+          <p className="mt-3 text-sm leading-relaxed text-faint">
+            Something went wrong reaching the server. Check your connection and try again.
+          </p>
+          <div className="mt-6 flex justify-center gap-2">
+            <Button onClick={() => refreshProfile()}>Try again</Button>
+            <Button variant="ghost" onClick={async () => { await signOut(); navigate('/') }}>Sign out</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading || (user && !profile)) return <Spinner page />
   if (!user || !profile) {

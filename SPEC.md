@@ -13,8 +13,14 @@ minors. Anything that doesn't do one of those three things is out.
 
 **What v1 got wrong (and v2 cuts):** open 1:1 DMs between adults and students, a social
 feed, follows, a marketplace, meeting-slot scheduling, mentor walls/shortlists, student
-"pitch" posts, push notifications, resume uploads. Each made the app feel like a generic
-network and expanded the unmoderated surface between adults and minors.
+"pitch" posts, resume uploads. Each made the app feel like a generic network and expanded
+the unmoderated surface between adults and minors.
+
+**Amendment (post-launch):** opt-in web push was added back for notifications. It does
+*not* reopen any of the above — it's a per-device, off-by-default delivery channel for the
+same in-app notifications, mirrors their (already conservative) content, and never
+auto-prompts. It uses `vite-plugin-pwa`'s generated worker plus a tiny imported push
+handler (`public/push-sw.js`) — still no hand-rolled `sw.ts`. See "Notifications & push" below.
 
 ## The one loop
 
@@ -100,30 +106,41 @@ UNIQUE(`offer_id`,`student_id`).
 **notifications** — `user_id fk cascade`, `kind`, `title` ≤120, `body` ≤300, `link` ≤200,
 `read_at`, `created_at`. Written only by SECURITY DEFINER triggers.
 
+**push_subscriptions** — `user_id fk cascade`, `endpoint` (unique), `p256dh`, `auth`,
+`user_agent`, `created_at`. One row per opted-in device; RLS: own rows only. A
+`dispatch_push` trigger on `notifications` insert calls the `send-push` edge function via
+pg_net, but only for an *active* recipient who has a subscription.
+
 **audit_log** — `actor_id`, `action text`, `target_kind text`, `target_id uuid`,
 `detail jsonb default '{}'`, `created_at`. Written by triggers on admin actions.
 
 Helper functions (SECURITY DEFINER, `search_path` pinned, EXECUTE revoked from public
-where internal): `app_role()`, `app_is_admin()`, `app_is_active()`,
-`handle_new_user()` (auth trigger: builds profile from metadata; `@crms.org` students
-auto-active), notification triggers, `enforce_profile_guard()` (non-admins cannot change
-own `role`/`account_status`/`approved_*`), request-transition guard, auto-fill trigger
-(accepted count ≥ spots → offer `filled`), `community_stats()` (anon-callable aggregate
+where internal): `app_role()`, `app_is_admin()`, `app_is_active()`, `app_user_active(id)`,
+`app_has_request_from(student)` / `app_has_request_on_offer(offer)` (scope member↔student
+visibility), `handle_new_user()` (auth trigger: builds profile; `@crms.org` students go
+active only once `email_confirmed_at` is set) + `handle_email_confirmed()` (promotes on
+confirmation), notification/push triggers, `enforce_profile_guard()` (non-admins cannot
+change own `role`/`account_status`/`affiliation`/`class_year`/`approved_*`),
+request-transition guard, auto-fill trigger (accepted count ≥ spots → offer `filled`),
+`community_stats()` (anon-callable aggregate
 for the landing page), `admin_overview()` (admin dashboard counts).
 
 ### RLS matrix (summary)
 
 | Table | student (active) | member (active) | admin |
 |---|---|---|---|
-| profiles | SELECT active profiles; UPDATE self (guarded cols) | same | SELECT/UPDATE all |
-| offers | SELECT `open/filled` & not hidden | + own drafts; INSERT; UPDATE own (not hidden ones) | all, incl. hide/unhide |
-| requests | own: INSERT (offer open, not hidden, self), SELECT, withdraw | SELECT/UPDATE status on own offers' requests | all |
-| messages | SELECT/INSERT on own requests (not withdrawn/declined) | same for own offers' requests | all (posts flagged `is_staff`) |
+| profiles | SELECT self + members/staff (no student directory); UPDATE self (guarded cols) | SELECT self + members/staff + **only students who applied to me**; UPDATE self (guarded) | SELECT/UPDATE all |
+| offers | SELECT `open/filled` & not hidden **& poster active** (or an offer they applied to) | + own drafts; INSERT; UPDATE own (not hidden ones) | all, incl. hide/unhide |
+| requests | own: INSERT (offer open, not hidden, poster active, self), SELECT, withdraw | SELECT/UPDATE status on own offers' requests | all |
+| messages | SELECT/INSERT on own requests (not withdrawn/declined; **both parties active**) | same for own offers' requests | all (posts flagged `is_staff`) |
 | reports | INSERT; SELECT own | same | all + resolve |
 | notifications | own SELECT/UPDATE(read) | same | own only |
+| push_subscriptions | own SELECT/INSERT/UPDATE/DELETE | same | (service role reads to deliver) |
 | audit_log | — | — | SELECT |
 
-Pending/disabled users: RLS denies everything except own-profile SELECT.
+Every non-admin branch above additionally requires `app_is_active()` — a pending or
+disabled account is denied everything except its own-profile SELECT. Disabling an adult
+therefore revokes their thread access and takes their offers off the board immediately.
 
 ## Design language — "field notes, not job board"
 
@@ -163,9 +180,10 @@ loop. Admin UI is plainer and denser — staff are working, not browsing.
 
 ## Engineering ground rules
 
-- Stack unchanged: React 19 + TS strict, Vite 7, React Router v7 (`createBrowserRouter`),
-  Tailwind v4, Supabase JS v2, PWA via `vite-plugin-pwa` (generateSW; **no push, no custom
-  sw.ts**). Deploy: push to `main` → Vercel.
+- Stack unchanged: React 19 + TS strict, Vite 7, React Router v7, Tailwind v4, Supabase
+  JS v2, PWA via `vite-plugin-pwa` (generateSW; **no hand-rolled `sw.ts`** — the push
+  handler is a small imported script, not a custom worker). One edge function
+  (`send-push`). Deploy: push to `main` → Vercel.
 - Data access: typed `supabase` client + `src/lib/database.types.ts` (generated). Small
   hand-rolled hooks (`useQuery`-style helpers in `src/lib/`), no new deps without reason.
 - Components live in `src/components/ui/` (primitives: Button, Card, Badge, Field,

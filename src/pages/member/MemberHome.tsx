@@ -6,21 +6,23 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { friendlyError } from '../../lib/errors'
 import { Spinner } from '../../components/ui/Spinner'
-import { OFFER_KIND_META, OFFER_STATUS_LABEL, REQUEST_STATUS_META, affiliationLabel } from '../../types'
+import { OFFER_KIND_META, OFFER_STATUS_LABEL, REQUEST_STATUS_META, affiliationLabel, personName } from '../../types'
 import type { HandRaise, Offer, PublicProfile } from '../../types'
 import { timeAgo } from '../../lib/format'
 import { pluralize } from '../../lib/pluralize'
 
 type IncomingRow = HandRaise & {
   offer: Pick<Offer, 'id' | 'title'>
-  student: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year'>
+  student: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year'> | null
 }
 
 export function MemberHome() {
   const { profile } = useAuth()
   const [offers, setOffers] = useState<Offer[] | null>(null)
   const [incoming, setIncoming] = useState<IncomingRow[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!profile) return
@@ -40,6 +42,10 @@ export function MemberHome() {
           .order('created_at', { ascending: false }),
       ])
       if (cancelled) return
+      if (offersRes.error || incomingRes.error) {
+        setError(friendlyError(offersRes.error ?? incomingRes.error))
+        return
+      }
       setOffers(offersRes.data ?? [])
       setIncoming((incomingRes.data ?? []) as unknown as IncomingRow[])
     }
@@ -64,7 +70,9 @@ export function MemberHome() {
         </Link>
       </div>
 
-      {offers === null || incoming === null ? (
+      {error ? (
+        <div className="mt-8"><EmptyState title="We couldn’t load your offers">{error}</EmptyState></div>
+      ) : offers === null || incoming === null ? (
         <Spinner page />
       ) : (
         <>
@@ -81,8 +89,8 @@ export function MemberHome() {
                     to={`/requests/${r.id}`}
                     className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-line bg-card px-5 py-3.5 hover:border-pine"
                   >
-                    <span className="text-sm font-medium text-ink">{r.student.full_name}</span>
-                    <span className="text-xs text-faint">{affiliationLabel(r.student)}</span>
+                    <span className="text-sm font-medium text-ink">{personName(r.student)}</span>
+                    {r.student && <span className="text-xs text-faint">{affiliationLabel(r.student)}</span>}
                     <span className="text-sm text-faint">· {r.offer.title}</span>
                     <span className="ml-auto flex items-center gap-3">
                       <Badge tint={REQUEST_STATUS_META[r.status].tint}>{REQUEST_STATUS_META[r.status].label}</Badge>

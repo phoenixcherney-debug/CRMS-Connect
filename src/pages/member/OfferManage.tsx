@@ -17,7 +17,7 @@ import { useToast } from '../../components/ui/Toast'
 import { pluralize } from '../../lib/pluralize'
 
 type RequestRow = HandRaise & {
-  student: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'tags'>
+  student: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'tags'> | null
 }
 
 /** The poster's view of one offer: every hand raised, and what happened next. */
@@ -132,7 +132,7 @@ export function OfferManage() {
                     <p className="mt-4 whitespace-pre-line rounded-lg bg-paper px-4 py-3 text-sm leading-relaxed text-ink">
                       {r.note}
                     </p>
-                    {r.student.tags.length > 0 && (
+                    {r.student && r.student.tags.length > 0 && (
                       <p className="mt-3 text-xs text-faint">Into: {r.student.tags.join(', ')}</p>
                     )}
                     <div className="mt-4 flex justify-end">

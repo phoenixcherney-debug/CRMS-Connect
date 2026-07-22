@@ -20,6 +20,10 @@ interface AuthContextValue {
   profile: Profile | null
   /** True until the initial session + profile fetch settles. */
   loading: boolean
+  /** Set when a signed-in user's profile row failed to load (network/RLS
+   *  error) — distinct from a genuinely absent profile. Lets route guards
+   *  show a retry instead of spinning forever. */
+  profileError: boolean
   signUp: (params: SignUpParams) => Promise<{ error: string | null; needsConfirmation: boolean }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -32,14 +36,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [profileError, setProfileError] = useState(false)
 
-  const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
+  // Returns { profile, failed } so callers can tell a network/RLS failure
+  // (failed=true) apart from a genuinely missing row (profile=null, failed=false).
+  const fetchProfile = useCallback(async (userId: string): Promise<{ profile: Profile | null; failed: boolean }> => {
     const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
     if (error) {
       console.error('profile fetch failed:', error)
-      return null
+      return { profile: null, failed: true }
     }
-    return data
+    return { profile: data, failed: false }
   }, [])
 
   useEffect(() => {
@@ -49,8 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return
       setUser(session?.user ?? null)
       if (session?.user) {
-        const p = await fetchProfile(session.user.id)
-        if (!cancelled) setProfile(p)
+        const { profile: p, failed } = await fetchProfile(session.user.id)
+        if (!cancelled) {
+          setProfile(p)
+          setProfileError(failed)
+        }
       }
       if (!cancelled) setLoading(false)
     })
@@ -59,10 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null)
       if (!session?.user) {
         setProfile(null)
+        setProfileError(false)
         return
       }
       // Deliberately not awaited: auth callbacks must not block.
-      fetchProfile(session.user.id).then((p) => setProfile(p))
+      fetchProfile(session.user.id).then(({ profile: p, failed }) => {
+        setProfile(p)
+        setProfileError(failed)
+      })
     })
 
     return () => {
@@ -106,11 +120,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     const { data: { user: current } } = await supabase.auth.getUser()
-    if (current) setProfile(await fetchProfile(current.id))
+    if (current) {
+      const { profile: p, failed } = await fetchProfile(current.id)
+      setProfile(p)
+      setProfileError(failed)
+    }
   }, [fetchProfile])
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, profileError, signUp, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

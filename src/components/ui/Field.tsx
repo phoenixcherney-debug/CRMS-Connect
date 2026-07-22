@@ -2,7 +2,7 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTML
 import { useId } from 'react'
 
 const CONTROL =
-  'w-full rounded-lg border border-line-strong bg-card px-3 py-2 text-sm text-ink placeholder:text-faint/70 focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20 disabled:opacity-60'
+  'w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-ink placeholder:text-faint/70 focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20 disabled:opacity-60'
 
 interface FieldShellProps {
   label: string

@@ -7,25 +7,30 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Spinner } from '../../components/ui/Spinner'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { friendlyError } from '../../lib/errors'
 import { timeAgo } from '../../lib/format'
+import { personName } from '../../types'
 import type { Report, PublicProfile } from '../../types'
 
-type Row = Report & { reporter: Pick<PublicProfile, 'id' | 'full_name'> }
+type Row = Report & { reporter: Pick<PublicProfile, 'id' | 'full_name'> | null }
 
 export function AdminReports() {
   const toast = useToast()
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
   /** message-target id → its thread (request) id, resolved for linking. */
   const [messageThreads, setMessageThreads] = useState<Record<string, string>>({})
   const [acting, setActing] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error: err } = await supabase
       .from('reports')
       .select('*, reporter:profiles!reports_reporter_id_fkey(id, full_name)')
       .order('created_at', { ascending: false })
+    if (err) { setError(friendlyError(err)); return }
+    setError(null)
     const rows = (data ?? []) as unknown as Row[]
     setRows(rows)
     const messageIds = rows.filter((r) => r.target === 'message').map((r) => r.target_id)
@@ -56,6 +61,7 @@ export function AdminReports() {
     return threadId ? { to: `/requests/${threadId}`, label: 'View thread' } : null
   }
 
+  if (error) return <AdminShell title="Reports"><EmptyState title="We couldn’t load reports">{error}</EmptyState></AdminShell>
   if (rows === null) return <AdminShell title="Reports"><Spinner page /></AdminShell>
 
   const open = rows.filter((r) => r.status === 'open')
@@ -75,7 +81,7 @@ export function AdminReports() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tint="bg-clay-soft text-danger">{r.target}</Badge>
                     <span className="text-sm text-faint">
-                      flagged by <span className="font-medium text-ink">{r.reporter.full_name}</span> · {timeAgo(r.created_at)}
+                      flagged by <span className="font-medium text-ink">{personName(r.reporter)}</span> · {timeAgo(r.created_at)}
                     </span>
                     {link && <Link to={link.to} className="ml-auto text-sm text-pine hover:underline">{link.label}</Link>}
                   </div>

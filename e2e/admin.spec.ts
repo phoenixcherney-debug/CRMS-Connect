@@ -25,3 +25,17 @@ test('audit log and reports pages load', async ({ page }) => {
   await page.goto('/admin/reports')
   await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible()
 })
+
+test('admin can unlist an offer and restore it', async ({ page }) => {
+  // Idempotent: unlist then restore leaves the board exactly as it started.
+  await page.goto('/admin/offers')
+  const row = page.locator('li', { hasText: 'Design a backyard studio with a working architect' }).first()
+  await expect(row).toBeVisible()
+
+  await row.getByRole('button', { name: 'Unlist' }).click()
+  await expect(row.getByText('Unlisted')).toBeVisible({ timeout: 10_000 })
+  await expect(row.getByRole('button', { name: 'Restore' })).toBeVisible()
+
+  await row.getByRole('button', { name: 'Restore' }).click()
+  await expect(row.getByRole('button', { name: 'Unlist' })).toBeVisible({ timeout: 10_000 })
+})

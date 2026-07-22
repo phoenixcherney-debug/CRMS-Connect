@@ -39,8 +39,10 @@ export default defineConfig({
     // limit and makes runs deterministic.
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {
+      // Unauthenticated + inline-login specs (each logs in itself), so no
+      // shared storageState and no setup dependency.
       name: 'public',
-      testMatch: /public\.spec\.ts/,
+      testMatch: /(public|gating)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
     {

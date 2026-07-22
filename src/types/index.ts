@@ -21,6 +21,15 @@ export type RequestStatus = Database['public']['Enums']['request_status']
 export type ReportStatus = Database['public']['Enums']['report_status']
 export type ReportTarget = Database['public']['Enums']['report_target']
 
+/** Placeholder for a person whose profile is no longer visible (disabled →
+ *  hidden by RLS) but who is still referenced by a visible offer/request/message. */
+export const FORMER_MEMBER = 'Former community member'
+
+/** Safe display name for a possibly-null embedded person join. */
+export function personName(p: { full_name: string } | null | undefined): string {
+  return p?.full_name ?? FORMER_MEMBER
+}
+
 /** A profile with only the fields other users are meant to see. */
 export type PublicProfile = Pick<
   Profile,
