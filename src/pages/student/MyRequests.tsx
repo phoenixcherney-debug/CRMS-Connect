@@ -5,18 +5,20 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { Spinner } from '../../components/ui/Spinner'
-import { REQUEST_STATUS_META, OFFER_KIND_META, affiliationLabel } from '../../types'
+import { REQUEST_STATUS_META, OFFER_KIND_META, affiliationLabel, personName } from '../../types'
 import type { HandRaise, Offer, PublicProfile } from '../../types'
 import { timeAgo } from '../../lib/format'
+import { friendlyError } from '../../lib/errors'
 
 type Row = HandRaise & {
   offer: Pick<Offer, 'id' | 'title' | 'kind'> & {
-    poster: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year'>
+    poster: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year'> | null
   }
 }
 
 export function MyRequests() {
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -24,12 +26,22 @@ export function MyRequests() {
       .from('requests')
       .select('*, offer:offers!requests_offer_id_fkey(id, title, kind, poster:profiles!offers_posted_by_fkey(id, full_name, role, affiliation, class_year))')
       .order('updated_at', { ascending: false })
-      .then(({ data }) => {
-        if (!cancelled) setRows((data ?? []) as unknown as Row[])
+      .then(({ data, error: err }) => {
+        if (cancelled) return
+        if (err) { setError(friendlyError(err)); return }
+        setRows((data ?? []) as unknown as Row[])
       })
     return () => { cancelled = true }
   }, [])
 
+  if (error) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <h1 className="text-3xl">My requests</h1>
+        <div className="mt-6"><EmptyState title="We couldn’t load your requests">{error}</EmptyState></div>
+      </div>
+    )
+  }
   if (rows === null) return <Spinner page />
 
   return (
@@ -61,7 +73,7 @@ export function MyRequests() {
                   </div>
                   <p className="mt-2.5 font-display text-lg font-semibold leading-snug text-ink">{r.offer.title}</p>
                   <p className="mt-1 text-sm text-faint">
-                    {r.offer.poster.full_name} · {affiliationLabel(r.offer.poster)}
+                    {r.offer.poster ? `${r.offer.poster.full_name} · ${affiliationLabel(r.offer.poster)}` : personName(r.offer.poster)}
                   </p>
                 </Link>
               </li>

@@ -7,9 +7,11 @@ import type { OfferWithPoster } from '../../components/OfferCard'
 import { Badge } from '../../components/ui/Badge'
 import { Card } from '../../components/ui/Card'
 import { Spinner } from '../../components/ui/Spinner'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { REQUEST_STATUS_META } from '../../types'
 import type { HandRaise, Offer } from '../../types'
 import { timeAgo } from '../../lib/format'
+import { friendlyError } from '../../lib/errors'
 
 type RequestWithOffer = HandRaise & { offer: Pick<Offer, 'id' | 'title' | 'kind'> }
 
@@ -17,6 +19,7 @@ export function StudentHome() {
   const { profile } = useAuth()
   const [fresh, setFresh] = useState<OfferWithPoster[] | null>(null)
   const [active, setActive] = useState<RequestWithOffer[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -37,6 +40,10 @@ export function StudentHome() {
           .limit(5),
       ])
       if (cancelled) return
+      if (offersRes.error || requestsRes.error) {
+        setError(friendlyError(offersRes.error ?? requestsRes.error))
+        return
+      }
       setFresh((offersRes.data ?? []) as unknown as OfferWithPoster[])
       setActive((requestsRes.data ?? []) as unknown as RequestWithOffer[])
     }
@@ -54,7 +61,9 @@ export function StudentHome() {
         Alumni and parents post doors here they'd never post publicly. Your job is just to raise a hand.
       </p>
 
-      {active === null || fresh === null ? (
+      {error ? (
+        <div className="mt-8"><EmptyState title="We couldn’t load your home">{error}</EmptyState></div>
+      ) : active === null || fresh === null ? (
         <Spinner page />
       ) : (
         <>

@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Card } from '../../components/ui/Card'
 import { Spinner } from '../../components/ui/Spinner'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { friendlyError } from '../../lib/errors'
 import { OfferCard } from '../../components/OfferCard'
 import type { OfferWithPoster } from '../../components/OfferCard'
 import { ReportButton } from '../../components/ReportButton'
@@ -21,13 +22,15 @@ export function PersonProfile() {
   const [person, setPerson] = useState<PublicProfile | null>(null)
   const [offers, setOffers] = useState<OfferWithPoster[] | null>(null)
   const [missing, setMissing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
     let cancelled = false
     async function load() {
-      const { data } = await supabase.from('profiles').select(PUBLIC_PROFILE_COLUMNS).eq('id', id!).maybeSingle()
+      const { data, error: err } = await supabase.from('profiles').select(PUBLIC_PROFILE_COLUMNS).eq('id', id!).maybeSingle()
       if (cancelled) return
+      if (err) { setError(friendlyError(err)); return }
       if (!data) {
         setMissing(true)
         return
@@ -48,6 +51,9 @@ export function PersonProfile() {
     return () => { cancelled = true }
   }, [id])
 
+  if (error) {
+    return <EmptyState title="We couldn’t load this profile">{error}</EmptyState>
+  }
   if (missing) {
     return (
       <EmptyState title="No one here">

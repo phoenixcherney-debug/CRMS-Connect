@@ -6,6 +6,7 @@ import { AdminShell } from './AdminShell'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { PersonLink } from '../../components/PersonLink'
 import { useToast } from '../../components/ui/Toast'
 import { friendlyError } from '../../lib/errors'
@@ -22,13 +23,16 @@ export function AdminPeople() {
   const { profile: me } = useAuth()
   const toast = useToast()
   const [people, setPeople] = useState<Profile[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<AccountStatus | 'all'>('all')
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all')
   const [search, setSearch] = useState('')
   const [acting, setActing] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    const { data, error: err } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    if (err) { setError(friendlyError(err)); return }
+    setError(null)
     setPeople(data ?? [])
   }, [])
 
@@ -63,13 +67,13 @@ export function AdminPeople() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search names…"
           aria-label="Search names"
-          className="w-56 rounded-lg border border-line-strong bg-card px-3 py-1.5 text-sm placeholder:text-faint/70 focus:border-pine focus:outline-none"
+          className="w-56 rounded-lg border border-input bg-card px-3 py-1.5 text-sm placeholder:text-faint/70 focus:border-pine focus:outline-none"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as AccountStatus | 'all')}
           aria-label="Filter by status"
-          className="rounded-lg border border-line-strong bg-card px-2.5 py-1.5 text-sm"
+          className="rounded-lg border border-input bg-card px-2.5 py-1.5 text-sm"
         >
           <option value="all">Any status</option>
           <option value="pending">Pending</option>
@@ -80,7 +84,7 @@ export function AdminPeople() {
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
           aria-label="Filter by role"
-          className="rounded-lg border border-line-strong bg-card px-2.5 py-1.5 text-sm"
+          className="rounded-lg border border-input bg-card px-2.5 py-1.5 text-sm"
         >
           <option value="all">Any role</option>
           <option value="student">Students</option>
@@ -90,7 +94,9 @@ export function AdminPeople() {
       </div>
 
       <div className="mt-5">
-        {people === null ? (
+        {error ? (
+          <EmptyState title="We couldn’t load people">{error}</EmptyState>
+        ) : people === null ? (
           <Spinner page />
         ) : (
           <ul className="divide-y divide-line rounded-xl border border-line bg-card">

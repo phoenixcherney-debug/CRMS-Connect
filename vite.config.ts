@@ -7,10 +7,12 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    // v2 uses the plain generateSW strategy: no push, no custom sw.ts. With
+    // v2 uses the plain generateSW strategy — no hand-rolled sw.ts. With
     // autoUpdate the generated worker skips waiting + claims clients, so a
     // deploy can't strand users on a stale shell pointing at gone chunks
-    // (the failure mode that motivated v1's hand-rolled worker).
+    // (the failure mode that motivated v1's hand-rolled worker). Opt-in push
+    // handlers are added via workbox.importScripts below, keeping the caching
+    // worker generated rather than custom.
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['pwa-192x192.png', 'pwa-512x512.png', 'pwa-512x512-maskable.png', 'apple-touch-icon.png'],

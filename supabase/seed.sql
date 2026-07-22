@@ -54,7 +54,19 @@ values
    'demo.admin@example.com', extensions.crypt(:'staff_password', extensions.gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}',
    '{"role":"member","full_name":"Demo Staff","affiliation":"faculty_staff","title":"CRMS Connect Admin (demo)"}',
-   now() - interval '90 days', now(), '', '', '', '', '', '', '', '');
+   now() - interval '90 days', now(), '', '', '', '', '', '', '', ''),
+  -- Gating fixtures: one pending member (approval queue / waiting room) and one
+  -- disabled account (disabled screen). Used by e2e/gating.spec.ts.
+  ('00000000-0000-0000-0000-000000000000', 'a0000000-0000-4000-8000-0000000000fe', 'authenticated', 'authenticated',
+   'pending.demo@example.com', extensions.crypt(:'demo_password', extensions.gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}',
+   '{"role":"member","full_name":"Pending Demo","affiliation":"alumni","class_year":"2010"}',
+   now() - interval '1 day', now(), '', '', '', '', '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', 'a0000000-0000-4000-8000-0000000000da', 'authenticated', 'authenticated',
+   'disabled.demo@example.com', extensions.crypt(:'demo_password', extensions.gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}',
+   '{"role":"student","full_name":"Disabled Demo","class_year":"2027"}',
+   now() - interval '20 days', now(), '', '', '', '', '', '', '', '');
 
 insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
 select gen_random_uuid(), u.id,
@@ -74,6 +86,10 @@ update public.profiles set account_status = 'active'
 where id in ('b0000000-0000-4000-8000-000000000001',
              'b0000000-0000-4000-8000-000000000002',
              'b0000000-0000-4000-8000-000000000003');
+
+-- Gating fixtures: keep Pending Demo pending, and disable Disabled Demo.
+update public.profiles set account_status = 'disabled'
+where id = 'a0000000-0000-4000-8000-0000000000da';
 
 update public.profiles set
   location = 'Basalt, CO',

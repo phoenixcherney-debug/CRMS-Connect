@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider } from './components/ui/Toast'
 import { Layout } from './components/Layout'
 import { Gate, RequireRole } from './components/guards'
+import { RootErrorBoundary } from './components/RootErrorBoundary'
 
 import { Landing } from './pages/public/Landing'
 import { Login } from './pages/public/Login'
@@ -52,7 +53,8 @@ function HomeSwitch() {
 
 export default function App() {
   return (
-    <AuthProvider>
+    <RootErrorBoundary>
+      <AuthProvider>
       <ToastProvider>
         <BrowserRouter>
           <ScrollToTop />
@@ -91,6 +93,7 @@ export default function App() {
           </Routes>
         </BrowserRouter>
       </ToastProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </RootErrorBoundary>
   )
 }

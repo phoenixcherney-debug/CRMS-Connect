@@ -75,10 +75,16 @@ export function OfferForm() {
     }
     setSaving(true)
     if (editing && id) {
-      const { error } = await supabase.from('offers').update(payload).eq('id', id)
+      // Chain .select() so a zero-row update (e.g. RLS filtered it out because
+      // staff unlisted the offer) surfaces instead of silently "succeeding".
+      const { data, error } = await supabase.from('offers').update(payload).eq('id', id).select().maybeSingle()
       setSaving(false)
       if (error) {
         toast(friendlyError(error), 'error')
+        return
+      }
+      if (!data) {
+        toast('This offer can’t be edited right now — a staff member may have unlisted it.', 'error')
         return
       }
       toast('Offer updated.')

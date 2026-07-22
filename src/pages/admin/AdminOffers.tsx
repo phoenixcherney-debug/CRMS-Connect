@@ -6,26 +6,30 @@ import { AdminShell } from './AdminShell'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Spinner } from '../../components/ui/Spinner'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { friendlyError } from '../../lib/errors'
 import { timeAgo } from '../../lib/format'
-import { OFFER_KIND_META, OFFER_STATUS_LABEL, affiliationLabel } from '../../types'
+import { OFFER_KIND_META, OFFER_STATUS_LABEL, affiliationLabel, personName } from '../../types'
 import type { Offer, PublicProfile } from '../../types'
 
 type Row = Offer & {
-  poster: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year'>
+  poster: (Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year'>) | null
 }
 
 export function AdminOffers() {
   const toast = useToast()
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [acting, setActing] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error: err } = await supabase
       .from('offers')
       .select('*, poster:profiles!offers_posted_by_fkey(id, full_name, role, affiliation, class_year)')
       .order('created_at', { ascending: false })
+    if (err) { setError(friendlyError(err)); return }
+    setError(null)
     setRows((data ?? []) as unknown as Row[])
   }, [])
 
@@ -48,7 +52,9 @@ export function AdminOffers() {
 
   return (
     <AdminShell title="Offers">
-      {rows === null ? (
+      {error ? (
+        <EmptyState title="We couldn’t load offers">{error}</EmptyState>
+      ) : rows === null ? (
         <Spinner page />
       ) : (
         <ul className="divide-y divide-line rounded-xl border border-line bg-card">
@@ -60,7 +66,7 @@ export function AdminOffers() {
                   {o.title}
                 </Link>
                 <p className="truncate text-xs text-faint">
-                  {o.poster.full_name} · {affiliationLabel(o.poster)} · {timeAgo(o.created_at)}
+                  {o.poster ? `${o.poster.full_name} · ${affiliationLabel(o.poster)}` : personName(o.poster)} · {timeAgo(o.created_at)}
                 </p>
               </div>
               <span className="flex items-center gap-2">

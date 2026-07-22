@@ -11,6 +11,9 @@
   --color-faint: #57665d;
   --color-line: #e2dccd;
   --color-line-strong: #cbc2ac;
+  /* Form-control border — the only cue a field exists, so it must clear WCAG
+     1.4.11 non-text contrast (3:1). #8c8468 on the card ≈ 3.7:1. */
+  --color-input: #8c8468;
 
   --color-pine: #1e4d3b;
   --color-pine-deep: #143528;

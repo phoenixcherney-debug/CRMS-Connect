@@ -29,10 +29,11 @@ jobs:
   e2e:
     name: Playwright smoke
     runs-on: ubuntu-latest
-    # E2E_PREVIEW_URL is the Vercel preview URL. If it's not set we skip — the
-    # spec creates real users in the connected Supabase project, so we don't
-    # want it running on every push if a preview env isn't available.
-    if: ${{ vars.E2E_PREVIEW_URL != '' || secrets.E2E_PREVIEW_URL != '' }}
+    # E2E_PREVIEW_URL is the Vercel preview URL, configured as a repo *variable*
+    # (not a secret — the `secrets` context is not allowed in a job-level `if`,
+    # so referencing it here would make the condition invalid and the job would
+    # never run). The seeded-account passwords are secrets, passed via env below.
+    if: ${{ vars.E2E_PREVIEW_URL != '' }}
     needs: unit
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +45,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e
         env:
-          E2E_BASE_URL: ${{ vars.E2E_PREVIEW_URL || secrets.E2E_PREVIEW_URL }}
+          E2E_BASE_URL: ${{ vars.E2E_PREVIEW_URL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_STAFF_PASSWORD: ${{ secrets.E2E_STAFF_PASSWORD }}
       - if: failure()
         uses: actions/upload-artifact@v4
         with:

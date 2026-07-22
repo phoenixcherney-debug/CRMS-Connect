@@ -17,14 +17,16 @@ import { PersonLink } from '../../components/PersonLink'
 import { ReportButton } from '../../components/ReportButton'
 import { friendlyError } from '../../lib/errors'
 import { messageTime } from '../../lib/format'
-import { REQUEST_STATUS_META, OFFER_KIND_META } from '../../types'
+import { REQUEST_STATUS_META, OFFER_KIND_META, personName } from '../../types'
 import type { HandRaise, Message, Offer, PublicProfile } from '../../types'
 
 type PersonLite = Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'organization'>
 
 type ThreadData = HandRaise & {
-  offer: Offer & { poster: PersonLite }
-  student: PersonLite
+  // Either party's profile join can be null once they're disabled (RLS hides
+  // the row) while the thread itself stays visible to the other participant.
+  offer: Offer & { poster: PersonLite | null }
+  student: PersonLite | null
 }
 
 const DECLINE_TEMPLATE =
@@ -47,6 +49,9 @@ export function Thread() {
   const [deciding, setDeciding] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const firstLoad = useRef(true)
+  // Once the thread has loaded once, background poll failures must not blow away
+  // the rendered thread (and the composer + the student's in-progress draft).
+  const hasLoaded = useRef(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -58,20 +63,27 @@ export function Thread() {
       .eq('id', id)
       .maybeSingle()
     if (error) {
-      setLoadError(friendlyError(error))
+      // Only surface a full-page error before the first successful load.
+      if (!hasLoaded.current) setLoadError(friendlyError(error))
       return
     }
     if (!data) {
-      setLoadError('This thread doesn\'t exist, or you\'re not part of it.')
+      if (!hasLoaded.current) setLoadError('This thread doesn\'t exist, or you\'re not part of it.')
       return
     }
-    setThread(data as unknown as ThreadData)
-    const { data: msgs } = await supabase
+    const { data: msgs, error: msgError } = await supabase
       .from('messages')
       .select('*')
       .eq('request_id', id)
       .order('created_at', { ascending: true })
+    if (msgError) {
+      if (!hasLoaded.current) setLoadError(friendlyError(msgError))
+      return
+    }
+    setThread(data as unknown as ThreadData)
     setMessages(msgs ?? [])
+    setLoadError(null)
+    hasLoaded.current = true
   }, [id])
 
   usePageData(load, 15_000)
@@ -100,7 +112,8 @@ export function Thread() {
   const canMessage = ['sent', 'in_conversation', 'accepted'].includes(thread.status) && (isStudent || isPoster || isAdmin)
   const posterCanDecide = (isPoster || isAdmin) && ['sent', 'in_conversation'].includes(thread.status)
   const studentCanWithdraw = isStudent && ['sent', 'in_conversation'].includes(thread.status)
-  const otherParty: PersonLite = isStudent ? thread.offer.poster : thread.student
+  const otherParty: PersonLite | null = isStudent ? thread.offer.poster : thread.student
+  const studentName = personName(thread.student)
 
   async function send(e: FormEvent) {
     e.preventDefault()
@@ -176,7 +189,7 @@ export function Thread() {
           <Badge tint={status.tint}>{isStudent ? status.student : status.label}</Badge>
         </div>
         <div className="mt-4 border-t border-line pt-4">
-          <PersonLink person={otherParty} size="sm" sub={otherParty.organization} />
+          <PersonLink person={otherParty} size="sm" sub={otherParty?.organization ?? null} />
         </div>
         {(posterCanDecide || studentCanWithdraw) && (
           <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
@@ -203,7 +216,7 @@ export function Thread() {
       {/* The student's original note opens the thread. */}
       <div className="mt-6 space-y-4">
         <MessageBubble
-          name={thread.student.full_name}
+          name={studentName}
           mine={isStudent}
           staff={false}
           time={thread.created_at}
@@ -213,7 +226,7 @@ export function Thread() {
         {messages.map((m) => (
           <MessageBubble
             key={m.id}
-            name={m.sender_id === thread.student_id ? thread.student.full_name : m.is_staff ? 'CRMS Staff' : thread.offer.poster.full_name}
+            name={m.sender_id === thread.student_id ? studentName : m.is_staff ? 'CRMS Staff' : personName(thread.offer.poster)}
             mine={m.sender_id === profile.id}
             staff={m.is_staff}
             time={m.created_at}
@@ -234,7 +247,9 @@ export function Thread() {
             placeholder="Write a message…"
           />
           <div className="mt-3 flex items-center justify-between gap-3">
-            <ReportButton target="user" targetId={otherParty.id} label="Flag this conversation" />
+            {otherParty ? (
+              <ReportButton target="user" targetId={otherParty.id} label="Flag this conversation" />
+            ) : <span />}
             <Button type="submit" loading={sending} disabled={!body.trim()}>Send</Button>
           </div>
         </form>
@@ -244,7 +259,7 @@ export function Thread() {
         </p>
       )}
 
-      <Modal open={decideOpen === 'accept'} onClose={() => setDecideOpen(null)} title={`Accept ${thread.student.full_name}?`}>
+      <Modal open={decideOpen === 'accept'} onClose={() => setDecideOpen(null)} title={`Accept ${studentName}?`}>
         <p className="text-sm text-faint">
           They'll be notified right away, and the thread stays open so you can sort out details.
           {thread.offer.spots === 1 ? ' This fills your offer and takes it off the open board.' : ''}
