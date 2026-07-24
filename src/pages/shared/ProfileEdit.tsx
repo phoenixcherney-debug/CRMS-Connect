@@ -85,8 +85,8 @@ export function ProfileEdit() {
             rows={4}
             maxLength={1000}
             hint={isMember
-              ? 'What you do, and what kind of doors you can open. Students read this before raising a hand.'
-              : 'What you\'re into and what you\'re hoping to find. Members read this when you raise a hand.'}
+              ? 'What you do, and what kind of doors you can open. Students read this before knocking.'
+              : 'What you\'re into and what you\'re hoping to find. Members read this when you knock.'}
           />
           <TextField
             label={isMember ? 'What you can help with' : 'Your interests'}
@@ -103,9 +103,9 @@ export function ProfileEdit() {
                 className="mt-0.5 h-4 w-4 accent-pine"
               />
               <span>
-                <span className="block text-sm font-medium text-ink">Open to hand-raises</span>
+                <span className="block text-sm font-medium text-ink">Open to knocks</span>
                 <span className="block text-xs text-faint">
-                  Uncheck to take a pause — students won't be able to raise a hand on your offers until you're back.
+                  Uncheck to take a pause — students won't be able to knock on your offers until you're back.
                 </span>
               </span>
             </label>

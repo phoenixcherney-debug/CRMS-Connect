@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import { usePageData } from '../../lib/usePageData'
 import { AdminShell } from './AdminShell'
 import { Spinner } from '../../components/ui/Spinner'
 import { messageTime } from '../../lib/format'
@@ -20,18 +21,16 @@ const ACTION_LABEL: Record<string, string> = {
 export function AdminAudit() {
   const [rows, setRows] = useState<Row[] | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    supabase
+  const load = useCallback(async (isActive: () => boolean) => {
+    const { data } = await supabase
       .from('audit_log')
       .select('*, actor:profiles!audit_log_actor_id_fkey(id, full_name)')
       .order('created_at', { ascending: false })
       .limit(100)
-      .then(({ data }) => {
-        if (!cancelled) setRows((data ?? []) as unknown as Row[])
-      })
-    return () => { cancelled = true }
+    if (isActive()) setRows((data ?? []) as unknown as Row[])
   }, [])
+
+  usePageData(load)
 
   return (
     <AdminShell title="Audit log">

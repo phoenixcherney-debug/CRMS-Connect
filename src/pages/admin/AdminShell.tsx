@@ -14,7 +14,7 @@ const TABS = [
 export function AdminShell({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <p className="eyebrow text-clay">Staff desk</p>
+      <p className="eyebrow text-clay-deep">Staff desk</p>
       <h1 className="mt-1 text-3xl">{title}</h1>
       <nav aria-label="Staff sections" className="mt-5 flex flex-wrap gap-1.5 border-b border-line pb-4">
         {TABS.map((t) => (

@@ -1,13 +1,13 @@
-import { useNavigate } from 'react-router-dom'
 import { Hourglass } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSignOut } from '../../lib/useSignOut'
 import { Button } from '../../components/ui/Button'
 
 /** The waiting room. Pending accounts land here — approval-by-a-real-person is
  *  the product's moat, so this page sells it instead of apologizing for it. */
 export function Waiting() {
-  const { profile, signOut, refreshProfile } = useAuth()
-  const navigate = useNavigate()
+  const { profile, refreshProfile } = useAuth()
+  const signOut = useSignOut()
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
@@ -28,7 +28,7 @@ export function Waiting() {
           <Button variant="secondary" onClick={() => refreshProfile()}>
             Check again
           </Button>
-          <Button variant="ghost" onClick={async () => { await signOut(); navigate('/') }}>
+          <Button variant="ghost" onClick={signOut}>
             Sign out
           </Button>
         </div>

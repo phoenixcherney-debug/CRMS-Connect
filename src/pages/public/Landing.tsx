@@ -30,7 +30,7 @@ export function Landing() {
       {/* Hero */}
       <section className="border-b border-line">
         <div className="mx-auto max-w-5xl px-4 py-16 sm:py-24">
-          <p className="eyebrow text-clay">Colorado Rocky Mountain School</p>
+          <p className="eyebrow text-clay-deep">Colorado Rocky Mountain School</p>
           <h1 className="mt-4 max-w-2xl text-4xl leading-tight sm:text-5xl">
             The doors only Oysters can open.
           </h1>
@@ -77,7 +77,7 @@ export function Landing() {
             },
             {
               icon: Hand,
-              title: 'A student raises a hand',
+              title: 'A student knocks',
               body: 'A short note about why they\'re interested. No resume required, no cold emails, no networking voodoo.',
             },
             {
@@ -131,7 +131,7 @@ export function Landing() {
             {
               icon: Hand,
               title: 'Students always go first',
-              body: 'Adults can\'t browse students or start conversations. Contact begins only when a student raises a hand on an offer.',
+              body: 'Adults can\'t browse students or start conversations. Contact begins only when a student knocks on an offer.',
             },
             {
               icon: Eye,

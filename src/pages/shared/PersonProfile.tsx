@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { MapPin } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { usePageData } from '../../lib/usePageData'
+import { OFFER_POSTER_JOIN } from '../../lib/joins'
 import { useAuth } from '../../contexts/AuthContext'
 import { Avatar } from '../../components/ui/Avatar'
 import { Badge } from '../../components/ui/Badge'
@@ -24,32 +26,29 @@ export function PersonProfile() {
   const [missing, setMissing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const load = useCallback(async (isActive: () => boolean) => {
     if (!id) return
-    let cancelled = false
-    async function load() {
-      const { data, error: err } = await supabase.from('profiles').select(PUBLIC_PROFILE_COLUMNS).eq('id', id!).maybeSingle()
-      if (cancelled) return
-      if (err) { setError(friendlyError(err)); return }
-      if (!data) {
-        setMissing(true)
-        return
-      }
-      setPerson(data as PublicProfile)
-      if (data.role === 'member') {
-        const { data: theirOffers } = await supabase
-          .from('offers')
-          .select('*, poster:profiles!offers_posted_by_fkey(id, full_name, role, affiliation, class_year, organization)')
-          .eq('posted_by', id!)
-          .eq('status', 'open')
-          .is('hidden_at', null)
-          .order('created_at', { ascending: false })
-        if (!cancelled) setOffers((theirOffers ?? []) as unknown as OfferWithPoster[])
-      }
+    const { data, error: err } = await supabase.from('profiles').select(PUBLIC_PROFILE_COLUMNS).eq('id', id).maybeSingle()
+    if (!isActive()) return
+    if (err) { setError(friendlyError(err)); return }
+    if (!data) {
+      setMissing(true)
+      return
     }
-    load()
-    return () => { cancelled = true }
+    setPerson(data as PublicProfile)
+    if (data.role === 'member') {
+      const { data: theirOffers } = await supabase
+        .from('offers')
+        .select(`*, ${OFFER_POSTER_JOIN}`)
+        .eq('posted_by', id)
+        .eq('status', 'open')
+        .is('hidden_at', null)
+        .order('created_at', { ascending: false })
+      if (isActive()) setOffers((theirOffers ?? []) as unknown as OfferWithPoster[])
+    }
   }, [id])
+
+  usePageData(load)
 
   if (error) {
     return <EmptyState title="We couldn’t load this profile">{error}</EmptyState>

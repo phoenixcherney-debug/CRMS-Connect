@@ -4,6 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { MapPin, CalendarRange, Clock3, Users } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { usePageData } from '../../lib/usePageData'
+import { setOfferHidden } from '../../lib/mutations'
+import { OFFER_POSTER_JOIN_DETAIL } from '../../lib/joins'
 import { useAuth } from '../../contexts/AuthContext'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -41,13 +43,14 @@ export function OfferDetail() {
   const [submitting, setSubmitting] = useState(false)
   const [moderating, setModerating] = useState(false)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isActive: () => boolean) => {
     if (!id || !user) return
     const { data, error } = await supabase
       .from('offers')
-      .select('*, poster:profiles!offers_posted_by_fkey(id, full_name, role, affiliation, class_year, organization, title, open_to_requests)')
+      .select(`*, ${OFFER_POSTER_JOIN_DETAIL}`)
       .eq('id', id)
       .maybeSingle()
+    if (!isActive()) return
     if (error) {
       setLoadError(friendlyError(error))
       return
@@ -64,7 +67,7 @@ export function OfferDetail() {
         .eq('offer_id', id)
         .eq('student_id', user.id)
         .maybeSingle()
-      setMyRequest(req)
+      if (isActive()) setMyRequest(req)
     }
   }, [id, user, profile?.role])
 
@@ -74,6 +77,17 @@ export function OfferDetail() {
     e.preventDefault()
     if (!user || !id || note.trim().length < 10) return
     setSubmitting(true)
+    // Clean re-application: a withdrawn request still occupies the (offer,student)
+    // unique slot, so delete it first (requests_delete retract policy) so the
+    // insert can proceed (review C-04).
+    if (myRequest && myRequest.status === 'withdrawn') {
+      const { error: delErr } = await supabase.from('requests').delete().eq('id', myRequest.id)
+      if (delErr) {
+        setSubmitting(false)
+        toast(friendlyError(delErr), 'error')
+        return
+      }
+    }
     const { data, error } = await supabase
       .from('requests')
       .insert({ offer_id: id, student_id: user.id, note: note.trim() })
@@ -84,24 +98,21 @@ export function OfferDetail() {
       toast(friendlyError(error), 'error')
       return
     }
-    toast('Hand raised — they\'ll see your note.')
+    toast('You knocked — they\'ll see your note.')
     navigate(`/requests/${data.id}`)
   }
 
   async function setHidden(hide: boolean) {
     if (!offer) return
     setModerating(true)
-    const { error } = await supabase
-      .from('offers')
-      .update({ hidden_at: hide ? new Date().toISOString() : null })
-      .eq('id', offer.id)
+    const { error } = await setOfferHidden(offer.id, hide)
     setModerating(false)
     if (error) {
       toast(friendlyError(error), 'error')
       return
     }
     toast(hide ? 'Offer unlisted from the board.' : 'Offer restored to the board.')
-    load()
+    load(() => true)
   }
 
   if (loadError) {
@@ -119,7 +130,9 @@ export function OfferDetail() {
   const isAdmin = profile.role === 'admin'
   const isStudent = profile.role === 'student'
   const posterPaused = offer.poster?.open_to_requests === false
-  const canRaise = isStudent && offer.status === 'open' && !offer.hidden_at && !myRequest && !posterPaused
+  // A withdrawn request frees the door to be knocked on again (review C-04).
+  const activeRequest = myRequest && myRequest.status !== 'withdrawn' ? myRequest : null
+  const canRaise = isStudent && offer.status === 'open' && !offer.hidden_at && !activeRequest && !posterPaused
 
   const facts: { icon: typeof MapPin; text: string }[] = [
     { icon: MapPin, text: offer.location_text || LOCATION_MODE_LABEL[offer.location_mode] },
@@ -156,7 +169,7 @@ export function OfferDetail() {
         ))}
       </div>
 
-      <div className="mt-6 whitespace-pre-line text-[15px] leading-relaxed text-ink">
+      <div className="mt-6 whitespace-pre-line text-base leading-relaxed text-ink">
         {offer.description}
       </div>
 
@@ -167,7 +180,7 @@ export function OfferDetail() {
             {isOwner && (
               <>
                 <Button variant="secondary" size="sm" onClick={() => navigate(`/offers/${offer.id}/manage`)}>
-                  See who raised a hand
+                  See who's knocked
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => navigate(`/offers/${offer.id}/edit`)}>
                   Edit
@@ -196,21 +209,21 @@ export function OfferDetail() {
       {/* Student action */}
       {isStudent && (
         <div className="mt-8">
-          {myRequest ? (
+          {activeRequest ? (
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-ink">You raised your hand {timeAgo(myRequest.created_at)}</p>
-                  <p className="mt-1 text-sm text-faint">{REQUEST_STATUS_META[myRequest.status].student}</p>
+                  <p className="text-sm font-medium text-ink">You knocked {timeAgo(activeRequest.created_at)}</p>
+                  <p className="mt-1 text-sm text-faint">{REQUEST_STATUS_META[activeRequest.status].student}</p>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => navigate(`/requests/${myRequest.id}`)}>
+                <Button variant="secondary" size="sm" onClick={() => navigate(`/requests/${activeRequest.id}`)}>
                   Open the thread
                 </Button>
               </div>
             </Card>
           ) : canRaise ? (
             <Card>
-              <h2 className="text-xl">Raise your hand</h2>
+              <h2 className="text-xl">Knock on the door</h2>
               <p className="mt-1 text-sm text-faint">
                 A few honest sentences beat a formal cover letter. Why this door, why you?
                 CRMS staff can see this too.
@@ -227,7 +240,7 @@ export function OfferDetail() {
                   required
                 />
                 <Button type="submit" variant="accent" size="lg" loading={submitting} disabled={note.trim().length < 10}>
-                  Raise your hand
+                  Knock on the door
                 </Button>
               </form>
             </Card>
@@ -238,7 +251,7 @@ export function OfferDetail() {
                   ? 'This member is taking a pause from new requests right now.'
                   : offer.status === 'filled'
                     ? 'This door has been filled — but new ones open all the time.'
-                    : 'This offer isn\'t taking new hand-raises right now.'}
+                    : 'This offer isn\'t taking new knocks right now.'}
               </p>
             </Card>
           )}

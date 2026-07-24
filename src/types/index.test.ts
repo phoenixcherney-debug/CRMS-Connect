@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { affiliationLabel } from './index'
+import { affiliationLabel, personName, FORMER_MEMBER } from './index'
 
 describe('affiliationLabel', () => {
   it('shows class year for alumni', () => {
@@ -19,5 +19,15 @@ describe('affiliationLabel', () => {
   })
   it('labels admins as CRMS staff regardless of affiliation', () => {
     expect(affiliationLabel({ role: 'admin', affiliation: 'faculty_staff', class_year: null })).toBe('CRMS staff')
+  })
+})
+
+describe('personName', () => {
+  it('returns the full name when the person is present', () => {
+    expect(personName({ full_name: 'Avery Kim' })).toBe('Avery Kim')
+  })
+  it('falls back to the former-member placeholder for a null/undefined join', () => {
+    expect(personName(null)).toBe(FORMER_MEMBER)
+    expect(personName(undefined)).toBe(FORMER_MEMBER)
   })
 })

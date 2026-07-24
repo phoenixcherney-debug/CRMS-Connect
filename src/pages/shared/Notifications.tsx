@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { usePageData } from '../../lib/usePageData'
 import { useAuth } from '../../contexts/AuthContext'
 import { Spinner } from '../../components/ui/Spinner'
 import { EmptyState } from '../../components/ui/EmptyState'
@@ -14,24 +15,22 @@ export function Notifications() {
   const [items, setItems] = useState<AppNotification[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const load = useCallback(async (isActive: () => boolean) => {
     if (!user) return
-    let cancelled = false
-    async function load() {
-      const { data, error: err } = await supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50)
-      if (cancelled) return
-      if (err) { setError(friendlyError(err)); return }
-      setItems(data ?? [])
-      // Everything visible is now read.
-      await supabase.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null)
-    }
-    load()
-    return () => { cancelled = true }
+    const { data, error: err } = await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (!isActive()) return
+    if (err) { setError(friendlyError(err)); return }
+    setError(null)
+    setItems(data ?? [])
+    // Everything visible is now read.
+    await supabase.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null)
   }, [user])
+
+  usePageData(load)
 
   if (error) {
     return (
@@ -53,7 +52,7 @@ export function Notifications() {
       <div className="mt-6">
         {items.length === 0 ? (
           <EmptyState title="Nothing yet">
-            When someone raises a hand, replies, or staff approves something of yours, it lands here.
+            When someone knocks, replies, or staff approves something of yours, it lands here.
           </EmptyState>
         ) : (
           <ul className="divide-y divide-line rounded-xl border border-line bg-card">

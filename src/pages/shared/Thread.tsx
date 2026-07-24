@@ -4,6 +4,9 @@ import { Link, useParams } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { usePageData } from '../../lib/usePageData'
+import { advanceRequest } from '../../lib/mutations'
+import { THREAD_POLL_MS } from '../../lib/constants'
+import { OFFER_POSTER_JOIN, REQUEST_STUDENT_JOIN } from '../../lib/joins'
 import { useAuth } from '../../contexts/AuthContext'
 import { Avatar } from '../../components/ui/Avatar'
 import { Badge } from '../../components/ui/Badge'
@@ -23,16 +26,17 @@ import type { HandRaise, Message, Offer, PublicProfile } from '../../types'
 type PersonLite = Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'organization'>
 
 type ThreadData = HandRaise & {
-  // Either party's profile join can be null once they're disabled (RLS hides
-  // the row) while the thread itself stays visible to the other participant.
-  offer: Offer & { poster: PersonLite | null }
+  // The offer join can come back null in a degraded state (e.g. the offer was
+  // hard-removed); every dereference below guards for it so the thread never
+  // white-screens. Either party's profile join is likewise null once disabled.
+  offer: (Offer & { poster: PersonLite | null }) | null
   student: PersonLite | null
 }
 
 const DECLINE_TEMPLATE =
-  'Thanks for raising your hand — I\'ve already filled this one, but I\'m glad you went for it. Keep an eye on the board.'
+  'Thanks for knocking — I\'ve already filled this one, but I\'m glad you went for it. Keep an eye on the board.'
 
-/** The request thread: student + poster + staff, scoped to one hand-raise.
+/** The request thread: student + poster + staff, scoped to one knock.
  *  This is the only messaging surface in the product, by design. */
 export function Thread() {
   const { id } = useParams<{ id: string }>()
@@ -52,18 +56,28 @@ export function Thread() {
   // Once the thread has loaded once, background poll failures must not blow away
   // the rendered thread (and the composer + the student's in-progress draft).
   const hasLoaded = useRef(false)
+  // Newest message timestamp we've loaded, so a background poll fetches only
+  // newer messages instead of re-transferring the whole history each tick.
+  const lastMessageAt = useRef<string | null>(null)
 
-  const load = useCallback(async () => {
+  // Note: the route mounts <Thread key={id}>, so switching :id remounts this
+  // component and resets every ref/state above — no stale-thread carryover
+  // (nit C-02). There is intentionally no reset effect here.
+
+  const load = useCallback(async (isActive: () => boolean) => {
     if (!id) return
+    // Don't poll a backgrounded tab (only skip after the first successful load).
+    if (hasLoaded.current && typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+
     const { data, error } = await supabase
       .from('requests')
       .select(`*,
-        offer:offers!requests_offer_id_fkey(*, poster:profiles!offers_posted_by_fkey(id, full_name, role, affiliation, class_year, organization)),
-        student:profiles!requests_student_id_fkey(id, full_name, role, affiliation, class_year, organization)`)
+        offer:offers!requests_offer_id_fkey(*, ${OFFER_POSTER_JOIN}),
+        ${REQUEST_STUDENT_JOIN}`)
       .eq('id', id)
       .maybeSingle()
+    if (!isActive()) return
     if (error) {
-      // Only surface a full-page error before the first successful load.
       if (!hasLoaded.current) setLoadError(friendlyError(error))
       return
     }
@@ -71,22 +85,38 @@ export function Thread() {
       if (!hasLoaded.current) setLoadError('This thread doesn\'t exist, or you\'re not part of it.')
       return
     }
-    const { data: msgs, error: msgError } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('request_id', id)
-      .order('created_at', { ascending: true })
+
+    // Incremental messages: full fetch on the first load, only-newer on polls.
+    const base = supabase.from('messages').select('*').eq('request_id', id).order('created_at', { ascending: true })
+    const since = lastMessageAt.current
+    const incremental = hasLoaded.current && since != null
+    const { data: msgs, error: msgError } = await (incremental ? base.gt('created_at', since!) : base)
+    if (!isActive()) return
     if (msgError) {
       if (!hasLoaded.current) setLoadError(friendlyError(msgError))
       return
     }
+
     setThread(data as unknown as ThreadData)
-    setMessages(msgs ?? [])
+    const fetched = (msgs ?? []) as Message[]
+    if (incremental) {
+      if (fetched.length > 0) {
+        setMessages((prev) => {
+          const existing = prev ?? []
+          const seen = new Set(existing.map((m) => m.id))
+          const added = fetched.filter((m) => !seen.has(m.id))
+          return added.length > 0 ? [...existing, ...added] : existing
+        })
+      }
+    } else {
+      setMessages(fetched)
+    }
+    if (fetched.length > 0) lastMessageAt.current = fetched[fetched.length - 1].created_at
     setLoadError(null)
     hasLoaded.current = true
   }, [id])
 
-  usePageData(load, 15_000)
+  usePageData(load, THREAD_POLL_MS)
 
   useEffect(() => {
     if (messages && firstLoad.current) {
@@ -105,15 +135,18 @@ export function Thread() {
   }
   if (!thread || !profile || messages === null) return <Spinner page />
 
+  const offer = thread.offer
   const isStudent = profile.id === thread.student_id
-  const isPoster = profile.id === thread.offer.posted_by
+  const isPoster = !!offer && profile.id === offer.posted_by
   const isAdmin = profile.role === 'admin'
   const status = REQUEST_STATUS_META[thread.status]
   const canMessage = ['sent', 'in_conversation', 'accepted'].includes(thread.status) && (isStudent || isPoster || isAdmin)
   const posterCanDecide = (isPoster || isAdmin) && ['sent', 'in_conversation'].includes(thread.status)
   const studentCanWithdraw = isStudent && ['sent', 'in_conversation'].includes(thread.status)
-  const otherParty: PersonLite | null = isStudent ? thread.offer.poster : thread.student
+  const otherParty: PersonLite | null = isStudent ? (offer?.poster ?? null) : thread.student
   const studentName = personName(thread.student)
+  const offerTitle = offer?.title ?? 'a removed offer'
+  const offerKindLabel = offer ? OFFER_KIND_META[offer.kind].label : 'Offer'
 
   async function send(e: FormEvent) {
     e.preventDefault()
@@ -124,49 +157,59 @@ export function Thread() {
       sender_id: profile.id,
       body: body.trim(),
     })
-    if (!error && isPoster && thread.status === 'sent') {
-      // First reply from the poster moves the request into conversation.
-      await supabase.from('requests').update({ status: 'in_conversation' }).eq('id', thread.id)
-    }
-    setSending(false)
     if (error) {
+      setSending(false)
       toast(friendlyError(error), 'error')
       return
     }
+    // First reply from the poster moves the request into conversation; surface a
+    // failure instead of dropping it silently (review A-06).
+    if (isPoster && thread.status === 'sent') {
+      const { error: advErr } = await advanceRequest(thread.id, 'in_conversation')
+      if (advErr) toast('Message sent, but updating the status failed — refresh to retry.', 'error')
+    }
+    setSending(false)
     setBody('')
-    load()
+    load(() => true)
   }
 
-  async function decide(status: 'accepted' | 'declined') {
+  async function decide(next: 'accepted' | 'declined') {
     if (!thread || !profile) return
     setDeciding(true)
-    if (status === 'declined' && declineNote.trim()) {
-      await supabase.from('messages').insert({
+    if (next === 'declined' && declineNote.trim()) {
+      const { error: noteErr } = await supabase.from('messages').insert({
         request_id: thread.id,
         sender_id: profile.id,
         body: declineNote.trim(),
       })
+      // Abort the decline if the softening note couldn't post, rather than
+      // committing the decline and silently losing the note (review A-06).
+      if (noteErr) {
+        setDeciding(false)
+        toast(friendlyError(noteErr), 'error')
+        return
+      }
     }
-    const { error } = await supabase.from('requests').update({ status }).eq('id', thread.id)
+    const { error } = await advanceRequest(thread.id, next)
     setDeciding(false)
     setDecideOpen(null)
     if (error) {
       toast(friendlyError(error), 'error')
       return
     }
-    toast(status === 'accepted' ? 'Accepted — the thread stays open to sort out details.' : 'Declined kindly.')
-    load()
+    toast(next === 'accepted' ? 'Accepted — the thread stays open to sort out details.' : 'Declined kindly.')
+    load(() => true)
   }
 
   async function withdraw() {
     if (!thread) return
-    const { error } = await supabase.from('requests').update({ status: 'withdrawn' }).eq('id', thread.id)
+    const { error } = await advanceRequest(thread.id, 'withdrawn')
     if (error) {
       toast(friendlyError(error), 'error')
       return
     }
-    toast('Request withdrawn.')
-    load()
+    toast('Knock withdrawn.')
+    load(() => true)
   }
 
   return (
@@ -181,9 +224,9 @@ export function Thread() {
       <Card className="mt-4" padded>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="eyebrow text-faint">{OFFER_KIND_META[thread.offer.kind].label}</p>
+            <p className="eyebrow text-faint">{offerKindLabel}</p>
             <Link to={`/board/${thread.offer_id}`} className="mt-1 block text-lg font-display font-semibold leading-snug text-ink hover:text-pine">
-              {thread.offer.title}
+              {offerTitle}
             </Link>
           </div>
           <Badge tint={status.tint}>{isStudent ? status.student : status.label}</Badge>
@@ -200,7 +243,7 @@ export function Thread() {
               </>
             )}
             {studentCanWithdraw && (
-              <Button size="sm" variant="ghost" onClick={withdraw}>Withdraw my hand-raise</Button>
+              <Button size="sm" variant="ghost" onClick={withdraw}>Withdraw my knock</Button>
             )}
           </div>
         )}
@@ -226,7 +269,7 @@ export function Thread() {
         {messages.map((m) => (
           <MessageBubble
             key={m.id}
-            name={m.sender_id === thread.student_id ? studentName : m.is_staff ? 'CRMS Staff' : personName(thread.offer.poster)}
+            name={m.sender_id === thread.student_id ? studentName : m.is_staff ? 'CRMS Staff' : personName(offer?.poster)}
             mine={m.sender_id === profile.id}
             staff={m.is_staff}
             time={m.created_at}
@@ -262,7 +305,7 @@ export function Thread() {
       <Modal open={decideOpen === 'accept'} onClose={() => setDecideOpen(null)} title={`Accept ${studentName}?`}>
         <p className="text-sm text-faint">
           They'll be notified right away, and the thread stays open so you can sort out details.
-          {thread.offer.spots === 1 ? ' This fills your offer and takes it off the open board.' : ''}
+          {offer && offer.spots === 1 ? ' This fills your offer and takes it off the open board.' : ''}
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setDecideOpen(null)}>Not yet</Button>

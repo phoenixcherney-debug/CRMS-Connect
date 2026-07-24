@@ -1,10 +1,8 @@
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useSignOut } from '../../lib/useSignOut'
 import { Button } from '../../components/ui/Button'
 
 export function Disabled() {
-  const { signOut } = useAuth()
-  const navigate = useNavigate()
+  const signOut = useSignOut()
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4">
       <div className="w-full max-w-md rounded-xl border border-line bg-card p-8 text-center">
@@ -14,7 +12,7 @@ export function Disabled() {
           contact the school's front office and ask for the Connect administrator.
         </p>
         <div className="mt-6">
-          <Button variant="ghost" onClick={async () => { await signOut(); navigate('/') }}>
+          <Button variant="ghost" onClick={signOut}>
             Sign out
           </Button>
         </div>

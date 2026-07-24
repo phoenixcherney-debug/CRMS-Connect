@@ -5,7 +5,7 @@ export function NotFound() {
   return (
     <PublicShell cta={false}>
       <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <p className="eyebrow text-clay">404</p>
+        <p className="eyebrow text-clay-deep">404</p>
         <h1 className="mt-3 text-3xl">This door doesn't exist</h1>
         <p className="mt-3 text-sm text-faint">
           The page you're after may have been filled, closed, or never opened.

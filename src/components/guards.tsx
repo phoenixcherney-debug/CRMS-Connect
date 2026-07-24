@@ -1,6 +1,7 @@
-import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useSignOut } from '../lib/useSignOut'
 import { Spinner } from './ui/Spinner'
 import { Button } from './ui/Button'
 import type { UserRole } from '../types'
@@ -8,9 +9,9 @@ import type { UserRole } from '../types'
 /** Auth + account-status gate for everything behind login. RLS is the real
  *  enforcement; these redirects are UX. */
 export function Gate() {
-  const { user, profile, loading, profileError, refreshProfile, signOut } = useAuth()
+  const { user, profile, loading, profileError, refreshProfile } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
+  const signOut = useSignOut()
 
   // A signed-in user whose profile failed to load: offer a way out instead of
   // spinning forever behind an infinite loader.
@@ -24,7 +25,7 @@ export function Gate() {
           </p>
           <div className="mt-6 flex justify-center gap-2">
             <Button onClick={() => refreshProfile()}>Try again</Button>
-            <Button variant="ghost" onClick={async () => { await signOut(); navigate('/') }}>Sign out</Button>
+            <Button variant="ghost" onClick={signOut}>Sign out</Button>
           </div>
         </div>
       </div>

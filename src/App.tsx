@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider } from './components/ui/Toast'
 import { Layout } from './components/Layout'
 import { Gate, RequireRole } from './components/guards'
 import { RootErrorBoundary } from './components/RootErrorBoundary'
+import { Spinner } from './components/ui/Spinner'
 
 import { Landing } from './pages/public/Landing'
 import { Login } from './pages/public/Login'
@@ -26,20 +27,30 @@ import { StudentHome } from './pages/student/StudentHome'
 import { MyRequests } from './pages/student/MyRequests'
 
 import { MemberHome } from './pages/member/MemberHome'
-import { OfferForm } from './pages/member/OfferForm'
-import { OfferManage } from './pages/member/OfferManage'
 
-import { AdminDashboard } from './pages/admin/AdminDashboard'
-import { AdminPeople } from './pages/admin/AdminPeople'
-import { AdminOffers } from './pages/admin/AdminOffers'
-import { AdminRequests } from './pages/admin/AdminRequests'
-import { AdminReports } from './pages/admin/AdminReports'
-import { AdminAudit } from './pages/admin/AdminAudit'
+// Member offer forms and the entire admin desk are split into their own chunks
+// (React.lazy) so a student — the majority role, often on mobile — never
+// downloads code they can't reach (review PERF-04). Named exports are adapted
+// to the default export React.lazy expects.
+const OfferForm = lazy(() => import('./pages/member/OfferForm').then((m) => ({ default: m.OfferForm })))
+const OfferManage = lazy(() => import('./pages/member/OfferManage').then((m) => ({ default: m.OfferManage })))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })))
+const AdminPeople = lazy(() => import('./pages/admin/AdminPeople').then((m) => ({ default: m.AdminPeople })))
+const AdminOffers = lazy(() => import('./pages/admin/AdminOffers').then((m) => ({ default: m.AdminOffers })))
+const AdminRequests = lazy(() => import('./pages/admin/AdminRequests').then((m) => ({ default: m.AdminRequests })))
+const AdminReports = lazy(() => import('./pages/admin/AdminReports').then((m) => ({ default: m.AdminReports })))
+const AdminAudit = lazy(() => import('./pages/admin/AdminAudit').then((m) => ({ default: m.AdminAudit })))
 
 function ScrollToTop() {
   const { pathname } = useLocation()
   useEffect(() => window.scrollTo(0, 0), [pathname])
   return null
+}
+
+/** Remount Thread per :id so its refs/messages never carry across threads. */
+function ThreadRoute() {
+  const { id } = useParams<{ id: string }>()
+  return <Thread key={id} />
 }
 
 /** /home fans out by role — each role's landing view is different on purpose. */
@@ -58,6 +69,7 @@ export default function App() {
       <ToastProvider>
         <BrowserRouter>
           <ScrollToTop />
+          <Suspense fallback={<Spinner page />}>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
@@ -73,7 +85,7 @@ export default function App() {
                 <Route path="/board" element={<Board />} />
                 <Route path="/board/:id" element={<OfferDetail />} />
                 <Route path="/requests" element={<RequireRole roles={['student']}><MyRequests /></RequireRole>} />
-                <Route path="/requests/:id" element={<Thread />} />
+                <Route path="/requests/:id" element={<ThreadRoute />} />
                 <Route path="/offers/new" element={<RequireRole roles={['member']}><OfferForm /></RequireRole>} />
                 <Route path="/offers/:id/edit" element={<RequireRole roles={['member', 'admin']}><OfferForm /></RequireRole>} />
                 <Route path="/offers/:id/manage" element={<RequireRole roles={['member', 'admin']}><OfferManage /></RequireRole>} />
@@ -91,6 +103,7 @@ export default function App() {
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </BrowserRouter>
       </ToastProvider>
       </AuthProvider>

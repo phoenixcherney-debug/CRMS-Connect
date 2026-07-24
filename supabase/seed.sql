@@ -3,6 +3,12 @@
 -- Passwords are psql variables — run with:
 --   psql $DB_URL -v demo_password='…' -v staff_password='…' -f supabase/seed.sql
 -- (The repo is public: never commit real passwords here.)
+--
+-- SAFETY: this provisions demo accounts — including a standing demo ADMIN — with
+-- shared, known passwords for tests/handoff. NEVER run it against a database that
+-- holds real users. Give the demo admin a unique per-environment password (its own
+-- var, not the same one your real staff use) and rotate any shared password after a
+-- handoff. See "Deployment invariants" in README.md.
 
 -- ---------------------------------------------------------------------------
 -- Auth users (handle_new_user builds profiles from the metadata)
@@ -49,7 +55,9 @@ values
    '{"role":"student","full_name":"Miles Tanaka","class_year":"2026"}',
    now() - interval '28 days', now(), '', '', '', '', '', '', '', ''),
   -- Dedicated demo admin, kept separate from any real staff email so its
-  -- password stays known for tests/handoff.
+  -- password stays known for tests/handoff. This is a standing privileged
+  -- account — prefer a unique per-environment password (its own psql var) and
+  -- do not seed it into any database with real users.
   ('00000000-0000-0000-0000-000000000000', 'a0000000-0000-4000-8000-0000000000de', 'authenticated', 'authenticated',
    'demo.admin@example.com', extensions.crypt(:'staff_password', extensions.gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}',

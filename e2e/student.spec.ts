@@ -6,9 +6,11 @@ import { test, expect } from '@playwright/test'
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? ''
 const ANON = process.env.VITE_SUPABASE_ANON_KEY ?? ''
 const PRIYA_STUDIO_OFFER = 'd0000000-0000-4000-8000-000000000004'
+const CASEY_MENTOR_OFFER = 'd0000000-0000-4000-8000-000000000005' // open, Avery has no knock here
+const JORDAN_CHAT_OFFER = 'd0000000-0000-4000-8000-000000000003' // Avery has an in_conversation knock here
 const AVERY_ID = 'c0000000-0000-4000-8000-000000000001'
 
-// Delete any leftover retractable request so the raise-hand test starts clean
+// Delete any leftover retractable request so the knock test starts clean
 // (uses the requests_delete "retract" policy). Runs directly against the API.
 async function retractPriyaRequest(request: import('@playwright/test').APIRequestContext) {
   const tokenRes = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -33,13 +35,55 @@ test('student sees home, board, and poster identity', async ({ page }) => {
   await expect(page.getByText('Class of ’02').first()).toBeVisible()
 })
 
-test('student can open an offer and sees the raise-hand form', async ({ page }) => {
+test('board keyword + type filters narrow the results server-side', async ({ page }) => {
+  await page.goto('/board')
+  await expect(page.getByText('Shadow a large-animal vet for a day')).toBeVisible()
+  // Keyword search (debounced, pushed into the query).
+  await page.getByLabel('Search offers by keyword').fill('internship')
+  await expect(page.getByText('Paid summer internship: junior web developer')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Shadow a large-animal vet for a day')).toHaveCount(0)
+  // Clear, then filter by type via the chip.
+  await page.getByLabel('Search offers by keyword').fill('')
+  await page.getByRole('button', { name: 'Career chat' }).click()
+  await expect(page.getByText('30 minutes on studying CS in college')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Shadow a large-animal vet for a day')).toHaveCount(0)
+})
+
+test('student can open an offer and sees the knock form', async ({ page }) => {
   await page.goto('/board')
   await page.getByText('Paid summer internship: junior web developer').click()
-  await expect(page.getByRole('heading', { name: 'Raise your hand' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Raise your hand' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Knock on the door' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Knock on the door' })).toBeVisible()
   // No contact info ever renders on offers.
   await expect(page.locator('main')).not.toContainText('@example.com')
+})
+
+test('the knock note requires at least 10 characters', async ({ page }) => {
+  await page.goto(`/board/${CASEY_MENTOR_OFFER}`)
+  await expect(page.getByRole('heading', { name: 'Knock on the door' })).toBeVisible()
+  await page.getByLabel('Your note').fill('too short')
+  await expect(page.getByRole('button', { name: 'Knock on the door' })).toBeDisabled()
+  await page.getByLabel('Your note').fill('This is a long enough note to enable the button.')
+  await expect(page.getByRole('button', { name: 'Knock on the door' })).toBeEnabled()
+})
+
+test('an already-knocked offer shows the status card, not the form', async ({ page }) => {
+  await page.goto(`/board/${JORDAN_CHAT_OFFER}`)
+  await expect(page.getByText('You knocked', { exact: false })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Knock on the door' })).toHaveCount(0)
+})
+
+test('the flag-for-staff form requires a real reason', async ({ page }) => {
+  await page.goto(`/board/${CASEY_MENTOR_OFFER}`)
+  await page.getByRole('button', { name: 'Flag for staff' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await dialog.getByLabel('What happened?').fill('ab')
+  await expect(dialog.getByRole('button', { name: 'Send to staff' })).toBeDisabled()
+  await dialog.getByLabel('What happened?').fill('This looks off to me.')
+  await expect(dialog.getByRole('button', { name: 'Send to staff' })).toBeEnabled()
+  // Close without submitting (reports can't be deleted afterward).
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
 })
 
 test('student thread shows staff-visibility notice and accepts a message', async ({ page }) => {
@@ -62,24 +106,52 @@ test('notifications page loads', async ({ page }) => {
   // against a built preview separately; here we just guard the page render.
 })
 
-test('student can raise a hand and then withdraw it', async ({ page, request }) => {
+test('student can knock and then withdraw it', async ({ page, request }) => {
   // Uses Priya's studio offer (no seeded thread for Avery). Idempotent: clears
-  // any prior request first, then raises and withdraws through the UI.
+  // any prior request first, then knocks and withdraws through the UI.
   await retractPriyaRequest(request)
 
   await page.goto(`/board/${PRIYA_STUDIO_OFFER}`)
-  await expect(page.getByRole('heading', { name: 'Raise your hand' })).toBeVisible()
-  await page.getByLabel('Your note').fill('E2E — trying out the raise-hand flow, please ignore.')
-  await page.getByRole('button', { name: 'Raise your hand' }).click()
+  await expect(page.getByRole('heading', { name: 'Knock on the door' })).toBeVisible()
+  await page.getByLabel('Your note').fill('E2E — trying out the knock flow, please ignore.')
+  await page.getByRole('button', { name: 'Knock on the door' }).click()
 
   await expect(page).toHaveURL(/\/requests\//, { timeout: 15_000 })
   await expect(page.getByText('CRMS staff can read this thread')).toBeVisible()
 
   // Withdraw so the offer's single spot is freed and the run is repeatable.
-  await page.getByRole('button', { name: 'Withdraw my hand-raise' }).click()
+  await page.getByRole('button', { name: 'Withdraw my knock' }).click()
   await expect(page.getByText('Withdrawn').first()).toBeVisible({ timeout: 10_000 })
 
   await retractPriyaRequest(request)
+})
+
+// --- Error / empty-state branches, forced via route interception (T-06) ------
+
+test('the board surfaces a load error instead of a blank page', async ({ page }) => {
+  await page.route('**/rest/v1/offers**', (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'boom' }) }))
+  await page.goto('/board')
+  await expect(page.getByText("The board didn't load")).toBeVisible({ timeout: 10_000 })
+})
+
+test('the board shows an empty state when no offers come back', async ({ page }) => {
+  await page.route('**/rest/v1/offers**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+  await page.goto('/board')
+  await expect(page.getByText('The board is quiet right now')).toBeVisible({ timeout: 10_000 })
+})
+
+test('my requests surfaces a load error', async ({ page }) => {
+  await page.route('**/rest/v1/requests**', (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'boom' }) }))
+  await page.goto('/requests')
+  await expect(page.getByText('load your requests', { exact: false })).toBeVisible({ timeout: 10_000 })
+})
+
+test('a nonexistent thread shows a friendly not-found, not a crash', async ({ page }) => {
+  await page.goto('/requests/00000000-0000-4000-8000-000000000000')
+  await expect(page.getByText("This thread doesn't exist", { exact: false })).toBeVisible({ timeout: 10_000 })
 })
 
 test('student cannot reach the staff desk', async ({ page }) => {

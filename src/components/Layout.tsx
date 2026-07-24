@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { useSignOut } from '../lib/useSignOut'
 import { NotificationBell } from './NotificationBell'
 import { Avatar } from './ui/Avatar'
 
@@ -10,11 +11,12 @@ const NAV_ACTIVE = 'bg-meadow text-pine'
 const NAV_IDLE = 'text-faint hover:text-ink hover:bg-line/40'
 
 export function Layout() {
-  const { profile, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { profile } = useAuth()
+  const signOutAndGo = useSignOut()
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
 
   // Menus close on navigation: NavLink/Link clicks call closeMenus directly
   // (a pathname effect would be a sync setState in an effect).
@@ -51,8 +53,15 @@ export function Layout() {
 
   async function handleSignOut() {
     closeMenus()
-    await signOut()
-    navigate('/')
+    await signOutAndGo()
+  }
+
+  // Escape closes the account menu and returns focus to its trigger.
+  function onMenuKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Escape') {
+      setMenuOpen(false)
+      menuTriggerRef.current?.focus()
+    }
   }
 
   return (
@@ -89,11 +98,12 @@ export function Layout() {
               </Link>
             )}
             <NotificationBell />
-            <div className="relative" ref={menuRef}>
+            <div className="relative" ref={menuRef} onKeyDown={onMenuKeyDown}>
               <button
                 type="button"
+                ref={menuTriggerRef}
                 onClick={() => setMenuOpen((v) => !v)}
-                aria-haspopup="menu"
+                aria-haspopup="true"
                 aria-expanded={menuOpen}
                 aria-label="Account menu"
                 className="flex items-center rounded-full"
@@ -101,15 +111,16 @@ export function Layout() {
                 <Avatar name={profile.full_name} size="sm" staff={profile.role === 'admin'} />
               </button>
               {menuOpen && (
-                <div role="menu" className="absolute right-0 top-11 w-48 rounded-xl border border-line bg-card p-1.5 shadow-sm">
+                // Plain, Tab-navigable items (no role="menu": we don't implement
+                // the full APG menu keyboard model). Escape closes + returns focus.
+                <div className="absolute right-0 top-11 w-48 rounded-xl border border-line bg-card p-1.5 shadow-sm">
                   <div className="px-3 py-2">
                     <p className="truncate text-sm font-medium text-ink">{profile.full_name}</p>
                   </div>
-                  <Link role="menuitem" to="/profile" onClick={closeMenus} className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-meadow">
+                  <Link to="/profile" onClick={closeMenus} className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-meadow">
                     My profile
                   </Link>
                   <button
-                    role="menuitem"
                     onClick={handleSignOut}
                     className="block w-full rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-meadow"
                   >

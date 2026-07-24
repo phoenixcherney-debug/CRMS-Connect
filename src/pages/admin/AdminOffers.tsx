@@ -1,7 +1,11 @@
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
 import { usePageData } from '../../lib/usePageData'
+import { supabase } from '../../lib/supabase'
+import { setOfferHidden } from '../../lib/mutations'
+import { OFFER_POSTER_JOIN } from '../../lib/joins'
+import type { OfferWithPoster } from '../../lib/joins'
+import { PAGE_SIZE } from '../../lib/constants'
 import { AdminShell } from './AdminShell'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -11,43 +15,42 @@ import { useToast } from '../../components/ui/Toast'
 import { friendlyError } from '../../lib/errors'
 import { timeAgo } from '../../lib/format'
 import { OFFER_KIND_META, OFFER_STATUS_LABEL, affiliationLabel, personName } from '../../types'
-import type { Offer, PublicProfile } from '../../types'
 
-type Row = Offer & {
-  poster: (Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year'>) | null
-}
+type Row = OfferWithPoster
 
 export function AdminOffers() {
   const toast = useToast()
   const [rows, setRows] = useState<Row[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [acting, setActing] = useState<string | null>(null)
+  const [limit, setLimit] = useState(PAGE_SIZE)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isActive: () => boolean) => {
     const { data, error: err } = await supabase
       .from('offers')
-      .select('*, poster:profiles!offers_posted_by_fkey(id, full_name, role, affiliation, class_year)')
+      .select(`*, ${OFFER_POSTER_JOIN}`)
       .order('created_at', { ascending: false })
+      .range(0, limit - 1)
+    if (!isActive()) return
     if (err) { setError(friendlyError(err)); return }
     setError(null)
     setRows((data ?? []) as unknown as Row[])
-  }, [])
+  }, [limit])
 
   usePageData(load)
 
+  const hasMore = (rows?.length ?? 0) === limit
+
   async function setHidden(o: Row, hide: boolean) {
     setActing(o.id)
-    const { error } = await supabase
-      .from('offers')
-      .update({ hidden_at: hide ? new Date().toISOString() : null })
-      .eq('id', o.id)
+    const { error } = await setOfferHidden(o.id, hide)
     setActing(null)
     if (error) {
       toast(friendlyError(error), 'error')
       return
     }
     toast(hide ? 'Unlisted — the poster has been notified.' : 'Back on the board.')
-    load()
+    load(() => true)
   }
 
   return (
@@ -57,34 +60,41 @@ export function AdminOffers() {
       ) : rows === null ? (
         <Spinner page />
       ) : (
-        <ul className="divide-y divide-line rounded-xl border border-line bg-card">
-          {rows.map((o) => (
-            <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3.5">
-              <Badge tint={OFFER_KIND_META[o.kind].tint}>{OFFER_KIND_META[o.kind].label}</Badge>
-              <div className="min-w-0 flex-1">
-                <Link to={`/board/${o.id}`} className="block truncate text-sm font-medium text-ink hover:text-pine">
-                  {o.title}
-                </Link>
-                <p className="truncate text-xs text-faint">
-                  {o.poster ? `${o.poster.full_name} · ${affiliationLabel(o.poster)}` : personName(o.poster)} · {timeAgo(o.created_at)}
-                </p>
-              </div>
-              <span className="flex items-center gap-2">
-                {o.hidden_at ? <Badge tint="bg-clay-soft text-danger">Unlisted</Badge> : <Badge>{OFFER_STATUS_LABEL[o.status]}</Badge>}
-                <Link to={`/offers/${o.id}/manage`} className="text-xs text-pine hover:underline">requests</Link>
-                <Button
-                  size="sm"
-                  variant={o.hidden_at ? 'secondary' : 'danger'}
-                  loading={acting === o.id}
-                  onClick={() => setHidden(o, !o.hidden_at)}
-                >
-                  {o.hidden_at ? 'Restore' : 'Unlist'}
-                </Button>
-              </span>
-            </li>
-          ))}
-          {rows.length === 0 && <li className="px-5 py-8 text-center text-sm text-faint">No offers yet.</li>}
-        </ul>
+        <>
+          <ul className="divide-y divide-line rounded-xl border border-line bg-card">
+            {rows.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3.5">
+                <Badge tint={OFFER_KIND_META[o.kind].tint}>{OFFER_KIND_META[o.kind].label}</Badge>
+                <div className="min-w-0 flex-1">
+                  <Link to={`/board/${o.id}`} className="block truncate text-sm font-medium text-ink hover:text-pine">
+                    {o.title}
+                  </Link>
+                  <p className="truncate text-xs text-faint">
+                    {o.poster ? `${o.poster.full_name} · ${affiliationLabel(o.poster)}` : personName(o.poster)} · {timeAgo(o.created_at)}
+                  </p>
+                </div>
+                <span className="flex items-center gap-2">
+                  {o.hidden_at ? <Badge tint="bg-clay-soft text-danger">Unlisted</Badge> : <Badge>{OFFER_STATUS_LABEL[o.status]}</Badge>}
+                  <Link to={`/offers/${o.id}/manage`} className="text-xs text-pine hover:underline">requests</Link>
+                  <Button
+                    size="sm"
+                    variant={o.hidden_at ? 'secondary' : 'danger'}
+                    loading={acting === o.id}
+                    onClick={() => setHidden(o, !o.hidden_at)}
+                  >
+                    {o.hidden_at ? 'Restore' : 'Unlist'}
+                  </Button>
+                </span>
+              </li>
+            ))}
+            {rows.length === 0 && <li className="px-5 py-8 text-center text-sm text-faint">No offers yet.</li>}
+          </ul>
+          {hasMore && (
+            <div className="mt-6 flex justify-center">
+              <Button variant="secondary" onClick={() => setLimit((n) => n + PAGE_SIZE)}>Load more</Button>
+            </div>
+          )}
+        </>
       )}
     </AdminShell>
   )

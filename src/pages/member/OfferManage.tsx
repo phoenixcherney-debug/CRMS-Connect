@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { usePageData } from '../../lib/usePageData'
+import { setOfferStatus } from '../../lib/mutations'
+import { REQUEST_STUDENT_JOIN_TAGS } from '../../lib/joins'
 import { useAuth } from '../../contexts/AuthContext'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -20,7 +22,7 @@ type RequestRow = HandRaise & {
   student: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'tags'> | null
 }
 
-/** The poster's view of one offer: every hand raised, and what happened next. */
+/** The poster's view of one offer: every knock, and what happened next. */
 export function OfferManage() {
   const { id } = useParams<{ id: string }>()
   const { profile } = useAuth()
@@ -30,20 +32,22 @@ export function OfferManage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isActive: () => boolean) => {
     if (!id) return
     const { data, error } = await supabase.from('offers').select('*').eq('id', id).maybeSingle()
+    if (!isActive()) return
     if (error || !data) {
       setLoadError(error ? friendlyError(error) : 'This offer doesn\'t exist or isn\'t yours to manage.')
       return
     }
+    setLoadError(null)
     setOffer(data)
     const { data: reqs } = await supabase
       .from('requests')
-      .select('*, student:profiles!requests_student_id_fkey(id, full_name, role, affiliation, class_year, tags)')
+      .select(`*, ${REQUEST_STUDENT_JOIN_TAGS}`)
       .eq('offer_id', id)
       .order('created_at', { ascending: false })
-    setRows((reqs ?? []) as unknown as RequestRow[])
+    if (isActive()) setRows((reqs ?? []) as unknown as RequestRow[])
   }, [id])
 
   usePageData(load)
@@ -65,14 +69,14 @@ export function OfferManage() {
   async function setStatus(status: Offer['status']) {
     if (!offer) return
     setClosing(true)
-    const { error } = await supabase.from('offers').update({ status }).eq('id', offer.id)
+    const { error } = await setOfferStatus(offer.id, status)
     setClosing(false)
     if (error) {
       toast(friendlyError(error), 'error')
       return
     }
     toast(status === 'closed' ? 'Door closed.' : 'Door reopened.')
-    load()
+    load(() => true)
   }
 
   return (
@@ -88,7 +92,7 @@ export function OfferManage() {
       </div>
       <h1 className="mt-3 text-3xl leading-tight">{offer.title}</h1>
       <p className="mt-2 text-sm text-faint">
-        {pluralize(accepted, 'spot')} filled of {offer.spots} · {pluralize(waiting, 'hand')} in the air
+        {pluralize(accepted, 'spot')} filled of {offer.spots} · {pluralize(waiting, 'knock')} waiting
       </p>
 
       <div className="mt-5 flex flex-wrap gap-2">
@@ -110,11 +114,11 @@ export function OfferManage() {
       </div>
 
       <section className="mt-8">
-        <h2 className="text-xl">Hands raised</h2>
+        <h2 className="text-xl">Knocks at the door</h2>
         <div className="mt-4">
           {rows.length === 0 ? (
-            <EmptyState title="No hands yet">
-              Students see new offers within a day. When someone raises a hand,
+            <EmptyState title="No knocks yet">
+              Students see new offers within a day. When someone knocks,
               you'll get a notification and their note lands here.
             </EmptyState>
           ) : (

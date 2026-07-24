@@ -2,10 +2,12 @@ import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { usePageData } from '../../lib/usePageData'
+import { setAccountStatus } from '../../lib/mutations'
 import { AdminShell } from './AdminShell'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Spinner } from '../../components/ui/Spinner'
+import { EmptyState } from '../../components/ui/EmptyState'
 import { PersonLink } from '../../components/PersonLink'
 import { useToast } from '../../components/ui/Toast'
 import { friendlyError } from '../../lib/errors'
@@ -27,14 +29,22 @@ export function AdminDashboard() {
   const toast = useToast()
   const [overview, setOverview] = useState<Overview | null>(null)
   const [pending, setPending] = useState<Profile[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [acting, setActing] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isActive: () => boolean) => {
     const [ovRes, pendingRes] = await Promise.all([
       supabase.rpc('admin_overview'),
       supabase.from('profiles').select('*').eq('account_status', 'pending').order('created_at', { ascending: true }),
     ])
-    if (ovRes.data) setOverview(ovRes.data as unknown as Overview)
+    if (!isActive()) return
+    // Surface a failed overview/queue load instead of spinning forever (review C-03).
+    if (ovRes.error || pendingRes.error) {
+      setError(friendlyError(ovRes.error ?? pendingRes.error))
+      return
+    }
+    setError(null)
+    setOverview(ovRes.data as unknown as Overview)
     setPending(pendingRes.data ?? [])
   }, [])
 
@@ -42,16 +52,25 @@ export function AdminDashboard() {
 
   async function approve(id: string) {
     setActing(id)
-    const { error } = await supabase.from('profiles').update({ account_status: 'active' }).eq('id', id)
+    const { error: err } = await setAccountStatus(id, 'active')
     setActing(null)
-    if (error) {
-      toast(friendlyError(error), 'error')
+    if (err) {
+      toast(friendlyError(err), 'error')
       return
     }
     toast('Approved — they\'ve been notified.')
-    load()
+    load(() => true)
   }
 
+  if (error) {
+    return (
+      <AdminShell title="Overview">
+        <EmptyState title="We couldn’t load the overview" action={<Button onClick={() => load(() => true)}>Try again</Button>}>
+          {error}
+        </EmptyState>
+      </AdminShell>
+    )
+  }
   if (!overview || pending === null) {
     return <AdminShell title="Overview"><Spinner page /></AdminShell>
   }
@@ -60,7 +79,7 @@ export function AdminDashboard() {
     [overview.pending_members, 'waiting for approval', '/admin/people'],
     [overview.open_reports, 'open reports', '/admin/reports'],
     [overview.open_offers, 'doors on the board', '/admin/offers'],
-    [overview.requests_30d, 'hand-raises in 30 days', '/admin/requests'],
+    [overview.requests_30d, 'knocks in 30 days', '/admin/requests'],
     [overview.active_students, 'active students'],
     [overview.active_members, 'approved members'],
     [overview.accepted_total, 'connections made'],

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { usePageData } from '../../lib/usePageData'
 import { useAuth } from '../../contexts/AuthContext'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -24,34 +25,32 @@ export function MemberHome() {
   const [incoming, setIncoming] = useState<IncomingRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const load = useCallback(async (isActive: () => boolean) => {
     if (!profile) return
-    let cancelled = false
-    async function load() {
-      const [offersRes, incomingRes] = await Promise.all([
-        supabase
-          .from('offers')
-          .select('*')
-          .eq('posted_by', profile!.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('requests')
-          .select('*, offer:offers!requests_offer_id_fkey!inner(id, title, posted_by), student:profiles!requests_student_id_fkey(id, full_name, role, affiliation, class_year)')
-          .eq('offer.posted_by', profile!.id)
-          .in('status', ['sent', 'in_conversation'])
-          .order('created_at', { ascending: false }),
-      ])
-      if (cancelled) return
-      if (offersRes.error || incomingRes.error) {
-        setError(friendlyError(offersRes.error ?? incomingRes.error))
-        return
-      }
-      setOffers(offersRes.data ?? [])
-      setIncoming((incomingRes.data ?? []) as unknown as IncomingRow[])
+    const [offersRes, incomingRes] = await Promise.all([
+      supabase
+        .from('offers')
+        .select('*')
+        .eq('posted_by', profile.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('requests')
+        .select('*, offer:offers!requests_offer_id_fkey!inner(id, title, posted_by), student:profiles!requests_student_id_fkey(id, full_name, role, affiliation, class_year)')
+        .eq('offer.posted_by', profile.id)
+        .in('status', ['sent', 'in_conversation'])
+        .order('created_at', { ascending: false }),
+    ])
+    if (!isActive()) return
+    if (offersRes.error || incomingRes.error) {
+      setError(friendlyError(offersRes.error ?? incomingRes.error))
+      return
     }
-    load()
-    return () => { cancelled = true }
+    setError(null)
+    setOffers(offersRes.data ?? [])
+    setIncoming((incomingRes.data ?? []) as unknown as IncomingRow[])
   }, [profile])
+
+  usePageData(load)
 
   if (!profile) return null
   const firstName = profile.full_name.split(' ')[0]
@@ -78,7 +77,7 @@ export function MemberHome() {
         <>
           {incoming.length > 0 && (
             <section className="mt-8">
-              <h2 className="text-xl">Hands in the air</h2>
+              <h2 className="text-xl">Knocks at the door</h2>
               <p className="mt-1 text-sm text-faint">
                 {pluralize(incoming.length, 'student is', 'students are')} waiting to hear from you.
               </p>
@@ -138,7 +137,7 @@ export function MemberHome() {
           {!profile.open_to_requests && (
             <Card className="mt-8 border-clay/25 bg-clay-soft/50">
               <p className="text-sm text-clay-deep">
-                You're paused — students can't raise a hand on your offers right now.{' '}
+                You're paused — students can't knock on your offers right now.{' '}
                 <Link to="/profile" className="font-medium underline">Unpause in your profile</Link> when you're ready.
               </p>
             </Card>

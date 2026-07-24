@@ -9,6 +9,9 @@ import { Spinner } from '../../components/ui/Spinner'
 import { TextField, TextAreaField, SelectField } from '../../components/ui/Field'
 import { useToast } from '../../components/ui/Toast'
 import { friendlyError } from '../../lib/errors'
+import { clampSpots, deriveOfferStatus } from '../../lib/offerForm'
+import { MAX_SPOTS, MIN_SPOTS } from '../../lib/constants'
+import { nextRovingIndex } from '../../lib/a11y'
 import { OFFER_KINDS, OFFER_KIND_META, LOCATION_MODE_LABEL } from '../../types'
 import type { LocationMode, OfferKind } from '../../types'
 
@@ -70,8 +73,8 @@ export function OfferForm() {
       location_text: locationText.trim() || null,
       timeframe: timeframe.trim() || null,
       commitment: commitment.trim() || null,
-      spots: Math.min(20, Math.max(1, Number(spots) || 1)),
-      status: asDraft ? ('draft' as const) : status === 'draft' ? ('open' as const) : status,
+      spots: clampSpots(spots),
+      status: deriveOfferStatus(status, asDraft),
     }
     setSaving(true)
     if (editing && id) {
@@ -121,15 +124,24 @@ export function OfferForm() {
       <Card className="mt-6">
         <form onSubmit={(e) => save(e)} className="space-y-5">
           <fieldset>
-            <legend className="mb-2 block text-sm font-medium text-ink">What kind of door is it?</legend>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <legend id="offer-kind-label" className="mb-2 block text-sm font-medium text-ink">What kind of door is it?</legend>
+            <div role="radiogroup" aria-labelledby="offer-kind-label" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {OFFER_KINDS.map((k) => (
                 <button
                   key={k}
                   type="button"
                   role="radio"
                   aria-checked={kind === k}
+                  tabIndex={kind === k ? 0 : -1}
                   onClick={() => setKind(k)}
+                  onKeyDown={(e) => {
+                    const idx = nextRovingIndex(e.key, OFFER_KINDS.indexOf(kind), OFFER_KINDS.length)
+                    if (idx === null) return
+                    e.preventDefault()
+                    setKind(OFFER_KINDS[idx])
+                    e.currentTarget.closest('[role="radiogroup"]')
+                      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[idx]?.focus()
+                  }}
                   className={`rounded-lg border px-3 py-2 text-left transition-colors ${
                     kind === k ? 'border-pine bg-meadow' : 'border-line-strong bg-card hover:border-line-strong hover:bg-paper'
                   }`}
@@ -158,7 +170,7 @@ export function OfferForm() {
             onChange={(e) => setDescription(e.target.value)}
             rows={7}
             maxLength={3000}
-            placeholder={'What will the student actually do? Who\'s a good fit (no experience is a fine answer)? What should they say when they raise a hand?'}
+            placeholder={'What will the student actually do? Who\'s a good fit (no experience is a fine answer)? What should they say when they knock?'}
             required
           />
 
@@ -178,8 +190,8 @@ export function OfferForm() {
               label="Spots"
               type="number"
               inputMode="numeric"
-              min={1}
-              max={20}
+              min={MIN_SPOTS}
+              max={MAX_SPOTS}
               value={spots}
               onChange={(e) => setSpots(e.target.value)}
               hint="Fills automatically as you accept students."

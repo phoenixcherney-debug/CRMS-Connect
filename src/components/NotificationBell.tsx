@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { NOTIF_POLL_MS } from '../lib/constants'
 
-/** Unread badge; re-counts on route change and every 60s. */
+/** Unread badge; counts once on sign-in and then on an interval. Previously it
+ *  re-queried on every route change (location.pathname in the deps), which
+ *  meant a recount per navigation on top of the interval (review PERF-05). */
 export function NotificationBell() {
   const { user } = useAuth()
-  const location = useLocation()
   const [unread, setUnread] = useState(0)
 
   useEffect(() => {
@@ -21,12 +23,12 @@ export function NotificationBell() {
       if (!cancelled) setUnread(n ?? 0)
     }
     count()
-    const interval = setInterval(count, 60_000)
+    const interval = setInterval(count, NOTIF_POLL_MS)
     return () => {
       cancelled = true
       clearInterval(interval)
     }
-  }, [user, location.pathname])
+  }, [user])
 
   return (
     <Link

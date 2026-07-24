@@ -60,10 +60,30 @@ npm run dev
 | `npm run dev` | Vite dev server |
 | `npm run build` | `tsc -b` + production build |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest unit tests (`src/**/*.test.ts`) |
+| `npm test` | Vitest unit tests (`src/**/*.test.ts`). Integration + e2e run separately (below) and are required CI gates. |
+| `npm run test:integration` | RLS trust-model tests against the live DB (`integration/`); needs the Supabase URL/keys + `E2E_PASSWORD` / `E2E_STAFF_PASSWORD` in `.env`. **Fails loudly** when any are missing — it never skips silently. |
 | `npm run e2e` | Playwright suite (`e2e/`); needs `E2E_PASSWORD` / `E2E_STAFF_PASSWORD` in `.env` |
 
 Run e2e against any deployment with `E2E_BASE_URL=https://… npm run e2e`.
+
+## Deployment invariants
+
+These must hold on the live Supabase project. The trust model assumes them and CI
+can't set them, so verify them before each deploy:
+
+- **Email confirmation must be ENABLED** (Supabase → Auth → Providers → Email →
+  "Confirm email"). Student auto-activation trusts a `@crms.org` address only once
+  `email_confirmed_at` is set. If confirmations are disabled, that column is populated
+  at signup, so anyone typing any `@crms.org` string would activate immediately without
+  proving they control the mailbox.
+- **Auth minimum password length ≥ 8** (Supabase → Auth → Policies). The 8-char rule is
+  enforced in the signup/reset UI; set the server-side minimum to match so a direct API
+  call to `signUp` / `updateUser` can't create a weaker password. Enabling
+  leaked-password protection is recommended too.
+- **Never run `supabase/seed.sql` against a database with real users.** It provisions
+  demo accounts (including a demo admin) with shared, known passwords for tests/handoff.
+  Keep it non-prod, give the demo admin a unique per-environment password, and rotate any
+  shared demo/staff password after a handoff.
 
 ## Notifications & opt-in push
 

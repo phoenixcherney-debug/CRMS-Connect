@@ -47,7 +47,7 @@ export function ReportButton({ target, targetId, label = 'Flag for staff' }: {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 text-xs text-faint hover:text-danger"
+        className="inline-flex min-h-[24px] items-center gap-1.5 py-1 text-xs text-faint hover:text-danger"
       >
         <Flag className="h-3.5 w-3.5" aria-hidden /> {label}
       </button>

@@ -16,26 +16,39 @@ import type { Report, PublicProfile } from '../../types'
 
 type Row = Report & { reporter: Pick<PublicProfile, 'id' | 'full_name'> | null }
 
+const REPORTER_JOIN = '*, reporter:profiles!reports_reporter_id_fkey(id, full_name)'
+/** How many settled reports to keep on the page. */
+const SETTLED_LIMIT = 20
+/** Upper bound on the open queue (staff work it down; a huge backlog is itself a signal). */
+const OPEN_LIMIT = 100
+
 export function AdminReports() {
   const toast = useToast()
-  const [rows, setRows] = useState<Row[] | null>(null)
+  const [open, setOpen] = useState<Row[] | null>(null)
+  const [settled, setSettled] = useState<Row[]>([])
   const [error, setError] = useState<string | null>(null)
   /** message-target id → its thread (request) id, resolved for linking. */
   const [messageThreads, setMessageThreads] = useState<Record<string, string>>({})
   const [acting, setActing] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    const { data, error: err } = await supabase
-      .from('reports')
-      .select('*, reporter:profiles!reports_reporter_id_fkey(id, full_name)')
-      .order('created_at', { ascending: false })
-    if (err) { setError(friendlyError(err)); return }
+  const load = useCallback(async (isActive: () => boolean) => {
+    // Two bounded queries instead of downloading every report then slicing.
+    const [openRes, settledRes] = await Promise.all([
+      supabase.from('reports').select(REPORTER_JOIN).eq('status', 'open').order('created_at', { ascending: false }).limit(OPEN_LIMIT),
+      supabase.from('reports').select(REPORTER_JOIN).neq('status', 'open').order('created_at', { ascending: false }).limit(SETTLED_LIMIT),
+    ])
+    if (!isActive()) return
+    if (openRes.error || settledRes.error) { setError(friendlyError(openRes.error ?? settledRes.error)); return }
     setError(null)
-    const rows = (data ?? []) as unknown as Row[]
-    setRows(rows)
-    const messageIds = rows.filter((r) => r.target === 'message').map((r) => r.target_id)
+    const openRows = (openRes.data ?? []) as unknown as Row[]
+    const settledRows = (settledRes.data ?? []) as unknown as Row[]
+    setOpen(openRows)
+    setSettled(settledRows)
+
+    const messageIds = [...openRows, ...settledRows].filter((r) => r.target === 'message').map((r) => r.target_id)
     if (messageIds.length > 0) {
       const { data: msgs } = await supabase.from('messages').select('id, request_id').in('id', messageIds)
+      if (!isActive()) return
       setMessageThreads(Object.fromEntries((msgs ?? []).map((m) => [m.id, m.request_id])))
     }
   }, [])
@@ -44,14 +57,14 @@ export function AdminReports() {
 
   async function resolve(r: Row, status: 'resolved' | 'dismissed') {
     setActing(r.id)
-    const { error } = await supabase.from('reports').update({ status }).eq('id', r.id)
+    const { error: err } = await supabase.from('reports').update({ status }).eq('id', r.id)
     setActing(null)
-    if (error) {
-      toast(friendlyError(error), 'error')
+    if (err) {
+      toast(friendlyError(err), 'error')
       return
     }
     toast(status === 'resolved' ? 'Marked resolved — reporter notified.' : 'Dismissed — reporter notified.')
-    load()
+    load(() => true)
   }
 
   function targetLink(r: Row): { to: string; label: string } | null {
@@ -62,10 +75,7 @@ export function AdminReports() {
   }
 
   if (error) return <AdminShell title="Reports"><EmptyState title="We couldn’t load reports">{error}</EmptyState></AdminShell>
-  if (rows === null) return <AdminShell title="Reports"><Spinner page /></AdminShell>
-
-  const open = rows.filter((r) => r.status === 'open')
-  const settled = rows.filter((r) => r.status !== 'open').slice(0, 20)
+  if (open === null) return <AdminShell title="Reports"><Spinner page /></AdminShell>
 
   return (
     <AdminShell title="Reports">

@@ -30,7 +30,7 @@ export function PushToggle() {
           ) : (
             <p className="mt-1 text-sm text-faint">
               {on
-                ? 'On for this device — you\'ll get a push when someone raises a hand, replies, or staff approves something.'
+                ? 'On for this device — you\'ll get a push when someone knocks, replies, or staff approves something.'
                 : 'Get a push on this device when there\'s something new. Off until you turn it on, and only on the devices you choose.'}
             </p>
           )}

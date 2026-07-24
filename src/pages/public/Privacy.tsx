@@ -22,7 +22,7 @@ export function Privacy() {
             <h2 className="text-xl">How contact works</h2>
             <p className="mt-2 text-faint">
               Adults cannot browse students, see a student directory, or start a conversation
-              with a student. Contact begins only when a student raises a hand on an offer an
+              with a student. Contact begins only when a student knocks on an offer an
               adult has posted. The resulting conversation lives in a thread tied to that
               offer — there are no open direct messages.
             </p>

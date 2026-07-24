@@ -1,14 +1,12 @@
 import { Link } from 'react-router-dom'
 import { Badge } from './ui/Badge'
 import { OFFER_KIND_META, LOCATION_MODE_LABEL, affiliationLabel, FORMER_MEMBER } from '../types'
-import type { Offer, PublicProfile } from '../types'
 import { timeAgo } from '../lib/format'
 
-export type OfferWithPoster = Offer & {
-  // Null when the poster has been disabled (RLS hides their profile) but the
-  // offer row is still returned — guarded below so the board never crashes.
-  poster: Pick<PublicProfile, 'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'organization'> | null
-}
+// Re-exported from the shared join module so existing `import { OfferWithPoster }
+// from '../components/OfferCard'` sites keep working (review Architecture A-01).
+export type { OfferWithPoster } from '../lib/joins'
+import type { OfferWithPoster } from '../lib/joins'
 
 /** One row on the board. Poster identity is as prominent as the title —
  *  "who is opening this door" is the product. */

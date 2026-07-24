@@ -5,6 +5,7 @@ import { AuthShell } from './PublicShell'
 import { TextField, SelectField } from '../../components/ui/Field'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../contexts/AuthContext'
+import { nextRovingIndex } from '../../lib/a11y'
 import type { MemberAffiliation } from '../../types'
 
 const THIS_YEAR = new Date().getFullYear()
@@ -104,7 +105,17 @@ export function Signup() {
             type="button"
             role="radio"
             aria-checked={role === value}
+            tabIndex={role === value ? 0 : -1}
             onClick={() => setRole(value)}
+            onKeyDown={(e) => {
+              const opts = ['student', 'member'] as const
+              const idx = nextRovingIndex(e.key, role === 'student' ? 0 : 1, opts.length)
+              if (idx === null) return
+              e.preventDefault()
+              setRole(opts[idx])
+              e.currentTarget.closest('[role="radiogroup"]')
+                ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[idx]?.focus()
+            }}
             className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
               role === value ? 'border-pine bg-meadow text-pine' : 'border-line-strong bg-card text-faint hover:text-ink'
             }`}
