@@ -22,11 +22,6 @@ export const OFFER_POSTER_JOIN_DETAIL =
 export type OfferWithPoster = Offer & { poster: OfferPoster | null }
 
 // --- Request → student ----------------------------------------------------
-export type RequestStudent = Pick<
-  PublicProfile,
-  'id' | 'full_name' | 'role' | 'affiliation' | 'class_year' | 'organization'
->
-
 /** Student identity shown on a request/thread view. */
 export const REQUEST_STUDENT_JOIN =
   'student:profiles!requests_student_id_fkey(id, full_name, role, affiliation, class_year, organization)'

@@ -11,7 +11,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { useToast } from '../../components/ui/Toast'
 import { friendlyError } from '../../lib/errors'
 import { timeAgo } from '../../lib/format'
-import { personName } from '../../types'
+import { personName, REPORT_STATUS_LABEL, REPORT_TARGET_LABEL } from '../../types'
 import type { Report, PublicProfile } from '../../types'
 
 type Row = Report & { reporter: Pick<PublicProfile, 'id' | 'full_name'> | null }
@@ -40,15 +40,18 @@ export function AdminReports() {
     if (!isActive()) return
     if (openRes.error || settledRes.error) { setError(friendlyError(openRes.error ?? settledRes.error)); return }
     setError(null)
-    const openRows = (openRes.data ?? []) as unknown as Row[]
-    const settledRows = (settledRes.data ?? []) as unknown as Row[]
+    const openRows = (openRes.data ?? [])
+    const settledRows = (settledRes.data ?? [])
     setOpen(openRows)
     setSettled(settledRows)
 
     const messageIds = [...openRows, ...settledRows].filter((r) => r.target === 'message').map((r) => r.target_id)
     if (messageIds.length > 0) {
-      const { data: msgs } = await supabase.from('messages').select('id, request_id').in('id', messageIds)
+      const { data: msgs, error: msgsError } = await supabase.from('messages').select('id, request_id').in('id', messageIds)
       if (!isActive()) return
+      // Without this, a failed lookup silently drops the thread links on
+      // message reports — staff see a report they can't open.
+      if (msgsError) { setError(friendlyError(msgsError)); return }
       setMessageThreads(Object.fromEntries((msgs ?? []).map((m) => [m.id, m.request_id])))
     }
   }, [])
@@ -89,7 +92,7 @@ export function AdminReports() {
               <li key={r.id}>
                 <Card padded>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tint="bg-clay-soft text-danger">{r.target}</Badge>
+                    <Badge tint="bg-clay-soft text-danger">{REPORT_TARGET_LABEL[r.target]}</Badge>
                     <span className="text-sm text-faint">
                       flagged by <span className="font-medium text-ink">{personName(r.reporter)}</span> · {timeAgo(r.created_at)}
                     </span>
@@ -113,11 +116,11 @@ export function AdminReports() {
 
       {settled.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-lg">Recently settled</h2>
+          <h2 className="text-xl">Recently settled</h2>
           <ul className="mt-3 divide-y divide-line rounded-xl border border-line bg-card">
             {settled.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-2 px-5 py-3">
-                <Badge>{r.status}</Badge>
+                <Badge>{REPORT_STATUS_LABEL[r.status]}</Badge>
                 <span className="min-w-0 flex-1 truncate text-sm text-faint">{r.reason}</span>
                 <span className="text-xs text-faint">{r.resolved_at ? timeAgo(r.resolved_at) : ''}</span>
               </li>

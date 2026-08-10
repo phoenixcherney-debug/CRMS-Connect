@@ -15,8 +15,25 @@ export const ACCOUNTS = {
 // Seed ids used by the setup/cleanup helpers (see supabase/seed.sql).
 export const AVERY_ID = 'c0000000-0000-4000-8000-000000000001'
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? ''
-const ANON = process.env.VITE_SUPABASE_ANON_KEY ?? ''
+/** Fail loudly instead of defaulting to ''. With an empty base URL every REST
+ *  helper below collapses to a path relative to the app preview, so arrange and
+ *  cleanup calls silently no-op — which is how `E2E published offer <ts>` rows
+ *  ended up stranded on the shared board, degrading every later board and search
+ *  assertion. Mirrors integration/rls.test.ts's no-silent-skip contract. */
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) {
+    throw new Error(
+      `${name} is not set. The e2e suite's REST arrange/cleanup helpers need it; ` +
+      'without it they resolve against the app preview and silently do nothing. ' +
+      'Set it in .env locally, or in the e2e job\'s env: block in CI.',
+    )
+  }
+  return value
+}
+
+const SUPABASE_URL = requireEnv('VITE_SUPABASE_URL')
+const ANON = requireEnv('VITE_SUPABASE_ANON_KEY')
 
 export async function login(page: Page, account: { email: string; password: string }) {
   await page.goto('/login')
@@ -48,4 +65,13 @@ export async function restInsert(request: APIRequestContext, token: string, tabl
 
 export async function restDelete(request: APIRequestContext, token: string, table: string, query: string) {
   return request.delete(`${SUPABASE_URL}/rest/v1/${table}?${query}`, { headers: authHeaders(token) })
+}
+
+export async function restPatch(
+  request: APIRequestContext, token: string, table: string, query: string, patch: Record<string, unknown>,
+) {
+  return request.patch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: { ...authHeaders(token), Prefer: 'return=representation' },
+    data: patch,
+  })
 }

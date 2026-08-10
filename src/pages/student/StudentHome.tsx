@@ -45,8 +45,8 @@ export function StudentHome() {
       return
     }
     setError(null)
-    setFresh((offersRes.data ?? []) as unknown as OfferWithPoster[])
-    setActive((requestsRes.data ?? []) as unknown as RequestWithOffer[])
+    setFresh((offersRes.data ?? []))
+    setActive((requestsRes.data ?? []))
   }, [])
 
   usePageData(load)

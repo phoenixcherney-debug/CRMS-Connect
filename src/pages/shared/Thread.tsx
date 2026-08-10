@@ -7,6 +7,7 @@ import { usePageData } from '../../lib/usePageData'
 import { advanceRequest } from '../../lib/mutations'
 import { THREAD_POLL_MS } from '../../lib/constants'
 import { OFFER_POSTER_JOIN, REQUEST_STUDENT_JOIN } from '../../lib/joins'
+import { threadCapabilities } from '../../lib/permissions'
 import { useAuth } from '../../contexts/AuthContext'
 import { Avatar } from '../../components/ui/Avatar'
 import { Badge } from '../../components/ui/Badge'
@@ -51,6 +52,7 @@ export function Thread() {
   const [decideOpen, setDecideOpen] = useState<'accept' | 'decline' | null>(null)
   const [declineNote, setDeclineNote] = useState(DECLINE_TEMPLATE)
   const [deciding, setDeciding] = useState(false)
+  const [moderatingId, setModeratingId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const firstLoad = useRef(true)
   // Once the thread has loaded once, background poll failures must not blow away
@@ -97,7 +99,7 @@ export function Thread() {
       return
     }
 
-    setThread(data as unknown as ThreadData)
+    setThread(data)
     const fetched = (msgs ?? []) as Message[]
     if (incremental) {
       if (fetched.length > 0) {
@@ -136,13 +138,19 @@ export function Thread() {
   if (!thread || !profile || messages === null) return <Spinner page />
 
   const offer = thread.offer
-  const isStudent = profile.id === thread.student_id
-  const isPoster = !!offer && profile.id === offer.posted_by
-  const isAdmin = profile.role === 'admin'
+  // Capability derivation lives in src/lib/permissions.ts so each branch is
+  // unit-tested rather than reachable only through live-DB e2e.
+  const { isStudent, isPoster, isAdmin, canMessage, posterCanDecide, studentCanWithdraw, backTo, backLabel } =
+    threadCapabilities(
+      { id: profile.id, role: profile.role },
+      {
+        studentId: thread.student_id,
+        posterId: offer?.posted_by ?? null,
+        offerId: thread.offer_id,
+        status: thread.status,
+      },
+    )
   const status = REQUEST_STATUS_META[thread.status]
-  const canMessage = ['sent', 'in_conversation', 'accepted'].includes(thread.status) && (isStudent || isPoster || isAdmin)
-  const posterCanDecide = (isPoster || isAdmin) && ['sent', 'in_conversation'].includes(thread.status)
-  const studentCanWithdraw = isStudent && ['sent', 'in_conversation'].includes(thread.status)
   const otherParty: PersonLite | null = isStudent ? (offer?.poster ?? null) : thread.student
   const studentName = personName(thread.student)
   const offerTitle = offer?.title ?? 'a removed offer'
@@ -201,6 +209,28 @@ export function Thread() {
     load(() => true)
   }
 
+  /** Staff redaction: hide (or restore) a single message. The schema has always
+   *  supported this — messages.hidden_at, and messages_select excludes hidden
+   *  rows for non-admins — but no client ever wrote it, so an abusive message to
+   *  a minor stayed permanently visible with no in-app remedy (review major). */
+  async function setHidden(message: Message, hide: boolean) {
+    setModeratingId(message.id)
+    const { error } = await supabase
+      .from('messages')
+      .update({ hidden_at: hide ? new Date().toISOString() : null })
+      .eq('id', message.id)
+    setModeratingId(null)
+    if (error) {
+      toast(friendlyError(error), 'error')
+      return
+    }
+    toast(hide ? 'Message removed from the thread.' : 'Message restored.')
+    // Force a full message refetch rather than the usual incremental one — the
+    // change is to an *existing* row, which `.gt('created_at', since)` skips.
+    lastMessageAt.current = null
+    load(() => true)
+  }
+
   async function withdraw() {
     if (!thread) return
     const { error } = await advanceRequest(thread.id, 'withdrawn')
@@ -214,20 +244,23 @@ export function Thread() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link
-        to={isStudent ? '/requests' : isPoster ? `/offers/${thread.offer_id}/manage` : '/admin/requests'}
-        className="text-sm text-faint hover:text-ink"
-      >
-        ← {isStudent ? 'My requests' : isPoster ? 'Your offer' : 'All requests'}
+      <Link to={backTo} className="text-sm text-faint hover:text-ink">
+        ← {backLabel}
       </Link>
 
       <Card className="mt-4" padded>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="eyebrow text-faint">{offerKindLabel}</p>
-            <Link to={`/board/${thread.offer_id}`} className="mt-1 block text-lg font-display font-semibold leading-snug text-ink hover:text-pine">
-              {offerTitle}
-            </Link>
+            {/* The offer title is this page's subject; it used to be a Link
+                styled to look like a heading, leaving the app's core screen
+                with no h1 at all. The base rule in index.css already applies
+                Fraunces 600 to h1, so the display classes come off. */}
+            <h1 className="mt-1 text-lg leading-snug">
+              <Link to={`/board/${thread.offer_id}`} className="text-ink hover:text-pine">
+                {offerTitle}
+              </Link>
+            </h1>
           </div>
           <Badge tint={status.tint}>{isStudent ? status.student : status.label}</Badge>
         </div>
@@ -256,8 +289,12 @@ export function Thread() {
           : 'CRMS staff can read this thread — that\'s what keeps the board safe for everyone.'}
       </div>
 
-      {/* The student's original note opens the thread. */}
-      <div className="mt-6 space-y-4">
+      {/* The student's original note opens the thread.
+          role="log" (not aria-live on the whole list) is the right fit for
+          chronologically appended history: the 15s poll appends replies, and
+          without a live region a screen-reader user was never told one arrived
+          on the product's only messaging surface. */}
+      <div className="mt-6 space-y-4" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation">
         <MessageBubble
           name={studentName}
           mine={isStudent}
@@ -274,6 +311,14 @@ export function Thread() {
             staff={m.is_staff}
             time={m.created_at}
             body={m.body}
+            hidden={!!m.hidden_at}
+            // Staff-only redaction. messages_update is admin-only in RLS, and
+            // enforce_message_guard stamps hidden_by + keeps the body immutable,
+            // so this can hide history but never rewrite it.
+            onModerate={isAdmin ? () => setHidden(m, !m.hidden_at) : undefined}
+            moderating={moderatingId === m.id}
+            reportable={m.sender_id !== profile.id}
+            messageId={m.id}
           />
         ))}
         <div ref={bottomRef} />
@@ -335,13 +380,24 @@ export function Thread() {
   )
 }
 
-function MessageBubble({ name, mine, staff, time, body, label }: {
+function MessageBubble({
+  name, mine, staff, time, body, label,
+  hidden = false, onModerate, moderating = false, reportable = false, messageId,
+}: {
   name: string
   mine: boolean
   staff: boolean
   time: string
   body: string
   label?: string
+  /** Staff-removed. Only staff ever see this state — messages_select hides the
+   *  row entirely from everyone else. */
+  hidden?: boolean
+  /** Provided for staff only; toggles hidden_at. */
+  onModerate?: () => void
+  moderating?: boolean
+  reportable?: boolean
+  messageId?: string
 }) {
   return (
     <div className={`flex gap-3 ${mine ? 'flex-row-reverse' : ''}`}>
@@ -350,14 +406,33 @@ function MessageBubble({ name, mine, staff, time, body, label }: {
         <p className="text-xs text-faint">
           {staff ? 'CRMS Staff' : name} · {messageTime(time)}
           {label ? ` · ${label}` : ''}
+          {hidden && ' · Removed by staff'}
         </p>
         <div
           className={`mt-1 inline-block whitespace-pre-line rounded-xl px-4 py-2.5 text-left text-sm leading-relaxed ${
-            staff ? 'bg-pine text-white' : mine ? 'bg-meadow text-ink' : 'border border-line bg-card text-ink'
+            hidden
+              ? 'border border-dashed border-input bg-paper text-faint line-through'
+              : staff
+                ? 'bg-pine text-white'
+                : mine
+                  ? 'bg-meadow text-ink'
+                  : 'border border-line bg-card text-ink'
           }`}
         >
           {body}
         </div>
+        {(onModerate || (reportable && messageId)) && (
+          <div className={`mt-1 flex items-center gap-3 ${mine ? 'justify-end' : ''}`}>
+            {reportable && messageId && (
+              <ReportButton target="message" targetId={messageId} label="Flag this message" />
+            )}
+            {onModerate && (
+              <Button variant="ghost" size="sm" loading={moderating} onClick={onModerate}>
+                {hidden ? 'Restore message' : 'Remove message'}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

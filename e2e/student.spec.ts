@@ -1,27 +1,27 @@
 import { test, expect } from '@playwright/test'
+import type { APIRequestContext } from '@playwright/test'
+import { ACCOUNTS, apiToken, restDelete } from './helpers'
 
 // Runs with the shared student session (see auth.setup.ts + the 'student'
 // project in playwright.config.ts) — no per-test login.
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? ''
-const ANON = process.env.VITE_SUPABASE_ANON_KEY ?? ''
 const PRIYA_STUDIO_OFFER = 'd0000000-0000-4000-8000-000000000004'
 const CASEY_MENTOR_OFFER = 'd0000000-0000-4000-8000-000000000005' // open, Avery has no knock here
 const JORDAN_CHAT_OFFER = 'd0000000-0000-4000-8000-000000000003' // Avery has an in_conversation knock here
 const AVERY_ID = 'c0000000-0000-4000-8000-000000000001'
 
-// Delete any leftover retractable request so the knock test starts clean
-// (uses the requests_delete "retract" policy). Runs directly against the API.
-async function retractPriyaRequest(request: import('@playwright/test').APIRequestContext) {
-  const tokenRes = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-    headers: { apikey: ANON, 'Content-Type': 'application/json' },
-    data: { email: 'avery.kim@crms.org', password: process.env.E2E_PASSWORD },
-  })
-  const token = (await tokenRes.json()).access_token as string
-  await request.delete(
-    `${SUPABASE_URL}/rest/v1/requests?offer_id=eq.${PRIYA_STUDIO_OFFER}&student_id=eq.${AVERY_ID}`,
-    { headers: { apikey: ANON, Authorization: `Bearer ${token}` } },
+// Delete any leftover retractable request so the knock test starts clean (uses
+// the requests_delete "retract" policy — which now also requires the thread to
+// be empty, so this only ever clears an untouched knock). Goes through the
+// shared REST helpers rather than re-deriving the URL/key, which used to
+// default to '' here and silently no-op.
+async function retractPriyaRequest(request: APIRequestContext) {
+  const token = await apiToken(request, ACCOUNTS.student)
+  const res = await restDelete(
+    request, token, 'requests',
+    `offer_id=eq.${PRIYA_STUDIO_OFFER}&student_id=eq.${AVERY_ID}`,
   )
+  expect(res.ok(), 'cleanup of the leftover Priya knock failed').toBeTruthy()
 }
 
 test('student sees home, board, and poster identity', async ({ page }) => {

@@ -44,6 +44,9 @@ export function AdminDashboard() {
       return
     }
     setError(null)
+    // One of only two remaining force-casts in the app: admin_overview() is a
+    // `returns json` RPC, so the generated type is `Json` and no structural
+    // checking is possible. Every embedded-join result is now checked by tsc.
     setOverview(ovRes.data as unknown as Overview)
     setPending(pendingRes.data ?? [])
   }, [])
@@ -90,18 +93,26 @@ export function AdminDashboard() {
     <AdminShell title="Overview">
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map(([n, label, link]) => {
+          // Two content-model fixes: <dt> must precede its <dd> (assistive
+          // tech pairs them positionally, so each number was announced as the
+          // previous stat's description), and only div/dt/dd may be direct
+          // children of a <dl> — the <Link> has to sit inside a wrapper.
           const inner = (
             <>
-              <dd className="font-display text-2xl font-semibold text-pine">{n}</dd>
-              <dt className="mt-0.5 text-xs text-faint">{label}</dt>
+              <dt className="font-display text-2xl font-semibold text-pine">{n}</dt>
+              <dd className="mt-0.5 text-xs text-faint">{label}</dd>
             </>
           )
-          return link ? (
-            <Link key={label} to={link} className="rounded-xl border border-line bg-card px-4 py-3 hover:border-pine">
-              {inner}
-            </Link>
-          ) : (
-            <div key={label} className="rounded-xl border border-line bg-card px-4 py-3">{inner}</div>
+          return (
+            <div key={label}>
+              {link ? (
+                <Link to={link} className="block rounded-xl border border-line bg-card px-4 py-3 hover:border-pine">
+                  {inner}
+                </Link>
+              ) : (
+                <div className="rounded-xl border border-line bg-card px-4 py-3">{inner}</div>
+              )}
+            </div>
           )
         })}
       </dl>

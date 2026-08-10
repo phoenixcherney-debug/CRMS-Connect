@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { TOAST_MS } from '../../lib/constants'
 
 interface Toast {
   id: number
@@ -16,7 +17,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const push = useCallback((message: string, tone: Toast['tone'] = 'success') => {
     const id = nextId.current++
     setToasts((t) => [...t, { id, message, tone }])
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4500)
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), TOAST_MS)
   }, [])
 
   return (

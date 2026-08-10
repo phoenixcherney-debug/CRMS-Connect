@@ -31,7 +31,7 @@ export function MyRequests() {
     if (!isActive()) return
     if (err) { setError(friendlyError(err)); return }
     setError(null)
-    setRows((data ?? []) as unknown as Row[])
+    setRows((data ?? []))
   }, [])
 
   usePageData(load)

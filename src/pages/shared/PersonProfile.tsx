@@ -35,29 +35,45 @@ export function PersonProfile() {
       setMissing(true)
       return
     }
+    // Reset both on success: this component stays mounted across /people/:id
+    // changes, so a stale error/missing flag would poison the next profile.
+    setError(null)
+    setMissing(false)
     setPerson(data as PublicProfile)
     if (data.role === 'member') {
-      const { data: theirOffers } = await supabase
+      const { data: theirOffers, error: offersErr } = await supabase
         .from('offers')
         .select(`*, ${OFFER_POSTER_JOIN}`)
         .eq('posted_by', id)
         .eq('status', 'open')
         .is('hidden_at', null)
         .order('created_at', { ascending: false })
-      if (isActive()) setOffers((theirOffers ?? []) as unknown as OfferWithPoster[])
+      if (!isActive()) return
+      // Dropping this used to silently hide a member's whole "Open doors"
+      // section, which reads as "they have nothing on the board".
+      if (offersErr) { setError(friendlyError(offersErr)); return }
+      setOffers((theirOffers ?? []))
     }
   }, [id])
 
   usePageData(load)
 
-  if (error) {
-    return <EmptyState title="We couldn’t load this profile">{error}</EmptyState>
-  }
-  if (missing) {
+  // Both branches replace the whole page, so they need to carry its h1 —
+  // otherwise these routes rendered a heading tree starting at h3.
+  if (error || missing) {
     return (
-      <EmptyState title="No one here">
-        This profile doesn't exist or isn't visible to you.
-      </EmptyState>
+      <div className="mx-auto max-w-2xl">
+        <h1 className="text-2xl">Profile</h1>
+        <div className="mt-4">
+          {error ? (
+            <EmptyState title="We couldn’t load this profile">{error}</EmptyState>
+          ) : (
+            <EmptyState title="No one here">
+              This profile doesn't exist or isn't visible to you.
+            </EmptyState>
+          )}
+        </div>
+      </div>
     )
   }
   if (!person || !me) return <Spinner page />

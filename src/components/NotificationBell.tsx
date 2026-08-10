@@ -16,6 +16,8 @@ export function NotificationBell() {
     if (!user) return
     let cancelled = false
     async function count() {
+      // Thread already models this; the bell polled forever in hidden tabs.
+      if (document.visibilityState === 'hidden') return
       const { count: n } = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
@@ -24,9 +26,12 @@ export function NotificationBell() {
     }
     count()
     const interval = setInterval(count, NOTIF_POLL_MS)
+    // ...and catch up once as soon as the tab comes back.
+    document.addEventListener('visibilitychange', count)
     return () => {
       cancelled = true
       clearInterval(interval)
+      document.removeEventListener('visibilitychange', count)
     }
   }, [user])
 
@@ -38,7 +43,7 @@ export function NotificationBell() {
     >
       <Bell className="h-5 w-5" aria-hidden />
       {unread > 0 && (
-        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-clay px-1 text-[10px] font-semibold text-white">
+        <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-clay px-1 text-[11px] font-semibold text-white">
           {unread > 9 ? '9+' : unread}
         </span>
       )}

@@ -7,7 +7,7 @@ import {
   isPushConfigured,
   isPushSupported,
   pushPermission,
-} from '../lib/push'
+} from './push'
 
 type PushState = 'loading' | 'unsupported' | 'unconfigured' | 'blocked' | 'off' | 'on'
 

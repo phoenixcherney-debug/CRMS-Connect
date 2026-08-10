@@ -34,7 +34,7 @@ export function AdminRequests() {
     if (!isActive()) return
     if (err) { setError(friendlyError(err)); return }
     setError(null)
-    setRows((data ?? []) as unknown as Row[])
+    setRows((data ?? []))
   }, [limit])
 
   usePageData(load)
@@ -58,7 +58,11 @@ export function AdminRequests() {
                 <Link to={`/requests/${r.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3.5 hover:bg-meadow/50">
                   <span className="text-sm font-medium text-ink">{personName(r.student)}</span>
                   <span className="text-sm text-faint">on</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{r.offer?.title ?? 'a removed offer'}</span>
+                  {/* flex-basis:0 means this never triggers wrapping and instead
+                      absorbs the entire shortfall; claim a full row below `sm`. */}
+                  <span className="w-full min-w-0 truncate text-sm text-ink sm:w-auto sm:flex-1">
+                    {r.offer?.title ?? 'a removed offer'}
+                  </span>
                   <span className="flex items-center gap-3">
                     <Badge tint={REQUEST_STATUS_META[r.status].tint}>{REQUEST_STATUS_META[r.status].label}</Badge>
                     <span className="text-xs text-faint">{timeAgo(r.updated_at)}</span>

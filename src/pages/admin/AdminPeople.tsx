@@ -13,6 +13,7 @@ import { PersonLink } from '../../components/PersonLink'
 import { useToast } from '../../components/ui/Toast'
 import { friendlyError } from '../../lib/errors'
 import { shortDate } from '../../lib/format'
+import { ACCOUNT_STATUS_LABEL } from '../../types'
 import type { AccountStatus, Profile, UserRole } from '../../types'
 
 const STATUS_TINT: Record<AccountStatus, string> = {
@@ -21,7 +22,7 @@ const STATUS_TINT: Record<AccountStatus, string> = {
   disabled: 'bg-clay-soft text-danger',
 }
 
-const CONTROL = 'rounded-lg border border-input bg-card px-2.5 py-1.5 text-sm text-ink focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20'
+const CONTROL = 'rounded-lg border border-input bg-card px-2.5 py-1.5 text-sm text-ink focus:border-pine focus:ring-2 focus:ring-pine/20'
 
 export function AdminPeople() {
   const { profile: me } = useAuth()
@@ -120,7 +121,7 @@ export function AdminPeople() {
                   <PersonLink person={p} size="sm" sub={[p.title, p.organization].filter(Boolean).join(', ') || null} />
                   <span className="ml-auto flex flex-wrap items-center gap-2">
                     <span className="hidden text-xs text-faint md:inline">joined {shortDate(p.created_at)}</span>
-                    <Badge tint={STATUS_TINT[p.account_status]}>{p.account_status}</Badge>
+                    <Badge tint={STATUS_TINT[p.account_status]}>{ACCOUNT_STATUS_LABEL[p.account_status]}</Badge>
                     {p.id !== me?.id && (
                       <>
                         {p.account_status === 'pending' && (

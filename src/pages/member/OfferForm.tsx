@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { usePageData } from '../../lib/usePageData'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -35,31 +36,47 @@ export function OfferForm() {
   const [spots, setSpots] = useState('1')
   const [status, setStatus] = useState<'draft' | 'open' | 'filled' | 'closed'>('open')
   const [loaded, setLoaded] = useState(!editing)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
+  // Was a hand-rolled `cancelled` effect that only called setLoaded(true) on the
+  // success path and never destructured `error` — so any failure (or a row the
+  // caller can't see) left this page on a permanent spinner behind a one-shot
+  // toast, with no retry and no way back. Now on the shared usePageData
+  // convention, with the same "couldn't load" card OfferManage uses.
+  const load = useCallback(async (isActive: () => boolean) => {
     if (!editing || !id) return
-    let cancelled = false
-    supabase.from('offers').select('*').eq('id', id).maybeSingle().then(({ data }) => {
-      if (cancelled || !data) {
-        if (!cancelled) toast('That offer couldn\'t be loaded.', 'error')
-        return
-      }
-      setKind(data.kind)
-      setTitle(data.title)
-      setDescription(data.description)
-      setLocationMode(data.location_mode)
-      setLocationText(data.location_text ?? '')
-      setTimeframe(data.timeframe ?? '')
-      setCommitment(data.commitment ?? '')
-      setSpots(String(data.spots))
-      setStatus(data.status)
+    const { data, error } = await supabase.from('offers').select('*').eq('id', id).maybeSingle()
+    if (!isActive()) return
+    if (error || !data) {
+      setLoadError(error ? friendlyError(error) : 'This offer doesn\'t exist or isn\'t yours to edit.')
       setLoaded(true)
-    })
-    return () => { cancelled = true }
-  }, [editing, id, toast])
+      return
+    }
+    setLoadError(null)
+    setKind(data.kind)
+    setTitle(data.title)
+    setDescription(data.description)
+    setLocationMode(data.location_mode)
+    setLocationText(data.location_text ?? '')
+    setTimeframe(data.timeframe ?? '')
+    setCommitment(data.commitment ?? '')
+    setSpots(String(data.spots))
+    setStatus(data.status)
+    setLoaded(true)
+  }, [editing, id])
+
+  usePageData(load)
 
   if (!profile) return null
+  if (loadError) {
+    return (
+      <Card className="text-center">
+        <p className="text-sm text-faint">{loadError}</p>
+        <Link to="/home" className="mt-4 inline-block text-sm text-pine hover:underline">My offers</Link>
+      </Card>
+    )
+  }
   if (!loaded) return <Spinner page />
 
   async function save(e: FormEvent, asDraft = false) {
@@ -143,7 +160,7 @@ export function OfferForm() {
                       ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[idx]?.focus()
                   }}
                   className={`rounded-lg border px-3 py-2 text-left transition-colors ${
-                    kind === k ? 'border-pine bg-meadow' : 'border-line-strong bg-card hover:border-line-strong hover:bg-paper'
+                    kind === k ? 'border-pine bg-meadow' : 'border-input bg-card hover:bg-paper'
                   }`}
                 >
                   <span className={`block text-sm font-medium ${kind === k ? 'text-pine' : 'text-ink'}`}>

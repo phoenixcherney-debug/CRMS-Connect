@@ -18,7 +18,18 @@ export function Landing() {
   const [stats, setStats] = useState<Stats | null>(null)
 
   useEffect(() => {
-    supabase.rpc('community_stats').then(({ data }) => {
+    supabase.rpc('community_stats').then(({ data, error }) => {
+      // Unlike the six in-app loaders, a failure here has no error state to
+      // render into: these counts are decorative furniture on a marketing hero,
+      // and an error banner above the sign-up CTA would be worse than their
+      // absence. So the stats block stays hidden — but the error is surfaced to
+      // the console rather than dropped on the floor.
+      if (error) {
+        console.error('[Landing] community_stats failed:', error)
+        return
+      }
+      // The other remaining force-cast: community_stats() is a `returns json`
+      // RPC, so its generated type is `Json`. Guarded by the typeof check above.
       if (data && typeof data === 'object') setStats(data as unknown as Stats)
     })
   }, [])
@@ -42,7 +53,7 @@ export function Landing() {
             <Link to="/signup" className="rounded-xl bg-pine px-5 py-2.5 font-medium text-white hover:bg-pine-deep">
               I'm a CRMS student
             </Link>
-            <Link to="/signup?role=member" className="rounded-xl border border-line-strong bg-card px-5 py-2.5 font-medium text-ink hover:border-pine hover:text-pine">
+            <Link to="/signup?role=member" className="rounded-xl border border-input bg-card px-5 py-2.5 font-medium text-ink hover:border-pine hover:text-pine">
               I'm an alum, parent, or friend
             </Link>
           </div>

@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button'
 import { TextField, TextAreaField } from '../../components/ui/Field'
 import { useToast } from '../../components/ui/Toast'
 import { friendlyError } from '../../lib/errors'
+import { MAX_TAGS } from '../../lib/constants'
 import { affiliationLabel } from '../../types'
 
 export function ProfileEdit() {
@@ -32,7 +33,7 @@ export function ProfileEdit() {
   async function save(e: FormEvent) {
     e.preventDefault()
     if (!profile) return
-    const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 10)
+    const tagList = tags.split(',').map((t) => t.trim()).filter(Boolean).slice(0, MAX_TAGS)
     setSaving(true)
     const { error } = await supabase
       .from('profiles')
@@ -92,7 +93,7 @@ export function ProfileEdit() {
             label={isMember ? 'What you can help with' : 'Your interests'}
             value={tags}
             onChange={(e) => setTags(e.target.value)}
-            hint="Comma-separated, up to 10 — e.g. Veterinary medicine, Animal science"
+            hint={`Comma-separated, up to ${MAX_TAGS} — e.g. Veterinary medicine, Animal science`}
           />
           {isMember && (
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-paper px-4 py-3">

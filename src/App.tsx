@@ -53,6 +53,14 @@ function ThreadRoute() {
   return <Thread key={id} />
 }
 
+/** Same for the offer detail page: without a per-:id remount, offer B rendered
+ *  for one round trip carrying offer A's request — "You knocked <A's time>",
+ *  with an "Open the thread" button pointing at the wrong thread. */
+function OfferDetailRoute() {
+  const { id } = useParams<{ id: string }>()
+  return <OfferDetail key={id} />
+}
+
 /** /home fans out by role — each role's landing view is different on purpose. */
 function HomeSwitch() {
   const { profile } = useAuth()
@@ -83,7 +91,7 @@ export default function App() {
               <Route element={<Layout />}>
                 <Route path="/home" element={<HomeSwitch />} />
                 <Route path="/board" element={<Board />} />
-                <Route path="/board/:id" element={<OfferDetail />} />
+                <Route path="/board/:id" element={<OfferDetailRoute />} />
                 <Route path="/requests" element={<RequireRole roles={['student']}><MyRequests /></RequireRole>} />
                 <Route path="/requests/:id" element={<ThreadRoute />} />
                 <Route path="/offers/new" element={<RequireRole roles={['member']}><OfferForm /></RequireRole>} />

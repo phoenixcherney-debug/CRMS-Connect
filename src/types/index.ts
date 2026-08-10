@@ -59,6 +59,24 @@ export const OFFER_STATUS_LABEL: Record<OfferStatus, string> = {
   closed: 'Closed',
 }
 
+export const ACCOUNT_STATUS_LABEL: Record<AccountStatus, string> = {
+  pending: 'Pending',
+  active: 'Active',
+  disabled: 'Disabled',
+}
+
+export const REPORT_TARGET_LABEL: Record<ReportTarget, string> = {
+  user: 'Person',
+  offer: 'Offer',
+  message: 'Message',
+}
+
+export const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
+  open: 'Open',
+  resolved: 'Resolved',
+  dismissed: 'Dismissed',
+}
+
 export const LOCATION_MODE_LABEL: Record<LocationMode, string> = {
   in_person: 'In person',
   remote: 'Remote',

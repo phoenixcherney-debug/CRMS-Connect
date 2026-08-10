@@ -39,7 +39,7 @@ export class RootErrorBoundary extends Component<Props, State> {
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="rounded-lg border border-line-strong bg-card px-4 py-2 text-sm font-medium text-ink hover:border-pine"
+              className="rounded-lg border border-input bg-card px-4 py-2 text-sm font-medium text-ink hover:border-pine"
             >
               Reload
             </button>

@@ -1,5 +1,5 @@
 import { Bell, BellOff } from 'lucide-react'
-import { usePush } from '../hooks/usePush'
+import { usePush } from '../lib/usePush'
 import { Button } from './ui/Button'
 
 /** Opt-in push control. Off by default; enabling always takes a deliberate
@@ -21,7 +21,7 @@ export function PushToggle() {
           {on ? <Bell className="h-5 w-5" aria-hidden /> : <BellOff className="h-5 w-5" aria-hidden />}
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-lg leading-snug">Push notifications</h2>
+          <h2 className="text-xl leading-snug">Push notifications</h2>
           {state === 'blocked' ? (
             <p className="mt-1 text-sm text-faint">
               Notifications are blocked for this site. Turn them back on in your browser's

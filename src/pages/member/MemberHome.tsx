@@ -47,7 +47,7 @@ export function MemberHome() {
     }
     setError(null)
     setOffers(offersRes.data ?? [])
-    setIncoming((incomingRes.data ?? []) as unknown as IncomingRow[])
+    setIncoming((incomingRes.data ?? []))
   }, [profile])
 
   usePageData(load)
@@ -106,6 +106,7 @@ export function MemberHome() {
             {offers.length === 0 ? (
               <div className="mt-4">
                 <EmptyState
+                  as="h3"
                   title="You haven't opened a door yet"
                   action={<Link to="/offers/new"><Button variant="accent">Open your first door</Button></Link>}
                 >

@@ -34,7 +34,7 @@ export function AdminOffers() {
     if (!isActive()) return
     if (err) { setError(friendlyError(err)); return }
     setError(null)
-    setRows((data ?? []) as unknown as Row[])
+    setRows((data ?? []))
   }, [limit])
 
   usePageData(load)
@@ -65,7 +65,11 @@ export function AdminOffers() {
             {rows.map((o) => (
               <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3.5">
                 <Badge tint={OFFER_KIND_META[o.kind].tint}>{OFFER_KIND_META[o.kind].label}</Badge>
-                <div className="min-w-0 flex-1">
+                {/* A `flex-1` item has flex-basis:0, so the line never exceeds
+                    its container and never wraps — the title just absorbs the
+                    whole shortfall and truncates to ~20px at 375px. Give it its
+                    own row below `sm`, and only then let it flex. */}
+                <div className="w-full min-w-0 sm:w-auto sm:flex-1">
                   <Link to={`/board/${o.id}`} className="block truncate text-sm font-medium text-ink hover:text-pine">
                     {o.title}
                   </Link>

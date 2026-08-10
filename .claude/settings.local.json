@@ -39,7 +39,10 @@
       "Bash(python3 -c \"from PIL import Image; print\\('PIL ok'\\)\")",
       "Bash(python3 -m pip install pillow -q)",
       "Bash(python3:*)",
-      "Bash(grep -i \"availability_slots\\\\|CREATE TABLE.*avail\" /Users/phoenixcherney/Desktop/crms-connect/supabase/migrations/*.sql)"
+      "Bash(grep -i \"availability_slots\\\\|CREATE TABLE.*avail\" /Users/phoenixcherney/Desktop/crms-connect/supabase/migrations/*.sql)",
+      "Read(//Users/phoenixcherney/Downloads/**)",
+      "Bash(unzip -l \"/Users/phoenixcherney/Downloads/CRMS Connect redesign priorities.zip\")",
+      "Bash(unzip -o -q \"/Users/phoenixcherney/Downloads/CRMS Connect redesign priorities.zip\")"
     ]
   }
 }

@@ -33,7 +33,7 @@ const INITIAL: Filters = {
   includeSettled: false,
 }
 
-const CONTROL = 'rounded-lg border border-input bg-card px-2.5 py-1.5 text-sm focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20'
+const CONTROL = 'rounded-lg border border-input bg-card px-2.5 py-1.5 text-sm focus:border-pine focus:ring-2 focus:ring-pine/20'
 
 export function Board() {
   const { profile } = useAuth()
@@ -78,7 +78,7 @@ export function Board() {
       return
     }
     setError(null)
-    setOffers((data ?? []) as unknown as OfferWithPoster[])
+    setOffers((data ?? []))
   }, [filters, limit])
 
   usePageData(load)
@@ -89,7 +89,7 @@ export function Board() {
   const hasMore = (offers?.length ?? 0) === limit
 
   const chip = (active: boolean) =>
-    `rounded-full px-3 py-1.5 text-xs font-medium ${active ? 'bg-pine text-white' : 'bg-card border border-line text-faint hover:text-ink'}`
+    `rounded-full px-3 py-1.5 text-xs font-medium ${active ? 'bg-pine text-white' : 'bg-card border border-input text-faint hover:text-ink'}`
 
   return (
     <div>
@@ -136,22 +136,22 @@ export function Board() {
             <option key={m} value={m}>{LOCATION_MODE_LABEL[m]}</option>
           ))}
         </select>
-        <select value={String(filters.minSpots)} onChange={(e) => patch({ minSpots: Number(e.target.value) })} aria-label="Filter by spots remaining" className={CONTROL}>
+        <select value={String(filters.minSpots)} onChange={(e) => patch({ minSpots: Number(e.target.value) })} aria-label="Filter by number of spots offered" className={CONTROL}>
           <option value="0">Any spots</option>
-          <option value="2">2+ spots</option>
-          <option value="3">3+ spots</option>
-          <option value="5">5+ spots</option>
+          <option value="2">2+ spots offered</option>
+          <option value="3">3+ spots offered</option>
+          <option value="5">5+ spots offered</option>
         </select>
         <select value={filters.sort} onChange={(e) => patch({ sort: e.target.value as SortOrder })} aria-label="Sort by date posted" className={CONTROL}>
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
         </select>
-        <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs text-faint">
+        <label className="ml-auto flex cursor-pointer items-center gap-2 py-1 text-sm text-faint">
           <input
             type="checkbox"
             checked={filters.includeSettled}
             onChange={(e) => patch({ includeSettled: e.target.checked })}
-            className="h-3.5 w-3.5 accent-pine"
+            className="h-4 w-4 accent-pine"
           />
           Include filled &amp; closed
         </label>

@@ -42,12 +42,16 @@ export function OfferManage() {
     }
     setLoadError(null)
     setOffer(data)
-    const { data: reqs } = await supabase
+    const { data: reqs, error: reqsError } = await supabase
       .from('requests')
       .select(`*, ${REQUEST_STUDENT_JOIN_TAGS}`)
       .eq('offer_id', id)
       .order('created_at', { ascending: false })
-    if (isActive()) setRows((reqs ?? []) as unknown as RequestRow[])
+    if (!isActive()) return
+    // Dropping this rendered "No knocks yet" on a failed query — a member is
+    // told nobody applied and stops checking.
+    if (reqsError) { setLoadError(friendlyError(reqsError)); return }
+    setRows((reqs ?? []))
   }, [id])
 
   usePageData(load)
@@ -117,7 +121,7 @@ export function OfferManage() {
         <h2 className="text-xl">Knocks at the door</h2>
         <div className="mt-4">
           {rows.length === 0 ? (
-            <EmptyState title="No knocks yet">
+            <EmptyState as="h3" title="No knocks yet">
               Students see new offers within a day. When someone knocks,
               you'll get a notification and their note lands here.
             </EmptyState>

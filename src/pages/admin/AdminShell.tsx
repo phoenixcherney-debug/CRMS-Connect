@@ -24,7 +24,7 @@ export function AdminShell({ title, children }: { title: string; children: React
             end={t.end}
             className={({ isActive }) =>
               `rounded-full px-3.5 py-1.5 text-xs font-medium ${
-                isActive ? 'bg-pine text-white' : 'border border-line bg-card text-faint hover:text-ink'
+                isActive ? 'bg-pine text-white' : 'border border-input bg-card text-faint hover:text-ink'
               }`
             }
           >

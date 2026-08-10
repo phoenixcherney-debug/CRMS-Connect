@@ -3,7 +3,10 @@ import { supabase } from '../../lib/supabase'
 import { usePageData } from '../../lib/usePageData'
 import { AdminShell } from './AdminShell'
 import { Spinner } from '../../components/ui/Spinner'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { friendlyError } from '../../lib/errors'
 import { messageTime } from '../../lib/format'
+import { AUDIT_LOG_LIMIT } from '../../lib/constants'
 import type { AuditEntry, PublicProfile } from '../../types'
 
 type Row = AuditEntry & { actor: Pick<PublicProfile, 'id' | 'full_name'> | null }
@@ -20,14 +23,20 @@ const ACTION_LABEL: Record<string, string> = {
 
 export function AdminAudit() {
   const [rows, setRows] = useState<Row[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async (isActive: () => boolean) => {
-    const { data } = await supabase
+    const { data, error: err } = await supabase
       .from('audit_log')
       .select('*, actor:profiles!audit_log_actor_id_fkey(id, full_name)')
       .order('created_at', { ascending: false })
-      .limit(100)
-    if (isActive()) setRows((data ?? []) as unknown as Row[])
+      .limit(AUDIT_LOG_LIMIT)
+    if (!isActive()) return
+    // A failed query used to render as "Nothing yet" — the compliance page
+    // reporting an empty staff record is worse than reporting an outage.
+    if (err) { setError(friendlyError(err)); return }
+    setError(null)
+    setRows((data ?? []))
   }, [])
 
   usePageData(load)
@@ -35,9 +44,11 @@ export function AdminAudit() {
   return (
     <AdminShell title="Audit log">
       <p className="-mt-2 mb-5 text-sm text-faint">
-        Every staff action, recorded automatically. Last 100 entries.
+        Every staff action, recorded automatically. Last {AUDIT_LOG_LIMIT} entries.
       </p>
-      {rows === null ? (
+      {error ? (
+        <EmptyState title="We couldn’t load the audit log">{error}</EmptyState>
+      ) : rows === null ? (
         <Spinner page />
       ) : rows.length === 0 ? (
         <p className="text-sm text-faint">Nothing yet — staff actions will appear here.</p>

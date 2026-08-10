@@ -5,6 +5,7 @@ import { AuthShell } from './PublicShell'
 import { TextField } from '../../components/ui/Field'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../contexts/AuthContext'
+import { friendlyError } from '../../lib/errors'
 
 export function Login() {
   const { signIn } = useAuth()
@@ -22,7 +23,7 @@ export function Login() {
     const { error: err } = await signIn(email, password)
     setSubmitting(false)
     if (err) {
-      setError(/invalid/i.test(err) ? 'That email and password don\'t match an account here.' : err)
+      setError(friendlyError(err))
       return
     }
     const from = (location.state as { from?: string } | null)?.from

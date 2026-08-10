@@ -5,6 +5,7 @@ import { AuthShell } from './PublicShell'
 import { TextField } from '../../components/ui/Field'
 import { Button } from '../../components/ui/Button'
 import { supabase } from '../../lib/supabase'
+import { friendlyError } from '../../lib/errors'
 
 /** Two modes: request a reset link, or (arriving from that link with a
  *  recovery session) set the new password. */
@@ -35,7 +36,7 @@ export function ResetPassword() {
     })
     setSubmitting(false)
     if (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       return
     }
     setSent(true)
@@ -52,7 +53,7 @@ export function ResetPassword() {
     const { error: err } = await supabase.auth.updateUser({ password })
     setSubmitting(false)
     if (err) {
-      setError(err.message)
+      setError(friendlyError(err))
       return
     }
     navigate('/home', { replace: true })

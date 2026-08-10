@@ -40,3 +40,6 @@ test-results/
 e2e/.auth/
 test-results/
 playwright-report/
+
+# Supabase CLI scratch (version pin cache, linked-project ref)
+supabase/.temp/

@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { usePageData } from '../../lib/usePageData'
 import { setOfferHidden } from '../../lib/mutations'
 import { OFFER_POSTER_JOIN_DETAIL } from '../../lib/joins'
+import { activeRequestOf, canRaiseHand, posterAvailable } from '../../lib/permissions'
 import { useAuth } from '../../contexts/AuthContext'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -59,15 +60,20 @@ export function OfferDetail() {
       setLoadError('This offer is gone — it may have been closed or removed.')
       return
     }
-    setOffer(data as unknown as OfferFull)
+    // Clear on success: without this, one failed detail page kept rendering
+    // "This offer is gone" over every healthy offer visited afterwards.
+    setLoadError(null)
+    setOffer(data)
     if (profile?.role === 'student') {
-      const { data: req } = await supabase
+      const { data: req, error: reqError } = await supabase
         .from('requests')
         .select('*')
         .eq('offer_id', id)
         .eq('student_id', user.id)
         .maybeSingle()
-      if (isActive()) setMyRequest(req)
+      if (!isActive()) return
+      if (reqError) { setLoadError(friendlyError(reqError)); return }
+      setMyRequest(req)
     }
   }, [id, user, profile?.role])
 
@@ -78,21 +84,23 @@ export function OfferDetail() {
     if (!user || !id || note.trim().length < 10) return
     setSubmitting(true)
     // Clean re-application: a withdrawn request still occupies the (offer,student)
-    // unique slot, so delete it first (requests_delete retract policy) so the
-    // insert can proceed (review C-04).
-    if (myRequest && myRequest.status === 'withdrawn') {
-      const { error: delErr } = await supabase.from('requests').delete().eq('id', myRequest.id)
-      if (delErr) {
-        setSubmitting(false)
-        toast(friendlyError(delErr), 'error')
-        return
-      }
-    }
-    const { data, error } = await supabase
-      .from('requests')
-      .insert({ offer_id: id, student_id: user.id, note: note.trim() })
-      .select()
-      .single()
+    // unique slot. Revive that row instead of deleting it — a DELETE cascades
+    // messages.request_id and would erase the entire prior staff-readable thread
+    // (review blocker). enforce_request_transition allows the student
+    // withdrawn → sent and re-checks every gate requests_insert applies.
+    const { data, error } =
+      myRequest && myRequest.status === 'withdrawn'
+        ? await supabase
+            .from('requests')
+            .update({ status: 'sent', note: note.trim() })
+            .eq('id', myRequest.id)
+            .select()
+            .single()
+        : await supabase
+            .from('requests')
+            .insert({ offer_id: id, student_id: user.id, note: note.trim() })
+            .select()
+            .single()
     setSubmitting(false)
     if (error) {
       toast(friendlyError(error), 'error')
@@ -129,10 +137,18 @@ export function OfferDetail() {
   const isOwner = offer.posted_by === profile.id
   const isAdmin = profile.role === 'admin'
   const isStudent = profile.role === 'student'
-  const posterPaused = offer.poster?.open_to_requests === false
   // A withdrawn request frees the door to be knocked on again (review C-04).
-  const activeRequest = myRequest && myRequest.status !== 'withdrawn' ? myRequest : null
-  const canRaise = isStudent && offer.status === 'open' && !offer.hidden_at && !activeRequest && !posterPaused
+  const activeRequest = activeRequestOf(myRequest)
+  // Null poster (RLS-hidden because they're disabled) counts as unavailable,
+  // not as "not paused" — see posterAvailable.
+  const posterUnavailable = !posterAvailable(offer.poster)
+  const canRaise = canRaiseHand({
+    viewerRole: profile.role,
+    offerStatus: offer.status,
+    offerHidden: !!offer.hidden_at,
+    poster: offer.poster,
+    hasActiveRequest: !!activeRequest,
+  })
 
   const facts: { icon: typeof MapPin; text: string }[] = [
     { icon: MapPin, text: offer.location_text || LOCATION_MODE_LABEL[offer.location_mode] },
@@ -247,7 +263,7 @@ export function OfferDetail() {
           ) : (
             <Card>
               <p className="text-sm text-faint">
-                {posterPaused
+                {posterUnavailable
                   ? 'This member is taking a pause from new requests right now.'
                   : offer.status === 'filled'
                     ? 'This door has been filled — but new ones open all the time.'

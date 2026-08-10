@@ -51,7 +51,7 @@ export function Notifications() {
       </div>
       <div className="mt-6">
         {items.length === 0 ? (
-          <EmptyState title="Nothing yet">
+          <EmptyState as="h3" title="Nothing yet">
             When someone knocks, replies, or staff approves something of yours, it lands here.
           </EmptyState>
         ) : (
@@ -59,7 +59,15 @@ export function Notifications() {
             {items.map((n) => {
               const inner = (
                 <div className="flex items-baseline gap-3 px-5 py-4">
-                  {!n.read_at && <span className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-full bg-clay" aria-label="Unread" />}
+                  {!n.read_at && (
+                    <>
+                      {/* A bare span maps to role="generic", which prohibits an
+                          accessible name — the aria-label was silently dropped
+                          and unread became a visual-only distinction. */}
+                      <span className="h-2 w-2 shrink-0 -translate-y-px rounded-full bg-clay" aria-hidden />
+                      <span className="sr-only">Unread</span>
+                    </>
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-ink">{n.title}</p>
                     {n.body && <p className="mt-0.5 truncate text-sm text-faint">{n.body}</p>}

@@ -58,6 +58,16 @@ export async function enablePush(userId: string): Promise<void> {
     applicationServerKey: urlBase64ToBuffer(VAPID_PUBLIC_KEY),
   })
 
+  // A shared device may still carry the previous user's row for this endpoint,
+  // and push_sub_update denies updating someone else's row — so the upsert
+  // below would fail forever. Claim the endpoint first (staff-free, no-op when
+  // it's already ours).
+  const { error: claimError } = await supabase.rpc('claim_push_endpoint', { p_endpoint: sub.endpoint })
+  if (claimError) {
+    await sub.unsubscribe().catch(() => {})
+    throw new Error('Couldn\'t set up notifications on this device. Please try again.')
+  }
+
   const json = sub.toJSON()
   const { error } = await supabase.from('push_subscriptions').upsert(
     {

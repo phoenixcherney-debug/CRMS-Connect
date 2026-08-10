@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { gateDecision, roleAllowed } from '../lib/permissions'
 import { useSignOut } from '../lib/useSignOut'
 import { Spinner } from './ui/Spinner'
 import { Button } from './ui/Button'
@@ -13,9 +14,20 @@ export function Gate() {
   const location = useLocation()
   const signOut = useSignOut()
 
+  // The routing itself is a pure function (src/lib/permissions.ts) so every
+  // branch below is unit-tested; this component only renders the outcome.
+  const decision = gateDecision({
+    hasUser: !!user,
+    hasProfile: !!profile,
+    loading,
+    profileError,
+    accountStatus: profile?.account_status ?? null,
+    pathname: location.pathname,
+  })
+
   // A signed-in user whose profile failed to load: offer a way out instead of
   // spinning forever behind an infinite loader.
-  if (user && !profile && profileError) {
+  if (decision.kind === 'account-error') {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-4">
         <div className="w-full max-w-md rounded-xl border border-line bg-card p-8 text-center">
@@ -32,24 +44,17 @@ export function Gate() {
     )
   }
 
-  if (loading || (user && !profile)) return <Spinner page />
-  if (!user || !profile) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />
-  }
-  if (profile.account_status === 'pending' && location.pathname !== '/waiting') {
-    return <Navigate to="/waiting" replace />
-  }
-  if (profile.account_status === 'disabled' && location.pathname !== '/disabled') {
-    return <Navigate to="/disabled" replace />
-  }
-  if (profile.account_status === 'active' && (location.pathname === '/waiting' || location.pathname === '/disabled')) {
-    return <Navigate to="/home" replace />
+  if (decision.kind === 'loading') return <Spinner page />
+  if (decision.kind === 'redirect') {
+    return decision.to === '/login'
+      ? <Navigate to="/login" state={{ from: location.pathname }} replace />
+      : <Navigate to={decision.to} replace />
   }
   return <Outlet />
 }
 
 export function RequireRole({ roles, children }: { roles: UserRole[]; children: ReactNode }) {
   const { profile } = useAuth()
-  if (!profile || !roles.includes(profile.role)) return <Navigate to="/home" replace />
+  if (!roleAllowed(profile?.role, roles)) return <Navigate to="/home" replace />
   return children
 }

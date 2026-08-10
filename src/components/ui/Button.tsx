@@ -14,9 +14,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary: 'bg-pine text-white hover:bg-pine-deep disabled:hover:bg-pine',
   accent: 'bg-clay text-white hover:bg-clay-deep disabled:hover:bg-clay',
-  secondary: 'bg-card text-ink border border-line-strong hover:border-pine hover:text-pine',
+  secondary: 'bg-card text-ink border border-input hover:border-pine hover:text-pine',
   ghost: 'text-faint hover:text-ink hover:bg-line/40',
-  danger: 'bg-card text-danger border border-line-strong hover:border-danger',
+  danger: 'bg-card text-danger border border-input hover:border-danger',
 }
 
 const SIZE_CLASSES: Record<Size, string> = {

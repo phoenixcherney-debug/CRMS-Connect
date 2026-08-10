@@ -6,6 +6,8 @@ import { TextField, SelectField } from '../../components/ui/Field'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../contexts/AuthContext'
 import { nextRovingIndex } from '../../lib/a11y'
+import { friendlyError } from '../../lib/errors'
+import { MAX_CLASS_YEAR, MIN_CLASS_YEAR } from '../../lib/constants'
 import type { MemberAffiliation } from '../../types'
 
 const THIS_YEAR = new Date().getFullYear()
@@ -54,6 +56,17 @@ export function Signup() {
       setError(role === 'student' ? 'Pick your expected graduation year.' : 'Pick your graduation year.')
       return
     }
+    // The form is noValidate, so the alum year input's min/max never fire.
+    // Without this, typing "02" sends class_year: 2, profiles' `between 1950
+    // and 2040` CHECK raises inside handle_new_user, the auth.users insert rolls
+    // back, and the only feedback is GoTrue's "Database error saving new user".
+    if (needsClassYear) {
+      const year = Number(classYear)
+      if (!Number.isInteger(year) || year < MIN_CLASS_YEAR || year > MAX_CLASS_YEAR) {
+        setError(`Enter a four-digit graduation year between ${MIN_CLASS_YEAR} and ${MAX_CLASS_YEAR} — for example, 2002.`)
+        return
+      }
+    }
     setSubmitting(true)
     const { error: err, needsConfirmation } = await signUp({
       email,
@@ -61,13 +74,15 @@ export function Signup() {
       fullName,
       role,
       affiliation: role === 'member' ? affiliation : undefined,
-      classYear: classYear ? Number(classYear) : undefined,
+      // Only send a year the current role/affiliation actually asks for —
+      // switching away from "Alum" used to leave a stale value attached.
+      classYear: needsClassYear && classYear ? Number(classYear) : undefined,
       organization: role === 'member' ? organization : undefined,
       title: role === 'member' ? title : undefined,
     })
     setSubmitting(false)
     if (err) {
-      setError(err)
+      setError(friendlyError(err))
       return
     }
     if (needsConfirmation) {
@@ -117,7 +132,7 @@ export function Signup() {
                 ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[idx]?.focus()
             }}
             className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
-              role === value ? 'border-pine bg-meadow text-pine' : 'border-line-strong bg-card text-faint hover:text-ink'
+              role === value ? 'border-pine bg-meadow text-pine' : 'border-input bg-card text-faint hover:text-ink'
             }`}
           >
             {label}
@@ -167,7 +182,7 @@ export function Signup() {
                 label="Graduation year"
                 type="number"
                 inputMode="numeric"
-                min={1950}
+                min={MIN_CLASS_YEAR}
                 max={THIS_YEAR}
                 value={classYear}
                 onChange={(e) => setClassYear(e.target.value)}

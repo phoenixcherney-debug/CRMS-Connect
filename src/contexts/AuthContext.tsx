@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
@@ -49,33 +49,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { profile: data, failed: false }
   }, [])
 
+  // Tracks the user id the current `profile` belongs to, so a repeat event for
+  // the same identity can be recognised without re-reading state in the
+  // callback's stale closure.
+  const loadedForUserId = useRef<string | null>(null)
+
   useEffect(() => {
     let cancelled = false
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // One fetch path. supabase-js invokes this callback with INITIAL_SESSION as
+    // soon as a listener subscribes, so it already covers the cold load — the
+    // separate getSession() fetch that used to sit here meant every page load
+    // issued `profiles?id=eq.X` twice with no dedupe.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        const { profile: p, failed } = await fetchProfile(session.user.id)
-        if (!cancelled) {
-          setProfile(p)
-          setProfileError(failed)
-        }
-      }
-      if (!cancelled) setLoading(false)
-    })
+      const nextUser = session?.user ?? null
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (!session?.user) {
+      if (!nextUser) {
+        setUser(null)
         setProfile(null)
         setProfileError(false)
+        loadedForUserId.current = null
+        setLoading(false)
         return
       }
+
+      // Keep the *same* User object across events that don't change identity.
+      // Handing consumers a freshly-parsed object rebuilt every useCallback
+      // keyed on `user` and tore down NotificationBell's 60s interval on each
+      // emission. USER_UPDATED genuinely carries new fields, so it passes through.
+      setUser((prev) => (prev && prev.id === nextUser.id && event !== 'USER_UPDATED' ? prev : nextUser))
+
+      // TOKEN_REFRESHED fires roughly hourly and on tab re-focus and says
+      // nothing about the profile row. Refetching there gave `profile` a new
+      // identity, which re-ran every usePageData loader on the mounted page.
+      if (event === 'TOKEN_REFRESHED' && loadedForUserId.current === nextUser.id) {
+        setLoading(false)
+        return
+      }
+
+      loadedForUserId.current = nextUser.id
       // Deliberately not awaited: auth callbacks must not block.
-      fetchProfile(session.user.id).then(({ profile: p, failed }) => {
+      fetchProfile(nextUser.id).then(({ profile: p, failed }) => {
+        if (cancelled) return
         setProfile(p)
         setProfileError(failed)
+        setLoading(false)
       })
     })
 
@@ -121,17 +140,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(async () => {
     const { data: { user: current } } = await supabase.auth.getUser()
     if (current) {
+      loadedForUserId.current = current.id
       const { profile: p, failed } = await fetchProfile(current.id)
       setProfile(p)
       setProfileError(failed)
     }
   }, [fetchProfile])
 
-  return (
-    <AuthContext.Provider value={{ user, profile, loading, profileError, signUp, signIn, signOut, refreshProfile }}>
-      {children}
-    </AuthContext.Provider>
+  // Memoized so consumers don't re-render on every provider render with
+  // identical data — the callbacks are already stable useCallbacks.
+  const value = useMemo(
+    () => ({ user, profile, loading, profileError, signUp, signIn, signOut, refreshProfile }),
+    [user, profile, loading, profileError, signUp, signIn, signOut, refreshProfile],
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
